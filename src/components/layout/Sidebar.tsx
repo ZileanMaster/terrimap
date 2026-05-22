@@ -68,8 +68,20 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardLi
     selectZone(zoneId)
     if (onFlyTo) {
       const zone = zones.find(z => z.id === zoneId)
-      if (zone?.centroid) {
-        onFlyTo(zone.centroid.lat, zone.centroid.lng, 14)
+      if (zone) {
+        // Compute centroid from polygon (GeoJSON coords are [lng, lat])
+        // Avoids using the stored centroid field which may be stale/incorrect
+        let ring: number[][] = []
+        if (zone.polygon.type === 'Polygon') {
+          ring = (zone.polygon.coordinates[0] ?? []) as number[][]
+        } else if (zone.polygon.type === 'MultiPolygon') {
+          ring = ((zone.polygon.coordinates[0]?.[0]) ?? []) as number[][]
+        }
+        if (ring.length > 0) {
+          const avgLng = ring.reduce((s, p) => s + (p[0] ?? 0), 0) / ring.length
+          const avgLat = ring.reduce((s, p) => s + (p[1] ?? 0), 0) / ring.length
+          onFlyTo(avgLat, avgLng, 14)
+        }
       }
     }
   }, [selectZone, onFlyTo, zones])
