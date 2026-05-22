@@ -412,11 +412,9 @@ export async function deleteAgent(agentId: string): Promise<void> {
 // ── Regions ────────────────────────────────────────────────────────────────────
 
 /**
- * Load all regions.
- * SQL needed: CREATE TABLE regions (id TEXT PK, name TEXT, coordinator_id TEXT, center JSONB, zoom INT).
- * Fallback: localStorage cache → [] (empty, no hardcoded defaults).
+ * Load regions, optionally filtered by project.
  */
-export async function loadRegions(): Promise<Region[]> {
+export async function loadRegions(projectId?: string): Promise<Region[]> {
   // Load project-scoped localStorage overrides (coordinator assignments etc.)
   const regionKey = lsKey('terrimap_regions')
   let local: Region[] = []
@@ -429,10 +427,18 @@ export async function loadRegions(): Promise<Region[]> {
   if (!isOnline()) return local
 
   try {
-    const { data, error } = await supabase!
+    let query = supabase!
       .from('regions')
       .select('*')
       .order('name')
+    
+    if (projectId) {
+      query = query.or(`project_id.eq.${projectId},project_id.is.null`)
+    } else {
+      query = query.is('project_id', null)
+    }
+
+    const { data, error } = await query
 
     if (error || !data || data.length === 0) return local
 
@@ -451,7 +457,7 @@ export async function loadRegions(): Promise<Region[]> {
 /**
  * Save (upsert) a region. Also persists to localStorage.
  */
-export async function saveRegion(region: Region): Promise<void> {
+export async function saveRegion(region: Region, projectId?: string): Promise<void> {
   // Update project-scoped localStorage
   const regionKey = lsKey('terrimap_regions')
   try {
@@ -464,13 +470,19 @@ export async function saveRegion(region: Region): Promise<void> {
   if (!isOnline()) return
 
   try {
-    const { error } = await supabase!.from('regions').upsert({
+    const row: Record<string, any> = {
       id:             region.id,
       name:           region.name,
       coordinator_id: region.coordinatorId ?? null,
       center:         region.center,
       zoom:           region.zoom,
-    })
+    }
+    const pId = projectId || _currentProjectId
+    if (pId) {
+      row.project_id = pId
+    }
+
+    const { error } = await supabase!.from('regions').upsert(row)
     if (error) console.error('[DB] saveRegion error:', error)
   } catch (e) {
     console.error('[DB] saveRegion unexpected:', e)
@@ -497,4 +509,5 @@ export async function deleteRegion(regionId: string): Promise<void> {
     console.error('[DB] deleteRegion unexpected:', e)
   }
 }
+
 

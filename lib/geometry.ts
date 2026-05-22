@@ -356,6 +356,73 @@ function polygonsShareEdge(zoneA: Zone, zoneB: Zone): boolean {
  * @param _thresholdKm - Kept for backward compatibility. Ignored in primary mode.
  * @returns AdjacencyMatrix symmetric, mọi zone có ít nhất một entry (có thể rỗng).
  */
+/**
+ * Trích xuất tất cả các đỉnh (coordinates) từ polygon của một Zone.
+ * @internal
+ */
+function extractVertices(polygon: Zone['polygon']): Coordinate[] {
+  const vertices: Coordinate[] = [];
+  const rings = polygon.type === 'MultiPolygon'
+    ? polygon.coordinates.flatMap((poly) => poly)
+    : polygon.coordinates;
+
+  for (const ring of rings) {
+    for (const pt of ring) {
+      vertices.push({ lng: pt[0], lat: pt[1] });
+    }
+  }
+  return vertices;
+}
+
+/**
+ * Tính khoảng cách nhỏ nhất giữa bất kỳ cặp đỉnh nào của hai Zone.
+ * @internal
+ */
+function getMinVertexDistance(zoneA: Zone, zoneB: Zone): number {
+  const vertsA = extractVertices(zoneA.polygon);
+  const vertsB = extractVertices(zoneB.polygon);
+  let minDistance = Infinity;
+
+  for (const vA of vertsA) {
+    for (const vB of vertsB) {
+      const d = haversineDistance(vA, vB);
+      if (d < minDistance) {
+        minDistance = d;
+      }
+    }
+  }
+  return minDistance;
+}
+
+/**
+ * Đếm số lượng thành phần liên thông trong ma trận kề hiện tại.
+ * @internal
+ */
+function countConnectedComponents(zones: Zone[], matrix: AdjacencyMatrix): number {
+  const visited = new Set<string>();
+  let count = 0;
+
+  for (const zone of zones) {
+    if (!visited.has(zone.id)) {
+      count++;
+      const queue = [zone.id];
+      visited.add(zone.id);
+      let head = 0;
+      while (head < queue.length) {
+        const curr = queue[head++]!;
+        const neighbors = matrix[curr] || [];
+        for (const neighbor of neighbors) {
+          if (!visited.has(neighbor)) {
+            visited.add(neighbor);
+            queue.push(neighbor);
+          }
+        }
+      }
+    }
+  }
+  return count;
+}
+
 export function buildAdjacencyMatrix(
   zones: Zone[],
   _thresholdKm?: number
@@ -377,6 +444,27 @@ export function buildAdjacencyMatrix(
       if (polygonsShareEdge(zi, zj)) {
         matrix[zi.id]!.push(zj.id);
         matrix[zj.id]!.push(zi.id);
+      }
+    }
+  }
+
+  // Fallback: Nếu đồ thị kề bị không liên thông, thêm các cạnh dựa trên khoảng cách đỉnh nhỏ nhất.
+  // Tránh các zone chạm góc trực tiếp (dist = 0 hoặc rất nhỏ, e.g., <= 1e-5) để bảo toàn quy tắc diagonal.
+  const components = countConnectedComponents(zones, matrix);
+  if (components > 1) {
+    const threshold = _thresholdKm !== undefined ? _thresholdKm : 15;
+    for (let i = 0; i < zones.length - 1; i++) {
+      for (let j = i + 1; j < zones.length; j++) {
+        const zi = zones[i]!;
+        const zj = zones[j]!;
+
+        if (!matrix[zi.id]!.includes(zj.id)) {
+          const dist = getMinVertexDistance(zi, zj);
+          if (dist > 1e-5 && dist <= threshold) {
+            matrix[zi.id]!.push(zj.id);
+            matrix[zj.id]!.push(zi.id);
+          }
+        }
       }
     }
   }
