@@ -88,7 +88,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
         loadZones(projectId),
         loadAssignments(projectId),
         loadAgents(projectId),
-        loadRegions(),
+        loadRegions(projectId),
       ])
       // Keep regionId as-is; null = unassigned (no forced default)
       set({ zones: z, assignments: a, agents: ag, regions: rg })
@@ -109,7 +109,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     set((s) => ({
       regions: s.regions.map((r) => r.id === region.id ? region : r),
     }))
-    await saveRegion(region)
+    await saveRegion(region, get().currentProjectId)
   },
 
   addRegion: async (name, center, zoom) => {
@@ -120,7 +120,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
       zoom,
     }
     set((s) => ({ regions: [...s.regions, region] }))
-    await saveRegion(region)
+    await saveRegion(region, get().currentProjectId)
     return region
   },
 

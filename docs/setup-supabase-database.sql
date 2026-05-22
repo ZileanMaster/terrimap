@@ -244,30 +244,30 @@ CREATE POLICY "regions_all" ON public.regions FOR ALL USING (true) WITH CHECK (t
 
 -- Cấu hình chính sách cho zones
 CREATE POLICY "zones_select" ON public.zones FOR SELECT USING (project_id IS NULL OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "zones_insert" ON public.zones FOR INSERT WITH CHECK (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "zones_update" ON public.zones FOR UPDATE USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "zones_delete" ON public.zones FOR DELETE USING (public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) IN ('admin', 'coordinator'));
+CREATE POLICY "zones_insert" ON public.zones FOR INSERT WITH CHECK ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "zones_update" ON public.zones FOR UPDATE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "zones_delete" ON public.zones FOR DELETE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) IN ('admin', 'coordinator'));
 
 -- Cấu hình chính sách cho sales_agents
 CREATE POLICY "agents_select" ON public.sales_agents FOR SELECT USING (project_id IS NULL OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "agents_insert" ON public.sales_agents FOR INSERT WITH CHECK (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "agents_update" ON public.sales_agents FOR UPDATE USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "agents_delete" ON public.sales_agents FOR DELETE USING (public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) = 'admin');
+CREATE POLICY "agents_insert" ON public.sales_agents FOR INSERT WITH CHECK ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "agents_update" ON public.sales_agents FOR UPDATE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "agents_delete" ON public.sales_agents FOR DELETE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) = 'admin');
 
 -- Cấu hình chính sách cho activities (Công khai/Kế thừa từ zone RLS)
 CREATE POLICY "activities_all" ON public.activities FOR ALL USING (true) WITH CHECK (true);
 
 -- Cấu hình chính sách cho assignments
 CREATE POLICY "assignments_select" ON public.assignments FOR SELECT USING (project_id IS NULL OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "assignments_insert" ON public.assignments FOR INSERT WITH CHECK (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "assignments_update" ON public.assignments FOR UPDATE USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "assignments_delete" ON public.assignments FOR DELETE USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "assignments_insert" ON public.assignments FOR INSERT WITH CHECK ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "assignments_update" ON public.assignments FOR UPDATE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "assignments_delete" ON public.assignments FOR DELETE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
 
 -- Cấu hình chính sách cho snapshots
 CREATE POLICY "snapshots_select" ON public.snapshots FOR SELECT USING (project_id IS NULL OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "snapshots_insert" ON public.snapshots FOR INSERT WITH CHECK (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "snapshots_update" ON public.snapshots FOR UPDATE USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
-CREATE POLICY "snapshots_delete" ON public.snapshots FOR DELETE USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "snapshots_insert" ON public.snapshots FOR INSERT WITH CHECK ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "snapshots_update" ON public.snapshots FOR UPDATE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "snapshots_delete" ON public.snapshots FOR DELETE USING ((project_id IS NULL AND auth.uid() IS NOT NULL) OR public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
 
 -- Cấu hình chính sách cho zone_monthly_metrics
 CREATE POLICY "metrics_all" ON public.zone_monthly_metrics FOR ALL USING (true) WITH CHECK (true);
