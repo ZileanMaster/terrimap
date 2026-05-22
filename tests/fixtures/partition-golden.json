@@ -1,0 +1,176 @@
+{
+  "greedy": {
+    "assignments": [
+      {
+        "zoneId": "z00",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z01",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z02",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z03",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z04",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z05",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z06",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z07",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z08",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z09",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z10",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z11",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z12",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z13",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z14",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z15",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z16",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z17",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z18",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z19",
+        "districtId": 1
+      }
+    ],
+    "timestamp": "2026-04-23T02:43:09.818Z",
+    "zonesCount": 20,
+    "m": 4
+  },
+  "local-search": {
+    "assignments": [
+      {
+        "zoneId": "z00",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z01",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z02",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z03",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z04",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z05",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z06",
+        "districtId": 2
+      },
+      {
+        "zoneId": "z07",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z08",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z09",
+        "districtId": 0
+      },
+      {
+        "zoneId": "z10",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z11",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z12",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z13",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z14",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z15",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z16",
+        "districtId": 3
+      },
+      {
+        "zoneId": "z17",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z18",
+        "districtId": 1
+      },
+      {
+        "zoneId": "z19",
+        "districtId": 1
+      }
+    ],
+    "timestamp": "2026-04-23T02:43:09.821Z",
+    "zonesCount": 20,
+    "m": 4
+  }
+}
