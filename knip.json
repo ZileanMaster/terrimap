@@ -1,0 +1,21 @@
+{
+  "entry": [
+    "lib/index.ts",
+    "services/index.ts",
+    "facades/index.ts",
+    "types/domain.ts"
+  ],
+  "project": [
+    "lib/**/*.ts",
+    "services/**/*.ts",
+    "facades/**/*.ts",
+    "types/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "ignore": [
+    ".stryker-tmp/**",
+    ".agent/**",
+    "tests/fixtures/generate-golden.ts"
+  ],
+  "ignoreExportsUsedInFile": false
+}
