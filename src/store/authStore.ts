@@ -114,10 +114,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange(async (_event, session) => {
       set({ user: session?.user ?? null, session })
       if (!session) {
         set({ profile: null, projects: [], currentProjectId: null, membership: null })
+      } else {
+        await get().loadProfile()
+        await get().loadProjects()
       }
     })
   },
@@ -158,6 +161,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     })
     if (error) {
       set({ authError: error.message, loading: false })
+      return false
+    }
+
+    // If session is null, email confirmation is required
+    if (!data.session) {
+      set({
+        authError: 'Tài khoản đã được tạo. Vui lòng kiểm tra email và xác nhận tài khoản, sau đó đăng nhập lại.',
+        loading: false,
+      })
       return false
     }
 

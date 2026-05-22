@@ -46,6 +46,7 @@ function PageLoader() {
 export default function App() {
   // Auth state
   const authUser       = useAuthStore((s) => s.user)
+  const authSession    = useAuthStore((s) => s.session)
   const authLoading    = useAuthStore((s) => s.loading)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const membership     = useAuthStore((s) => s.membership)
@@ -93,8 +94,8 @@ export default function App() {
     )
   }
 
-  // ── Not logged in ─────────────────────────────────────────────────────
-  if (!authUser) {
+  // ── Not logged in or no valid session ───────────────────────────────────
+  if (!authUser || !authSession) {
     return (
       <Suspense fallback={<PageLoader />}>
         <LoginPage />
