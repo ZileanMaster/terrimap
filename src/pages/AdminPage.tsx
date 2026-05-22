@@ -159,15 +159,18 @@ export default function AdminPage() {
       selectZone(null)
       setHighlightedSalesId(null)
       setMapTransitioning(true)
-
-      // Await persist — prevents data loss if user switches tab immediately
-      await persistAssignments(partResult.assignments)
-
       setTimeout(() => setMapTransitioning(false), 300)
+
+      // Show result IMMEDIATELY — don't wait for DB persist
       setResult(partResult)
+      setAlgoRunning(false)
+
+      // Persist in background (fire-and-forget) so UI is never blocked
+      persistAssignments(partResult.assignments).catch((e) =>
+        console.warn('[AdminPage] persist failed (non-critical):', e),
+      )
     } catch (e) {
       console.error('[AdminPage] runAlgorithm error:', e)
-    } finally {
       setAlgoRunning(false)
     }
   }, [ctx, zones, agents, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])

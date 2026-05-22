@@ -55,13 +55,24 @@ interface ZoneCardListProps {
   zones:          Zone[]
   assignments:    Assignment[]
   islandZoneIds?: Set<string>    // L4b-2 EC-1
+  onFlyTo?:       (lat: number, lng: number, zoom: number) => void
 }
 
-function ZoneCardList({ zones, assignments, islandZoneIds }: ZoneCardListProps) {
+function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardListProps) {
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
   const selectZone     = useUIStore((s) => s.selectZone)
   const containerRef   = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
+
+  const handleZoneSelect = useCallback((zoneId: string) => {
+    selectZone(zoneId)
+    if (onFlyTo) {
+      const zone = zones.find(z => z.id === zoneId)
+      if (zone?.centroid) {
+        onFlyTo(zone.centroid.lat, zone.centroid.lng, 14)
+      }
+    }
+  }, [selectZone, onFlyTo, zones])
 
   // Build assignment lookup (memoized)
   const assignmentMap = React.useMemo(
@@ -94,7 +105,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds }: ZoneCardListProps) 
               assignment={assignmentMap.get(zone.id)}
               isSelected={zone.id === selectedZoneId}
               isIsland={islandZoneIds?.has(zone.id) ?? false}
-              onSelect={selectZone}
+              onSelect={handleZoneSelect}
             />
           ))}
         </div>
@@ -125,7 +136,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds }: ZoneCardListProps) 
             assignment={assignmentMap.get(zone.id)}
             isSelected={zone.id === selectedZoneId}
             isIsland={islandZoneIds?.has(zone.id) ?? false}
-            onSelect={selectZone}
+            onSelect={handleZoneSelect}
           />
         ))}
         <div style={{ height: (zones.length - endIdx) * CARD_HEIGHT, flexShrink: 0 }} />
@@ -296,7 +307,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
       <DistrictAgentAssigner />
 
       <div style={styles.divider} />
-      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} />
+      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
 
       <div style={styles.divider} />
       <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot}>
