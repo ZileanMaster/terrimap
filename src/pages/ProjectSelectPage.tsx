@@ -25,11 +25,16 @@ export default function ProjectSelectPage() {
     e.preventDefault()
     if (!newName.trim()) return
     setCreating(true)
-    await createProject(newName.trim(), newDesc.trim())
-    setCreating(false)
-    setShowCreate(false)
-    setNewName('')
-    setNewDesc('')
+    try {
+      const id = await createProject(newName.trim(), newDesc.trim())
+      if (id) {
+        setShowCreate(false)
+        setNewName('')
+        setNewDesc('')
+      }
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleSelect = async (project: Project) => {
