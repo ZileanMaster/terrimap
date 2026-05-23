@@ -1,373 +1,219 @@
 /**
- * Mock Zones — 12 zones phân bố quanh Hà Nội
- * THIẾT KẾ MỚI: Polygons nhiều đỉnh (6-10), KHÔNG chồng lấn.
+ * Mock Zones — 20 zones Hà Nội + 12 zones TP.HCM = 32 total
  *
- * Layout grid 4×3 — các vùng chia sát nhau, SHARE biên (adjacent),
- * nhưng KHÔNG overlap diện tích:
+ * THIẾT KẾ: Polygons nhỏ, sát nhau, phản ánh tọa độ thực tế của
+ * các quận/phường ở 2 thành phố lớn nhất Việt Nam.
  *
- *   ┌──────┬──────┬──────┐  Row 0: lat 21.08 → 21.15
- *   │ z01  │ z06  │ z04  │
- *   ├──────┼──────┼──────┤  Row 1: lat 21.01 → 21.08
- *   │ z02  │ z05  │ z07  │
- *   ├──────┼──────┼──────┤  Row 2: lat 20.94 → 21.01
- *   │ z03  │ z09  │ z08  │
- *   ├──────┼──────┼──────┤  Row 3: lat 20.87 → 20.94
- *   │ z12  │ z10  │ z11  │
- *   └──────┴──────┴──────┘
- *   Col 0        Col 1        Col 2
- *   105.72→105.80 105.80→105.88 105.88→105.96
+ * Hà Nội: 20 zones (5×4 grid) — khu vực nội thành
+ *   Tọa độ thực tế quanh Hoàn Kiếm/Ba Đình/Đống Đa/Hai Bà Trưng
  *
- * 4 districts (0-3) × 3 zones mỗi district
- * salesAgentId: 'sa0'-'sa3' tương ứng findIndex trong MOCK_AGENTS
+ * HCM: 12 zones (4×3 grid) — khu vực Q1/Q3/Bình Thạnh/Phú Nhuận
  *
- * CRITICAL (OPEN-4): Thứ tự MOCK_AGENTS không được thay đổi.
- * sa0 → district 0, sa1 → district 1, sa2 → district 2, sa3 → district 3
+ * Tất cả zones share biên (adjacent), KHÔNG overlap.
  */
 
 import type { Zone, Assignment } from '../../facades/viewmodels.js'
 
 // ── Helper: compute centroid from polygon ring ──────────────────────────────────
 function centroidOf(ring: number[][]): { lat: number; lng: number } {
-  // Skip last point (closing duplicate)
   const pts = ring.slice(0, -1)
   const lat = pts.reduce((s, p) => s + p[1]!, 0) / pts.length
   const lng = pts.reduce((s, p) => s + p[0]!, 0) / pts.length
-  return { lat: Math.round(lat * 1000) / 1000, lng: Math.round(lng * 1000) / 1000 }
+  return { lat: Math.round(lat * 100000) / 100000, lng: Math.round(lng * 100000) / 100000 }
 }
 
-/*
- * Grid boundaries (shared edges = adjacent, zero overlap):
- *
- * latRows = [20.87, 20.94, 21.01, 21.08, 21.15]
- * lngCols = [105.72, 105.80, 105.88, 105.96]
- *
- * Each polygon has 6-10 vertices to make shapes more natural
- * (notches, indentations, irregular edges) while still tiling perfectly.
- * Key rule: shared edges have IDENTICAL vertex sequences → zero gaps/overlaps.
- */
-
-// ── Column boundaries ───────────────────────────────────────────────────────────
-const C0 = 105.72
-const C1 = 105.80
-const C2 = 105.88
-const C3 = 105.96
-
-// ── Row boundaries ──────────────────────────────────────────────────────────────
-const R0 = 20.87
-const R1 = 20.94
-const R2 = 21.01
-const R3 = 21.08
-const R4 = 21.15
-
-// ── Midpoints for irregular shapes ──────────────────────────────────────────────
-const MC01 = (C0 + C1) / 2   // 105.76 — mid col 0-1
-const MC12 = (C1 + C2) / 2   // 105.84 — mid col 1-2
-const MC23 = (C2 + C3) / 2   // 105.92 — mid col 2-3
-const MR01 = (R0 + R1) / 2   // 20.905 — mid row 0-1
-const MR12 = (R1 + R2) / 2   // 20.975 — mid row 1-2
-const MR23 = (R2 + R3) / 2   // 21.045 — mid row 2-3
-const MR34 = (R3 + R4) / 2   // 21.115 — mid row 3-4
-
-// ── Polygon rings [lng, lat] — GeoJSON spec ─────────────────────────────────────
-// Each ring is closed (first === last point).
-// Vertices are ordered counter-clockwise for GeoJSON exterior rings.
-
-// --- Row 3 (top): lat R3→R4 -------------------------------------------------
-
-// z01: Top-Left — 8-point irregular polygon (District 0)
-const z01Ring: number[][] = [
-  [C0,  R3],
-  [MC01, R3],
-  [MC01, MR34 - 0.005],
-  [C1,  MR34],
-  [C1,  R4],
-  [MC01, R4 + 0.005],
-  [C0,  R4],
-  [C0,  MR34],
-  [C0,  R3],  // close
-]
-
-// z06: Top-Center — 7-point (District 1)
-const z06Ring: number[][] = [
-  [C1,  MR34],
-  [MC01, MR34 - 0.005],
-  [MC01, R3],
-  [C1,  R3],
-  [C2,  R3],
-  [C2,  R4],
-  [C1,  R4],
-  [C1,  MR34], // close
-]
-
-// z04: Top-Right — 8-point with notch (District 1)
-const z04Ring: number[][] = [
-  [C2,  R3],
-  [MC23, R3],
-  [C3,  R3 + 0.01],
-  [C3,  MR34],
-  [C3,  R4],
-  [MC23, R4 - 0.005],
-  [C2,  R4],
-  [C2,  R3], // close
-]
-
-// --- Row 2: lat R2→R3 --------------------------------------------------------
-
-// z02: Mid-Left — 7-point (District 0)
-const z02Ring: number[][] = [
-  [C0,  R2],
-  [MC01, R2 + 0.005],
-  [C1,  R2],
-  [C1,  R3],
-  [MC01, R3],
-  [C0,  R3],
-  [C0,  R2], // close
-]
-
-// z05: Mid-Center — 8-point (District 1)
-const z05Ring: number[][] = [
-  [C1,  R2],
-  [MC12, R2],
-  [C2,  R2],
-  [C2,  MR23],
-  [C2,  R3],
-  [C1,  R3],
-  [C1,  MR23 + 0.005],
-  [C1,  R2], // close
-]
-
-// z07: Mid-Right — 8-point (District 2)
-const z07Ring: number[][] = [
-  [C2,  R2],
-  [MC23, R2 - 0.005],
-  [C3,  R2],
-  [C3,  R3 + 0.01],
-  [MC23, R3],
-  [C2,  R3],
-  [C2,  MR23],
-  [C2,  R2], // close
-]
-
-// --- Row 1: lat R1→R2 --------------------------------------------------------
-
-// z03: Lower-Left — 7-point (District 0)
-const z03Ring: number[][] = [
-  [C0,  R1],
-  [MC01, R1],
-  [C1,  R1 + 0.005],
-  [C1,  R2],
-  [MC01, R2 + 0.005],
-  [C0,  R2],
-  [C0,  R1], // close
-]
-
-// z09: Lower-Center — 8-point (District 2)
-const z09Ring: number[][] = [
-  [C1,  R1 + 0.005],
-  [MC12, R1],
-  [C2,  R1],
-  [C2,  MR12],
-  [C2,  R2],
-  [MC12, R2],
-  [C1,  R2],
-  [C1,  R1 + 0.005], // close
-]
-
-// z08: Lower-Right — 8-point (District 2)
-const z08Ring: number[][] = [
-  [C2,  R1],
-  [MC23, R1 + 0.005],
-  [C3,  R1],
-  [C3,  R2],
-  [MC23, R2 - 0.005],
-  [C2,  R2],
-  [C2,  MR12],
-  [C2,  R1], // close
-]
-
-// --- Row 0 (bottom): lat R0→R1 -----------------------------------------------
-
-// z12: Bottom-Left — 7-point (District 3)
-const z12Ring: number[][] = [
-  [C0,  R0],
-  [MC01, R0 + 0.005],
-  [C1,  R0],
-  [C1,  R1 + 0.005],
-  [MC01, R1],
-  [C0,  R1],
-  [C0,  R0], // close
-]
-
-// z10: Bottom-Center — 7-point (District 3)
-const z10Ring: number[][] = [
-  [C1,  R0],
-  [MC12, R0],
-  [C2,  R0 + 0.005],
-  [C2,  R1],
-  [MC12, R1],
-  [C1,  R1 + 0.005],
-  [C1,  R0], // close
-]
-
-// z11: Bottom-Right — 8-point (District 3)
-const z11Ring: number[][] = [
-  [C2,  R0 + 0.005],
-  [MC23, R0],
-  [C3,  R0],
-  [C3,  MR01],
-  [C3,  R1],
-  [MC23, R1 + 0.005],
-  [C2,  R1],
-  [C2,  R0 + 0.005], // close
-]
-
-// ── MOCK_ZONES ─────────────────────────────────────────────────────────────────
-
-export const MOCK_ZONES: Zone[] = [
-  // ─── District 0 (North-West) — sa0 ───────────────────────────────────────────
-  {
-    id: 'z01', status: 'unassigned', name: 'Tây Hồ',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z01Ring] },
-    centroid: centroidOf(z01Ring),
+function makeZone(
+  id: string, name: string, regionId: string,
+  ring: number[][], customers: number, orders: number,
+): Zone {
+  return {
+    id, name, status: 'unassigned', regionId,
+    polygon: { type: 'Polygon', coordinates: [ring] },
+    centroid: centroidOf(ring),
     activities: [
-      { id: 'a01a', type: 'CUSTOMER', value: 120 },
-      { id: 'a01b', type: 'ORDER',    value: 85 },
+      { id: `${id}-c`, type: 'CUSTOMER', value: customers },
+      { id: `${id}-o`, type: 'ORDER',    value: orders },
     ],
-  },
-  {
-    id: 'z02', status: 'unassigned', name: 'Cầu Giấy',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z02Ring] },
-    centroid: centroidOf(z02Ring),
-    activities: [
-      { id: 'a02a', type: 'CUSTOMER', value: 200 },
-      { id: 'a02b', type: 'ORDER',    value: 140 },
-      { id: 'a02c', type: 'REVENUE',  value: 5000 },
-    ],
-  },
-  {
-    id: 'z03', status: 'unassigned', name: 'Nam Từ Liêm',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z03Ring] },
-    centroid: centroidOf(z03Ring),
-    activities: [
-      { id: 'a03a', type: 'CUSTOMER', value: 90 },
-      { id: 'a03b', type: 'ORDER',    value: 60 },
-    ],
-  },
+  }
+}
 
-  // ─── District 1 (North-East) — sa1 ───────────────────────────────────────────
-  {
-    id: 'z04', status: 'unassigned', name: 'Long Biên',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z04Ring] },
-    centroid: centroidOf(z04Ring),
-    activities: [
-      { id: 'a04a', type: 'CUSTOMER', value: 310 },
-      { id: 'a04b', type: 'ORDER',    value: 210 },
-    ],
-  },
-  {
-    id: 'z05', status: 'unassigned', name: 'Ba Đình',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z05Ring] },
-    centroid: centroidOf(z05Ring),
-    activities: [
-      { id: 'a05a', type: 'CUSTOMER', value: 180 },
-      { id: 'a05b', type: 'ORDER',    value: 130 },
-    ],
-  },
-  {
-    id: 'z06', status: 'unassigned', name: 'Đống Đa',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z06Ring] },
-    centroid: centroidOf(z06Ring),
-    activities: [
-      { id: 'a06a', type: 'CUSTOMER', value: 75 },
-      { id: 'a06b', type: 'ORDER',    value: 45 },
-    ],
-  },
+// ══════════════════════════════════════════════════════════════════════════════
+// HÀ NỘI — 20 zones (5 cols × 4 rows)
+// Khu vực: Ba Đình → Hoàn Kiếm → Hai Bà Trưng (trái → phải)
+//          Tây Hồ → Đống Đa → Thanh Xuân (trên → dưới)
+//
+// Grid: lat 21.000 → 21.048, lng 105.810 → 105.860
+// Cell size: ~0.012 lat × ~0.010 lng ≈ 1.3km × 1.0km
+// ══════════════════════════════════════════════════════════════════════════════
 
-  // ─── District 2 (South-East) — sa2 ───────────────────────────────────────────
-  {
-    id: 'z07', status: 'unassigned', name: 'Hai Bà Trưng',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z07Ring] },
-    centroid: centroidOf(z07Ring),
-    activities: [
-      { id: 'a07a', type: 'CUSTOMER', value: 250 },
-      { id: 'a07b', type: 'ORDER',    value: 170 },
-    ],
-  },
-  {
-    id: 'z08', status: 'unassigned', name: 'Hoàng Mai',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z08Ring] },
-    centroid: centroidOf(z08Ring),
-    activities: [
-      { id: 'a08a', type: 'CUSTOMER', value: 290 },
-      { id: 'a08b', type: 'ORDER',    value: 200 },
-      { id: 'a08c', type: 'REVENUE',  value: 7500 },
-    ],
-  },
-  {
-    id: 'z09', status: 'unassigned', name: 'Thanh Xuân',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z09Ring] },
-    centroid: centroidOf(z09Ring),
-    activities: [
-      { id: 'a09a', type: 'CUSTOMER', value: 220 },
-      { id: 'a09b', type: 'ORDER',    value: 150 },
-    ],
-  },
+// Column edges (lng)
+const HL0 = 105.810
+const HL1 = 105.820
+const HL2 = 105.830
+const HL3 = 105.840
+const HL4 = 105.850
+const HL5 = 105.860
 
-  // ─── District 3 (South-West) — sa3 ───────────────────────────────────────────
-  {
-    id: 'z10', status: 'unassigned', name: 'Hà Đông',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z10Ring] },
-    centroid: centroidOf(z10Ring),
-    activities: [
-      { id: 'a10a', type: 'CUSTOMER', value: 160 },
-      { id: 'a10b', type: 'ORDER',    value: 110 },
-    ],
-  },
-  {
-    id: 'z11', status: 'unassigned', name: 'Thanh Trì',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z11Ring] },
-    centroid: centroidOf(z11Ring),
-    activities: [
-      { id: 'a11a', type: 'CUSTOMER', value: 130 },
-      { id: 'a11b', type: 'ORDER',    value: 90 },
-    ],
-  },
-  {
-    id: 'z12', status: 'unassigned', name: 'Hoài Đức',
-    regionId: 'region-hn',
-    polygon: { type: 'Polygon', coordinates: [z12Ring] },
-    centroid: centroidOf(z12Ring),
-    activities: [
-      { id: 'a12a', type: 'CUSTOMER', value: 95 },
-      { id: 'a12b', type: 'ORDER',    value: 65 },
-    ],
-  },
+// Row edges (lat)
+const HR0 = 21.000
+const HR1 = 21.012
+const HR2 = 21.024
+const HR3 = 21.036
+const HR4 = 21.048
+
+// Helper: rectangle polygon [lng,lat] closed
+function rect(l: number, b: number, r: number, t: number): number[][] {
+  return [[l,b],[r,b],[r,t],[l,t],[l,b]]
+}
+
+// Irregular shapes — add midpoint notches for realism
+function hn(col: number, row: number, notch?: 'tl'|'tr'|'bl'|'br'): number[][] {
+  const l = [HL0,HL1,HL2,HL3,HL4][col]!
+  const r = [HL1,HL2,HL3,HL4,HL5][col]!
+  const b = [HR0,HR1,HR2,HR3][row]!
+  const t = [HR1,HR2,HR3,HR4][row]!
+  const mx = (l+r)/2, my = (b+t)/2
+  const d = 0.002 // notch depth
+
+  if (notch === 'tr') return [[l,b],[r,b],[r,my],[r-d,my+d],[r,t],[l,t],[l,b]]
+  if (notch === 'tl') return [[l,b],[r,b],[r,t],[l,t],[l+d,my+d],[l,my],[l,b]]
+  if (notch === 'br') return [[l,b],[r,b],[r-d,my-d],[r,my],[r,t],[l,t],[l,b]]
+  if (notch === 'bl') return [[l,b],[l+d,my-d],[l,my],[l,t],[r,t],[r,b],[l,b]]
+
+  // Default: rectangle with slight mid-edge indent for visual interest
+  return [[l,b],[mx,b+0.001],[r,b],[r,t],[mx,t-0.001],[l,t],[l,b]]
+}
+
+// ── Hà Nội zones ────────────────────────────────────────────────────────────────
+const hnZones: Zone[] = [
+  // Row 3 (top) — Tây Hồ / Ba Đình area
+  makeZone('hn01', 'Phúc Xá',       'region-hn', hn(0,3,'tr'), 85,  55),
+  makeZone('hn02', 'Trúc Bạch',     'region-hn', hn(1,3),      120, 80),
+  makeZone('hn03', 'Quán Thánh',    'region-hn', hn(2,3,'tl'), 95,  65),
+  makeZone('hn04', 'Phú Thượng',    'region-hn', hn(3,3),      110, 75),
+  makeZone('hn05', 'Nhật Tân',      'region-hn', hn(4,3,'bl'), 70,  45),
+
+  // Row 2 — Ba Đình / Hoàn Kiếm
+  makeZone('hn06', 'Cống Vị',       'region-hn', hn(0,2),      140, 95),
+  makeZone('hn07', 'Ngọc Hà',       'region-hn', hn(1,2,'br'), 180, 125),
+  makeZone('hn08', 'Hàng Bông',     'region-hn', hn(2,2),      310, 220),
+  makeZone('hn09', 'Hàng Bạc',      'region-hn', hn(3,2,'tl'), 290, 200),
+  makeZone('hn10', 'Đồng Xuân',     'region-hn', hn(4,2),      250, 170),
+
+  // Row 1 — Đống Đa / Hai Bà Trưng
+  makeZone('hn11', 'Láng Thượng',   'region-hn', hn(0,1,'tr'), 160, 110),
+  makeZone('hn12', 'Ô Chợ Dừa',    'region-hn', hn(1,1),      200, 140),
+  makeZone('hn13', 'Quang Trung',   'region-hn', hn(2,1,'bl'), 175, 120),
+  makeZone('hn14', 'Phạm Đình Hổ',  'region-hn', hn(3,1),      220, 155),
+  makeZone('hn15', 'Bạch Mai',      'region-hn', hn(4,1,'tl'), 260, 180),
+
+  // Row 0 (bottom) — Thanh Xuân / Hoàng Mai
+  makeZone('hn16', 'Thanh Xuân Bắc','region-hn', hn(0,0),      130, 90),
+  makeZone('hn17', 'Khương Đình',   'region-hn', hn(1,0,'tr'), 150, 100),
+  makeZone('hn18', 'Khương Thượng', 'region-hn', hn(2,0),      115, 75),
+  makeZone('hn19', 'Phương Liệt',  'region-hn', hn(3,0,'bl'), 190, 130),
+  makeZone('hn20', 'Tương Mai',     'region-hn', hn(4,0),      210, 145),
 ]
 
-// ── Default assignments theo 4 districts ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// TP.HCM — 12 zones (4 cols × 3 rows)
+// Khu vực: Q1 / Q3 / Phú Nhuận / Bình Thạnh
+//
+// Grid: lat 10.775 → 10.811, lng 106.675 → 106.715
+// Cell size: ~0.012 lat × ~0.010 lng ≈ 1.3km × 1.0km
+// ══════════════════════════════════════════════════════════════════════════════
 
+const SL0 = 106.675
+const SL1 = 106.685
+const SL2 = 106.695
+const SL3 = 106.705
+const SL4 = 106.715
+
+const SR0 = 10.775
+const SR1 = 10.787
+const SR2 = 10.799
+const SR3 = 10.811
+
+function hcm(col: number, row: number, notch?: 'tl'|'tr'|'bl'|'br'): number[][] {
+  const l = [SL0,SL1,SL2,SL3][col]!
+  const r = [SL1,SL2,SL3,SL4][col]!
+  const b = [SR0,SR1,SR2][row]!
+  const t = [SR1,SR2,SR3][row]!
+  const mx = (l+r)/2, my = (b+t)/2
+  const d = 0.002
+
+  if (notch === 'tr') return [[l,b],[r,b],[r,my],[r-d,my+d],[r,t],[l,t],[l,b]]
+  if (notch === 'bl') return [[l,b],[l+d,my-d],[l,my],[l,t],[r,t],[r,b],[l,b]]
+  return [[l,b],[mx,b+0.001],[r,b],[r,t],[mx,t-0.001],[l,t],[l,b]]
+}
+
+const hcmZones: Zone[] = [
+  // Row 2 (top) — Phú Nhuận
+  makeZone('sg01', 'Phú Nhuận P1',  'region-hcm', hcm(0,2),      145, 100),
+  makeZone('sg02', 'Phú Nhuận P2',  'region-hcm', hcm(1,2,'tr'), 170, 115),
+  makeZone('sg03', 'Phú Nhuận P3',  'region-hcm', hcm(2,2),      130, 85),
+  makeZone('sg04', 'Bình Thạnh P1', 'region-hcm', hcm(3,2,'bl'), 195, 135),
+
+  // Row 1 — Quận 3
+  makeZone('sg05', 'Quận 3 P6',     'region-hcm', hcm(0,1,'tr'), 220, 155),
+  makeZone('sg06', 'Quận 3 P9',     'region-hcm', hcm(1,1),      280, 195),
+  makeZone('sg07', 'Quận 3 P12',    'region-hcm', hcm(2,1,'bl'), 240, 165),
+  makeZone('sg08', 'Bình Thạnh P2', 'region-hcm', hcm(3,1),      160, 110),
+
+  // Row 0 (bottom) — Quận 1
+  makeZone('sg09', 'Bến Nghé',      'region-hcm', hcm(0,0),      350, 250),
+  makeZone('sg10', 'Bến Thành',     'region-hcm', hcm(1,0,'tr'), 400, 280),
+  makeZone('sg11', 'Đa Kao',        'region-hcm', hcm(2,0),      310, 215),
+  makeZone('sg12', 'Tân Định',      'region-hcm', hcm(3,0,'bl'), 270, 185),
+]
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXPORTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+export const MOCK_ZONES: Zone[] = [...hnZones, ...hcmZones]
+
+// Default assignments: 5 districts for HN (4 zones each), 3 districts for HCM (4 zones each)
 export const MOCK_ASSIGNMENTS: Assignment[] = [
-  { zoneId: 'z01', districtId: 0, salesAgentId: 'sa0' },
-  { zoneId: 'z02', districtId: 0, salesAgentId: 'sa0' },
-  { zoneId: 'z03', districtId: 0, salesAgentId: 'sa0' },
-  { zoneId: 'z04', districtId: 1, salesAgentId: 'sa1' },
-  { zoneId: 'z05', districtId: 1, salesAgentId: 'sa1' },
-  { zoneId: 'z06', districtId: 1, salesAgentId: 'sa1' },
-  { zoneId: 'z07', districtId: 2, salesAgentId: 'sa2' },
-  { zoneId: 'z08', districtId: 2, salesAgentId: 'sa2' },
-  { zoneId: 'z09', districtId: 2, salesAgentId: 'sa2' },
-  { zoneId: 'z10', districtId: 3, salesAgentId: 'sa3' },
-  { zoneId: 'z11', districtId: 3, salesAgentId: 'sa3' },
-  { zoneId: 'z12', districtId: 3, salesAgentId: 'sa3' },
+  // HN — 5 districts
+  { zoneId: 'hn01', districtId: 0, salesAgentId: 'sa0' },
+  { zoneId: 'hn02', districtId: 0, salesAgentId: 'sa0' },
+  { zoneId: 'hn06', districtId: 0, salesAgentId: 'sa0' },
+  { zoneId: 'hn07', districtId: 0, salesAgentId: 'sa0' },
+
+  { zoneId: 'hn03', districtId: 1, salesAgentId: 'sa1' },
+  { zoneId: 'hn04', districtId: 1, salesAgentId: 'sa1' },
+  { zoneId: 'hn08', districtId: 1, salesAgentId: 'sa1' },
+  { zoneId: 'hn09', districtId: 1, salesAgentId: 'sa1' },
+
+  { zoneId: 'hn05', districtId: 2, salesAgentId: 'sa2' },
+  { zoneId: 'hn10', districtId: 2, salesAgentId: 'sa2' },
+  { zoneId: 'hn15', districtId: 2, salesAgentId: 'sa2' },
+  { zoneId: 'hn20', districtId: 2, salesAgentId: 'sa2' },
+
+  { zoneId: 'hn11', districtId: 3, salesAgentId: 'sa3' },
+  { zoneId: 'hn12', districtId: 3, salesAgentId: 'sa3' },
+  { zoneId: 'hn16', districtId: 3, salesAgentId: 'sa3' },
+  { zoneId: 'hn17', districtId: 3, salesAgentId: 'sa3' },
+
+  { zoneId: 'hn13', districtId: 4, salesAgentId: 'sa0' },
+  { zoneId: 'hn14', districtId: 4, salesAgentId: 'sa0' },
+  { zoneId: 'hn18', districtId: 4, salesAgentId: 'sa0' },
+  { zoneId: 'hn19', districtId: 4, salesAgentId: 'sa0' },
+
+  // HCM — 3 districts
+  { zoneId: 'sg01', districtId: 5, salesAgentId: 'sa1' },
+  { zoneId: 'sg02', districtId: 5, salesAgentId: 'sa1' },
+  { zoneId: 'sg05', districtId: 5, salesAgentId: 'sa1' },
+  { zoneId: 'sg06', districtId: 5, salesAgentId: 'sa1' },
+
+  { zoneId: 'sg03', districtId: 6, salesAgentId: 'sa2' },
+  { zoneId: 'sg04', districtId: 6, salesAgentId: 'sa2' },
+  { zoneId: 'sg07', districtId: 6, salesAgentId: 'sa2' },
+  { zoneId: 'sg08', districtId: 6, salesAgentId: 'sa2' },
+
+  { zoneId: 'sg09', districtId: 7, salesAgentId: 'sa3' },
+  { zoneId: 'sg10', districtId: 7, salesAgentId: 'sa3' },
+  { zoneId: 'sg11', districtId: 7, salesAgentId: 'sa3' },
+  { zoneId: 'sg12', districtId: 7, salesAgentId: 'sa3' },
 ]

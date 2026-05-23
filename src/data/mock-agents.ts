@@ -1,41 +1,48 @@
 /**
- * Mock SalesAgents — thứ tự canonical KHÔNG ĐƯỢC THAY ĐỔI (OPEN-4).
- * sa0 → index 0 → district 0
- * sa1 → index 1 → district 1
- * sa2 → index 2 → district 2
- * sa3 → index 3 → district 3
+ * Mock SalesAgents — 6 agents cho 2 thành phố
  *
- * Khi pass vào SalesFacade: luôn dùng MOCK_AGENTS trực tiếp, không sort.
- * Nếu cần sort để hiển thị UI: sort bản copy [...MOCK_AGENTS].sort(...)
+ * CRITICAL (OPEN-4): Thứ tự canonical KHÔNG ĐƯỢC THAY ĐỔI.
+ * sa0-sa3 → Hà Nội, sa4-sa5 → HCM
  */
 
 import type { SalesAgent } from '../../facades/viewmodels.js'
 
-// CRITICAL: Thứ tự này là canonical — không sort trước khi inject SalesFacade
 export const MOCK_AGENTS: SalesAgent[] = [
   {
     id: 'sa0',
-    name: 'Nguyễn Văn Alpha',
-    activeRegion: 'Tây-Bắc Hà Nội',
+    name: 'Nguyễn Văn A',
+    activeRegion: 'Hà Nội',
     capacity: 400,
   },
   {
     id: 'sa1',
-    name: 'Trần Thị Beta',
-    activeRegion: 'Đông-Bắc Hà Nội',
+    name: 'Trần Thị B',
+    activeRegion: 'Hà Nội',
     capacity: 500,
   },
   {
     id: 'sa2',
-    name: 'Lê Quốc Gamma',
-    activeRegion: 'Đông-Nam Hà Nội',
+    name: 'Lê Văn C',
+    activeRegion: 'Hà Nội',
     capacity: 600,
   },
   {
     id: 'sa3',
-    name: 'Phạm Hữu Delta',
-    activeRegion: 'Tây-Nam Hà Nội',
+    name: 'Phạm Thị D',
+    activeRegion: 'Hồ Chí Minh',
     capacity: 350,
+  },
+  {
+    id: 'sa4',
+    name: 'Hoàng Văn E',
+    activeRegion: 'Hồ Chí Minh',
+    capacity: 450,
+  },
+  {
+    id: 'sa5',
+    name: 'Vũ Thị F',
+    activeRegion: 'Hồ Chí Minh',
+    capacity: 550,
   },
 ]
 
