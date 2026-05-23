@@ -14,7 +14,7 @@
  */
 
 import type { Zone, AdjacencyMatrix } from '../types/domain.js';
-import { haversineDistance, buildAdjacencyMatrix, meanCoordinate, getMinBoundaryDistKm } from './geometry.js';
+import { haversineDistance, buildAdjacencyMatrix, meanCoordinate } from './geometry.js';
 
 // ==========================================
 // ERROR TYPE
@@ -502,85 +502,39 @@ export function partitionGreedy(
           }
           progress = true;
         } else {
-          // Zone bị cô lập hoàn toàn — không tìm được path trong adjacency graph.
-          // Theo Valid Inequality (19/20) của Salazar-Aguilar et al. (2011):
-          //   "Nếu zone j được assign vào territory q, ít nhất một neighbor của j
-          //    phải cùng ở territory q."
-          // → KHÔNG ĐƯỢC assign theo centroid distance (vi phạm constraint này).
+          // Zone genuinely isolated in adjacency graph G — no path exists.
+          // This means the zone's polygon is too far from all other zones
+          // (> 500m boundary distance) to be considered physically adjacent.
           //
-          // Fix: Tìm zone đã-assigned gần nhất theo BIÊN GIỚI (boundary distance),
-          //      thêm cạnh động vào adjMatrix, rồi assign qua BFS path.
-          // Điều này đảm bảo zone luôn có ít nhất một neighbor trong cùng district.
-
-          let nearestAssignedIdx = -1;
-          let minBoundaryDist = Infinity;
-
-          for (let i = 0; i < zones.length; i++) {
-            if (assignment[i] === -1) continue; // bỏ qua zone chưa assigned
-            const d = getMinBoundaryDistKm(zones[startIdx]!, zones[i]!);
-            if (d < minBoundaryDist) {
-              minBoundaryDist = d;
-              nearestAssignedIdx = i;
+          // According to Salazar-Aguilar et al. (2011), connectivity requires
+          // that territories form connected subgraphs of G. If a zone has no
+          // edges in G, it CANNOT be contiguous with any territory.
+          //
+          // Strategy: Assign to nearest district by centroid distance so the
+          // algorithm completes. The validator will CORRECTLY detect this as
+          // a DISCONNECTED violation (since adjacency graph has no fake edges).
+          // The user should fix polygon gaps to resolve the violation.
+          let nearestDistrict = 0;
+          let minD = Infinity;
+          for (let d = 0; d < m; d++) {
+            const seedIdx = seedIndices[d]!;
+            const dist = haversineDistance(
+              zones[startIdx]!.centroid,
+              zones[seedIdx]!.centroid,
+            );
+            if (dist < minD) {
+              minD = dist;
+              nearestDistrict = d;
             }
           }
-
-          if (nearestAssignedIdx >= 0) {
-            // Thêm cạnh động vào adjMatrix để kết nối zone cô lập với zone gần nhất
-            const startId   = zones[startIdx]!.id;
-            const nearestId = zones[nearestAssignedIdx]!.id;
-
-            if (!adjMatrix[startId]!.includes(nearestId)) {
-              adjMatrix[startId]!.push(nearestId);
-              adjMatrix[nearestId]!.push(startId);
-            }
-
-            // BFS có thể tìm được path → assign qua graph (đảm bảo liên thông)
-            const newPath = bfsShortestPathToAssigned(
-              zones, adjMatrix, idToIdx, assignment, startIdx,
-            );
-
-            if (newPath) {
-              const { path, targetDistrict } = newPath;
-              for (const idx of path) {
-                if (assignment[idx] === -1) {
-                  assignment[idx] = targetDistrict;
-                  unassigned--;
-                  // Mở rộng frontier của targetDistrict
-                  const zId = zones[idx]!.id;
-                  for (const neighborId of (adjMatrix[zId] ?? [])) {
-                    const nIdx = idToIdx.get(neighborId);
-                    if (nIdx !== undefined && assignment[nIdx] === -1) {
-                      frontiers[targetDistrict]!.add(nIdx);
-                    }
-                  }
-                }
-              }
-              progress = true;
-            } else {
-              // Không thể xảy ra sau khi đã thêm dynamic edge — fallback an toàn:
-              // Assign trực tiếp vào district của nearestAssignedIdx.
-              // Dynamic edge đã thêm → constraint (19) vẫn được thỏa mãn.
-              const targetDistrict = assignment[nearestAssignedIdx]!;
-              assignment[startIdx] = targetDistrict;
-              unassigned--;
-              progress = true;
-              console.warn(
-                `[TerriMap] Zone "${zones[startIdx]!.id}" isolated. ` +
-                `Added dynamic edge to "${nearestId}" ` +
-                `(dist=${minBoundaryDist.toFixed(3)}km). ` +
-                `Assigned to district ${targetDistrict}.`,
-              );
-            }
-          } else {
-            // Không có zone nào đã assigned — edge case cực hiếm (nên không xảy ra).
-            assignment[startIdx] = 0;
-            unassigned--;
-            progress = true;
-            console.error(
-              `[TerriMap] CRITICAL: Zone "${zones[startIdx]!.id}" could not be ` +
-              `reconnected (no assigned zones found). Assigned to district 0.`,
-            );
-          }
+          assignment[startIdx] = nearestDistrict;
+          unassigned--;
+          progress = true;
+          console.warn(
+            `[TerriMap] Zone "${zones[startIdx]!.id}" is isolated in graph G ` +
+            `(no adjacent zones within 500m). Assigned to district ${nearestDistrict} ` +
+            `by centroid distance. This WILL be reported as a CONTIGUITY violation.`,
+          );
         }
       }
     }
