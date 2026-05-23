@@ -84,12 +84,19 @@ export const useDataStore = create<DataStore>((set, get) => ({
     // Reset on project change
     set({ loading: true, initialized: false, currentProjectId: projectId })
     try {
-      const [z, a, ag, rg] = await Promise.all([
-        loadZones(projectId),
-        loadAssignments(projectId),
-        loadAgents(projectId),
-        loadRegions(projectId),
-      ])
+      // 10s timeout: if Supabase queries hang, fallback to mock data
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Data load timeout (10s)')), 10_000),
+      )
+      const [z, a, ag, rg] = await Promise.race([
+        Promise.all([
+          loadZones(projectId),
+          loadAssignments(projectId),
+          loadAgents(projectId),
+          loadRegions(projectId),
+        ]),
+        timeout,
+      ]) as [typeof MOCK_ZONES, typeof MOCK_ASSIGNMENTS, typeof MOCK_AGENTS, never[]]
       // Keep regionId as-is; null = unassigned (no forced default)
       set({ zones: z, assignments: a, agents: ag, regions: rg })
     } catch (e) {
