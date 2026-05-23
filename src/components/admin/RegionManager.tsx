@@ -33,11 +33,13 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
   const addRegion        = useDataStore((s) => s.addRegion)
   const deleteRegion     = useDataStore((s) => s.deleteRegion)
 
-  const [searchQuery,  setSearchQuery]  = useState('')
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [creating,     setCreating]     = useState(false)
-  const [newName,      setNewName]      = useState('')
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [searchQuery,    setSearchQuery]    = useState('')
+  const [showDropdown,   setShowDropdown]   = useState(false)
+  const [creating,       setCreating]       = useState(false)
+  const [newName,        setNewName]        = useState('')
+  const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null)
+  // FIX: save province coords from dropdown so region gets correct center
+  const [selectedProvince, setSelectedProvince] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
 
   // Filter provinces by query
@@ -61,20 +63,26 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
   const handleProvinceSelect = useCallback((lat: number, lng: number, zoom: number, name: string) => {
     setSearchQuery(name)
     setShowDropdown(false)
-    setNewName(name)  // pre-fill create form with province name
+    setNewName(name)          // pre-fill create form with province name
+    setSelectedProvince({ lat, lng, zoom })  // FIX: save coords for region creation
     onFlyTo?.(lat, lng, zoom)
   }, [onFlyTo])
 
   const handleCreateRegion = useCallback(async () => {
     if (!newName.trim()) return
-    const center = mapCenter ?? { lat: 16.047, lng: 108.206 }
-    const zoom   = mapZoom   ?? 12
+    // FIX: priority — province search coords > mapCenter > fallback
+    // (mapCenter may be undefined since Sidebar doesn't always pass it)
+    const center = selectedProvince ?? mapCenter ?? { lat: 21.028, lng: 105.854 }  // Hà Nội default
+    const zoom   = selectedProvince?.zoom ?? mapZoom ?? 12
     setCreating(false)
     setNewName('')
     setSearchQuery('')
+    setSelectedProvince(null)  // reset after use
     const region = await addRegion(newName.trim(), center, zoom)
     setCurrentRegion(region.id)
-  }, [newName, mapCenter, mapZoom, addRegion, setCurrentRegion])
+    // FIX: fly to newly created region
+    onFlyTo?.(center.lat, center.lng, zoom)
+  }, [newName, selectedProvince, mapCenter, mapZoom, addRegion, setCurrentRegion, onFlyTo])
 
   const handleDeleteRegion = useCallback(async (regionId: string) => {
     const zoneCount = zones.filter((z) => (z as any).regionId === regionId).length
@@ -183,7 +191,14 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
                     ...styles.pill,
                     ...(isActive ? styles.pillActive : styles.pillInactive),
                   }}
-                  onClick={() => setCurrentRegion(isActive ? null : region.id)}
+                  onClick={() => {
+                    const nextActive = !isActive
+                    setCurrentRegion(nextActive ? region.id : null)
+                    // FIX: fly to region center when selecting
+                    if (nextActive && region.center) {
+                      onFlyTo?.(region.center.lat, region.center.lng, (region as any).zoom ?? 12)
+                    }
+                  }}
                   title={`${region.name} · ${zoneCount} vùng`}
                 >
                   <span style={styles.pillName}>{region.name}</span>
