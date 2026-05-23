@@ -70,7 +70,7 @@ export default function ResultMetrics({ result, onRunSA }: ResultMetricsProps) {
         />
         <MetricRow
           label={t('metrics.duration')}
-          value={`${durationMs} ms`}
+          value={`${Math.round((durationMs ?? 0) * 10) / 10} ms`}
         />
         <MetricRow
           label={t('metrics.violations')}
