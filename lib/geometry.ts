@@ -314,14 +314,58 @@ function edgesShareSegment(
 }
 
 /**
- * Check if two zones' polygons share at least one common edge.
- * Two polygons share an edge if they have identical line segments
- * (in same or reversed direction) on their boundaries.
+ * Check if two edges overlap along a shared collinear segment (T-junctions).
  *
- * Per paper G=(V,E): "an arc connecting nodes i and j exists
- * if BU i and j are located in adjacent blocks" — adjacent means
- * sharing a boundary edge, NOT just a corner point.
+ * This detects cases where one edge is a SUB-SEGMENT of another, e.g.:
+ *   e1: A=[105.800,21.065] → B=[105.830,21.065]  (long edge)
+ *   e2: C=[105.820,21.065] → D=[105.843,21.065]  (partly overlapping edge)
+ * These share a segment from 105.820 to 105.830 — but edgesShareSegment
+ * returns false because endpoints differ. This function catches that case.
  *
+ * Algorithm:
+ *  1. Check that both endpoints of e2 lie on the line through e1 (collinear).
+ *  2. Project e2 onto e1 and check the 1D overlap is > COORD_EPS.
+ *
+ * @internal
+ */
+function edgesOverlapCollinear(
+  e1: [[number, number], [number, number]],
+  e2: [[number, number], [number, number]],
+): boolean {
+  const [a, b] = e1;
+  const [c, d] = e2;
+
+  const dx = b[0]! - a[0]!, dy = b[1]! - a[1]!;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-20) return false; // degenerate zero-length edge
+
+  // Cross product: if |cross| / |e1| > COORD_EPS, the point is off-line
+  const len = Math.sqrt(len2);
+  const crossC = (c[0]! - a[0]!) * dy - (c[1]! - a[1]!) * dx;
+  const crossD = (d[0]! - a[0]!) * dy - (d[1]! - a[1]!) * dx;
+  if (Math.abs(crossC) > COORD_EPS * len || Math.abs(crossD) > COORD_EPS * len) return false;
+
+  // Both c and d lie on the line through e1.
+  // Project c and d onto e1 parametrically (t=0 at a, t=1 at b).
+  const tc = ((c[0]! - a[0]!) * dx + (c[1]! - a[1]!) * dy) / len2;
+  const td = ((d[0]! - a[0]!) * dx + (d[1]! - a[1]!) * dy) / len2;
+  const tMin = Math.min(tc, td);
+  const tMax = Math.max(tc, td);
+
+  // e1 occupies t ∈ [0, 1]. Overlap is non-trivial if [0,1] ∩ [tMin,tMax] has length > eps.
+  const overlapStart = Math.max(0, tMin);
+  const overlapEnd   = Math.min(1, tMax);
+  return overlapEnd - overlapStart > COORD_EPS;
+}
+
+/**
+ * Check if two zones' polygons share at least one common edge segment.
+ * Detects both:
+ *   (a) Exact shared edges (same endpoints, same or reversed direction).
+ *   (b) Partial shared edges / T-junctions (one edge overlaps a sub-segment
+ *       of the other — common when user draws adjacent zones separately).
+ *
+ * Per paper G=(V,E): adjacency = sharing a boundary edge, NOT just a corner.
  * @internal
  */
 function polygonsShareEdge(zoneA: Zone, zoneB: Zone): boolean {
@@ -330,7 +374,7 @@ function polygonsShareEdge(zoneA: Zone, zoneB: Zone): boolean {
 
   for (const eA of edgesA) {
     for (const eB of edgesB) {
-      if (edgesShareSegment(eA, eB)) return true;
+      if (edgesShareSegment(eA, eB) || edgesOverlapCollinear(eA, eB)) return true;
     }
   }
   return false;
@@ -451,15 +495,14 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Secondary (always-on): near-vertex adjacency at ≤50m
-  // Handles: (a) T-junctions where zones share partial edges,
-  // (b) Leaflet floating-point imprecision where shared vertices
-  //     differ by <50m despite appearing identical on screen.
-  // Threshold 0.05km = 50m is tight enough to avoid false positives
-  // (non-adjacent zones in a real project are >200m apart at minimum).
-  // Guard dist > 1e-6 filters out zones with overlapping vertices (shouldn't exist
-  // after draw-overlap validation, but kept for safety).
-  const NEAR_VERTEX_KM = 0.05;
+  // Secondary (always-on): near-vertex adjacency for zones with drawing gaps ≤500m
+  // Handles Leaflet floating-point imprecision where shared border has a small gap
+  // (e.g., user draws two zones with a 100m gap between them).
+  // - Lower bound dist > 1e-6: excludes corner-only touch (diagonal zones whose
+  //   closest vertices are at exactly 0 distance but share NO edge segment).
+  // - Upper bound 0.5km: safe for any realistic zone size.
+  // T-junctions are already handled by edgesOverlapCollinear above.
+  const NEAR_VERTEX_KM = 0.5;
   for (let i = 0; i < zones.length - 1; i++) {
     for (let j = i + 1; j < zones.length; j++) {
       const zi = zones[i]!;
