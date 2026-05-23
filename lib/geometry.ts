@@ -587,28 +587,6 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Tertiary fallback: if adjacency graph is STILL disconnected (e.g., zones
-  // separated by gaps > 50m but <15km), add distance-based edges as last resort.
-  // Avoids isolated zones that can't be reached by the partition algorithm.
-  const components = countConnectedComponents(zones, matrix);
-  if (components > 1) {
-    const threshold = _thresholdKm !== undefined ? _thresholdKm : 15;
-    for (let i = 0; i < zones.length - 1; i++) {
-      for (let j = i + 1; j < zones.length; j++) {
-        const zi = zones[i]!;
-        const zj = zones[j]!;
-
-        if (!matrix[zi.id]!.includes(zj.id)) {
-          const dist = getMinBoundaryDistKm(zi, zj);
-          if (dist > 1e-5 && dist <= threshold) {
-            matrix[zi.id]!.push(zj.id);
-            matrix[zj.id]!.push(zi.id);
-          }
-        }
-      }
-    }
-  }
-
   return matrix;
 }
 
