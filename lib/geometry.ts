@@ -422,7 +422,79 @@ function extractVertices(polygon: Zone['polygon']): Coordinate[] {
 }
 
 /**
+ * Tính khoảng cách nhỏ nhất từ điểm P đến đoạn thẳng AB.
+ * Tọa độ trong degree-space, kết quả xấp xỉ km dùng scale cố định cho VN.
+ * @internal
+ */
+const KM_PER_DEG_LAT = 111.0;
+const KM_PER_DEG_LNG = 103.5; // cos(21°) × 111 — Vietnam average
+
+function pointToSegDistKm(
+  px: number, py: number,
+  ax: number, ay: number,
+  bx: number, by: number,
+): number {
+  const pxk = px * KM_PER_DEG_LNG, pyk = py * KM_PER_DEG_LAT;
+  const axk = ax * KM_PER_DEG_LNG, ayk = ay * KM_PER_DEG_LAT;
+  const bxk = bx * KM_PER_DEG_LNG, byk = by * KM_PER_DEG_LAT;
+  const dx = bxk - axk, dy = byk - ayk;
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-20) return Math.hypot(pxk - axk, pyk - ayk);
+  const t = Math.max(0, Math.min(1, ((pxk - axk) * dx + (pyk - ayk) * dy) / len2));
+  return Math.hypot(pxk - axk - t * dx, pyk - ayk - t * dy);
+}
+
+/**
+ * Tính khoảng cách nhỏ nhất giữa hai đoạn thẳng (segment-to-segment).
+ * = min của 4 điểm endpoint projected onto opposite segment.
+ * @internal
+ */
+function segPairMinDistKm(
+  e1: [[number, number], [number, number]],
+  e2: [[number, number], [number, number]],
+): number {
+  const [a, b] = e1, [c, d] = e2;
+  return Math.min(
+    pointToSegDistKm(a[0]!, a[1]!, c[0]!, c[1]!, d[0]!, d[1]!),
+    pointToSegDistKm(b[0]!, b[1]!, c[0]!, c[1]!, d[0]!, d[1]!),
+    pointToSegDistKm(c[0]!, c[1]!, a[0]!, a[1]!, b[0]!, b[1]!),
+    pointToSegDistKm(d[0]!, d[1]!, a[0]!, a[1]!, b[0]!, b[1]!),
+  );
+}
+
+/**
+ * Tính khoảng cách biên nhỏ nhất giữa hai Zone (segment-to-segment toàn bộ polygon).
+ *
+ * Khác với getMinVertexDistance (chỉ so sánh đỉnh-đỉnh), hàm này tính khoảng cách
+ * nhỏ nhất giữa bất kỳ điểm nào trên cạnh của zoneA đến bất kỳ điểm nào trên cạnh
+ * của zoneB. Điều này quan trọng cho polygon không đều (irregular): hai zone có thể
+ * kề nhau tại giữa cạnh mà không có đỉnh nào gần nhau.
+ *
+ * Ví dụ: zone tam giác kề zone chữ V — cạnh của chúng gần nhau ở giữa nhưng
+ * các vertex ở xa → getMinVertexDistance sẽ trả về giá trị lớn, bỏ sót adjacency.
+ *
+ * @internal
+ */
+function getMinBoundaryDistKm(zoneA: Zone, zoneB: Zone): number {
+  const edgesA = extractEdges(zoneA.polygon);
+  const edgesB = extractEdges(zoneB.polygon);
+  let minDist = Infinity;
+
+  for (const eA of edgesA) {
+    for (const eB of edgesB) {
+      const d = segPairMinDistKm(eA, eB);
+      if (d < minDist) {
+        minDist = d;
+        if (minDist < 1e-6) return minDist; // early exit if effectively 0
+      }
+    }
+  }
+  return minDist;
+}
+
+/**
  * Tính khoảng cách nhỏ nhất giữa bất kỳ cặp đỉnh nào của hai Zone.
+ * @deprecated Dùng getMinBoundaryDistKm thay thế cho độ chính xác tốt hơn.
  * @internal
  */
 function getMinVertexDistance(zoneA: Zone, zoneB: Zone): number {
@@ -495,21 +567,20 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Secondary (always-on): near-vertex adjacency for zones with drawing gaps ≤500m
-  // Handles Leaflet floating-point imprecision where shared border has a small gap
-  // (e.g., user draws two zones with a 100m gap between them).
-  // - Lower bound dist > 1e-6: excludes corner-only touch (diagonal zones whose
-  //   closest vertices are at exactly 0 distance but share NO edge segment).
-  // - Upper bound 0.5km: safe for any realistic zone size.
-  // T-junctions are already handled by edgesOverlapCollinear above.
-  const NEAR_VERTEX_KM = 0.5;
+  // Secondary (always-on): near-BOUNDARY adjacency for zones with drawing gaps ≤500m
+  // Uses segment-to-segment min distance (not vertex-to-vertex) so irregular polygons
+  // (triangles, V-shapes) are correctly detected as adjacent even when edges are close
+  // at non-vertex points.
+  // - Lower bound dist > 1e-6: excludes corner-only diagonal touch.
+  // - Upper bound 0.5km: covers all realistic hand-drawn zone gaps.
+  const NEAR_BOUNDARY_KM = 0.5;
   for (let i = 0; i < zones.length - 1; i++) {
     for (let j = i + 1; j < zones.length; j++) {
       const zi = zones[i]!;
       const zj = zones[j]!;
       if (matrix[zi.id]!.includes(zj.id)) continue; // already adjacent
-      const dist = getMinVertexDistance(zi, zj);
-      if (dist > 1e-6 && dist <= NEAR_VERTEX_KM) {
+      const dist = getMinBoundaryDistKm(zi, zj);
+      if (dist > 1e-6 && dist <= NEAR_BOUNDARY_KM) {
         matrix[zi.id]!.push(zj.id);
         matrix[zj.id]!.push(zi.id);
       }
@@ -528,7 +599,7 @@ export function buildAdjacencyMatrix(
         const zj = zones[j]!;
 
         if (!matrix[zi.id]!.includes(zj.id)) {
-          const dist = getMinVertexDistance(zi, zj);
+          const dist = getMinBoundaryDistKm(zi, zj);
           if (dist > 1e-5 && dist <= threshold) {
             matrix[zi.id]!.push(zj.id);
             matrix[zj.id]!.push(zi.id);
