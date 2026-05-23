@@ -6,10 +6,11 @@
 -- Project: test-project-terrimap
 -- ============================================================
 
-DELETE FROM public.activities WHERE zone_id LIKE 'hn%' OR zone_id LIKE 'sg%';
-DELETE FROM public.assignments WHERE zone_id LIKE 'hn%' OR zone_id LIKE 'sg%';
-DELETE FROM public.zones WHERE id LIKE 'hn%' OR id LIKE 'sg%';
-DELETE FROM public.sales_agents WHERE id IN ('sa0','sa1','sa2','sa3','sa4','sa5');
+-- Xóa TẤT CẢ dữ liệu cũ trong project (bao gồm z01-z12, hp*, v.v.)
+DELETE FROM public.activities WHERE zone_id IN (SELECT id FROM public.zones WHERE project_id = 'test-project-terrimap');
+DELETE FROM public.assignments WHERE zone_id IN (SELECT id FROM public.zones WHERE project_id = 'test-project-terrimap');
+DELETE FROM public.zones WHERE project_id = 'test-project-terrimap';
+DELETE FROM public.sales_agents WHERE project_id = 'test-project-terrimap';
 
 -- ── SALES AGENTS ─────────────────────────────────────────────
 INSERT INTO public.sales_agents (id, name, active_region, capacity, project_id) VALUES
