@@ -38,10 +38,19 @@ export default function AdminPage() {
   const updateZone         = useDataStore((s) => s.updateZone)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
 
-  // Filter zones by currentRegionId when a region is selected
+  // Filter zones/agents/assignments by currentRegionId — MANDATORY:
+  // The algorithm MUST run on each region independently.
   const displayZones = currentRegionId
     ? zones.filter((z) => (z as any).regionId === currentRegionId)
     : zones
+
+  const displayAgents = currentRegionId
+    ? agents.filter((a) => (a as any).region_id === currentRegionId)
+    : agents
+
+  const displayAssignments = currentRegionId
+    ? assignments.filter((a) => displayZones.some((z) => z.id === a.zoneId))
+    : assignments
 
   // Compute map center/zoom from selected region (for flyTo animation)
   const selectedRegion = currentRegionId
@@ -88,15 +97,15 @@ export default function AdminPage() {
 
   const matrixData = useMemo((): { adj: AdjMatrix; dist: DistMatrix } | null => {
     if (ctx.role !== 'admin') return null
-    try { return ctx.facade.computeMatrices(zones) } catch { return null }
-  }, [ctx, zones])
+    try { return ctx.facade.computeMatrices(displayZones) } catch { return null }
+  }, [ctx, displayZones])
 
   // ── Island zones ───────────────────────────────────────────────────────────
 
   const islandZoneIds = useMemo(() => {
     if (ctx.role !== 'admin') return new Set<string>()
-    try { return new Set(ctx.facade.getIslandZones(zones)) } catch { return new Set<string>() }
-  }, [ctx, zones])
+    try { return new Set(ctx.facade.getIslandZones(displayZones)) } catch { return new Set<string>() }
+  }, [ctx, displayZones])
 
   // ── Disconnected districts ─────────────────────────────────────────────────
 
@@ -113,8 +122,8 @@ export default function AdminPage() {
 
   const reportData = useMemo(() => {
     if (ctx.role !== 'admin') return null
-    return ctx.facade.exportReport(zones, assignments, agents)
-  }, [ctx, zones, assignments, agents])
+    return ctx.facade.exportReport(displayZones, displayAssignments, displayAgents)
+  }, [ctx, displayZones, displayAssignments, displayAgents])
 
   // ── SA Web Worker ──────────────────────────────────────────────────────────
 
@@ -135,11 +144,17 @@ export default function AdminPage() {
     try {
       let partResult: AlgorithmResultVM
 
+      if (displayZones.length < 2) {
+        console.warn('[AdminPage] Not enough zones in region to run algorithm (need ≥2)')
+        setAlgoRunning(false)
+        return
+      }
+
       if (algo === 'sa') {
         const startTime = performance.now()
         try {
           const saAssignments = await runSA(
-            zones, m,
+            displayZones, m,
             { maxIter: 5000, initialTemp: 1000, cooling: 0.995 },
             (iter, cost, total) => {
               setProgress(Math.round((iter / total) * 100))
@@ -147,13 +162,13 @@ export default function AdminPage() {
             },
           )
           const durationMs = performance.now() - startTime
-          partResult = ctx.facade.wrapAssignmentsAsResult('sa', zones, saAssignments, agents, durationMs)
+          partResult = ctx.facade.wrapAssignmentsAsResult('sa', displayZones, saAssignments, displayAgents, durationMs)
         } catch {
           console.warn('[AdminPage] SA Worker failed, falling back to main thread')
-          partResult = await ctx.facade.runAlgorithm(algo, zones, m, agents)
+          partResult = await ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
         }
       } else {
-        partResult = await ctx.facade.runAlgorithm(algo, zones, m, agents)
+        partResult = await ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
       }
 
       selectZone(null)
@@ -173,7 +188,7 @@ export default function AdminPage() {
       console.error('[AdminPage] runAlgorithm error:', e)
       setAlgoRunning(false)
     }
-  }, [ctx, zones, agents, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])
+  }, [ctx, displayZones, displayAgents, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])
 
   // ── Auto-suggest SA ────────────────────────────────────────────────────────
 
@@ -188,12 +203,12 @@ export default function AdminPage() {
     if (ctx.role !== 'admin') return
     const label = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
     try {
-      await ctx.facade.createVersion(label, zones, assignments)
+      await ctx.facade.createVersion(label, displayZones, displayAssignments)
       setSnapshots(ctx.facade.getVersionHistory())
     } catch (e) {
       console.error('[AdminPage] createVersion error:', e)
     }
-  }, [ctx, zones, assignments])
+  }, [ctx, displayZones, displayAssignments])
 
   // ── Update activity ────────────────────────────────────────────────────────
 
