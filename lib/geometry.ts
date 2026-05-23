@@ -260,7 +260,10 @@ export function zoneDiameter(zones: Zone[]): number {
 // ==========================================
 
 /** Floating-point tolerance for coordinate comparison */
-const COORD_EPS = 1e-7;
+// Tolerance for floating-point coordinate comparison in edge matching.
+// 1e-5 degrees ≈ 1.1 meters — handles Leaflet drawing imprecision
+// (old value 1e-7 was too strict: failed for edges drawn by mouse ~1cm apart)
+const COORD_EPS = 1e-5;
 
 /**
  * Extract edges from a GeoJSON polygon as pairs of [lng, lat] points.
@@ -448,8 +451,31 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Fallback: Nếu đồ thị kề bị không liên thông, thêm các cạnh dựa trên khoảng cách đỉnh nhỏ nhất.
-  // Tránh các zone chạm góc trực tiếp (dist = 0 hoặc rất nhỏ, e.g., <= 1e-5) để bảo toàn quy tắc diagonal.
+  // Secondary (always-on): near-vertex adjacency at ≤50m
+  // Handles: (a) T-junctions where zones share partial edges,
+  // (b) Leaflet floating-point imprecision where shared vertices
+  //     differ by <50m despite appearing identical on screen.
+  // Threshold 0.05km = 50m is tight enough to avoid false positives
+  // (non-adjacent zones in a real project are >200m apart at minimum).
+  // Guard dist > 1e-6 filters out zones with overlapping vertices (shouldn't exist
+  // after draw-overlap validation, but kept for safety).
+  const NEAR_VERTEX_KM = 0.05;
+  for (let i = 0; i < zones.length - 1; i++) {
+    for (let j = i + 1; j < zones.length; j++) {
+      const zi = zones[i]!;
+      const zj = zones[j]!;
+      if (matrix[zi.id]!.includes(zj.id)) continue; // already adjacent
+      const dist = getMinVertexDistance(zi, zj);
+      if (dist > 1e-6 && dist <= NEAR_VERTEX_KM) {
+        matrix[zi.id]!.push(zj.id);
+        matrix[zj.id]!.push(zi.id);
+      }
+    }
+  }
+
+  // Tertiary fallback: if adjacency graph is STILL disconnected (e.g., zones
+  // separated by gaps > 50m but <15km), add distance-based edges as last resort.
+  // Avoids isolated zones that can't be reached by the partition algorithm.
   const components = countConnectedComponents(zones, matrix);
   if (components > 1) {
     const threshold = _thresholdKm !== undefined ? _thresholdKm : 15;
