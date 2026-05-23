@@ -73,6 +73,43 @@ function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) 
   return null
 }
 
+// ── MapZoneFlyTo — fitBounds to selected zone polygon ─────────────────────────
+// Accurate zoom-to-zone using Leaflet bounds (avoids centroid storage issues)
+function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId?: string | null }) {
+  const map = useMap()
+  const prevZoneId = React.useRef<string | null | undefined>(null)
+
+  React.useEffect(() => {
+    if (!selectedZoneId || selectedZoneId === prevZoneId.current) return
+    prevZoneId.current = selectedZoneId
+
+    const zone = zones.find((z) => z.id === selectedZoneId)
+    if (!zone) return
+
+    // Build [lat, lng][] from GeoJSON [lng, lat][] for Leaflet
+    let ring: number[][] = []
+    if (zone.polygon.type === 'Polygon') {
+      ring = (zone.polygon.coordinates[0] ?? []) as number[][]
+    } else if (zone.polygon.type === 'MultiPolygon') {
+      ring = ((zone.polygon.coordinates[0]?.[0]) ?? []) as number[][]
+    }
+    if (ring.length < 2) return
+
+    // Convert GeoJSON [lng, lat] → Leaflet [lat, lng]
+    const latlngs: [number, number][] = ring.map(([lng, lat]) => [lat!, lng!])
+    try {
+      const bounds = L.latLngBounds(latlngs)
+      if (bounds.isValid()) {
+        map.flyToBounds(bounds, { padding: [40, 40], duration: 1.0, maxZoom: 16 })
+      }
+    } catch {
+      // Ignore invalid bounds
+    }
+  }, [map, zones, selectedZoneId])
+
+  return null
+}
+
 export default function TerritoryMap({
   zones,
   assignments,
@@ -120,6 +157,8 @@ export default function TerritoryMap({
       >
         {/* Smooth fly-to when region changes */}
         <MapFlyTo center={center} zoom={zoom} />
+        {/* Accurate zoom-to-zone when zone is selected */}
+        <MapZoneFlyTo zones={zones} selectedZoneId={selectedZoneId} />
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
