@@ -14,7 +14,7 @@
  */
 
 import type { Zone, AdjacencyMatrix } from '../types/domain.js';
-import { haversineDistance, buildAdjacencyMatrix, meanCoordinate } from './geometry.js';
+import { haversineDistance, buildAdjacencyMatrix, meanCoordinate, getMinBoundaryDistKm } from './geometry.js';
 
 // ==========================================
 // ERROR TYPE
@@ -83,7 +83,7 @@ export interface PartitionOpts {
   adjThresholdKm?: number;
   /** Balance weights — default: { customers: 1.0, orders: 0.0 } */
   balanceWeights?: { customers: number; orders: number };
-  /** Objective function: 'p-center' (minimize max diameter) hoặc 'p-median' (minimize tổng distance) */
+  /** Objective function: 'p-median' (minimize tổng distance — recommended, Salazar-Aguilar et al. 2011) hoặc 'p-center' (minimize max diameter). Default: 'p-median'. */
   objective?: 'p-center' | 'p-median';
 }
 
@@ -204,7 +204,7 @@ function computeCost(
   objective?: 'p-center' | 'p-median',
 ): number {
   const weights = balanceWeights ?? { customers: 1.0, orders: 0.0 };
-  const obj = objective ?? 'p-center';
+  const obj = objective ?? 'p-median'; // p-median được khâyến nghị theo Salazar-Aguilar et al. (2011)
 
   // Nhóm các zones theo district
   const groups: Zone[][] = Array.from({ length: m }, () => []);
@@ -296,7 +296,8 @@ function computeCost(
     }
   }
 
-  const gamma = 50; // heavy penalty per disconnected fragment
+  const gamma = 500; // Very heavy penalty per disconnected fragment
+                     // Connectivity is HARD CONSTRAINT per Salazar-Aguilar et al. (2011)
   return alpha * dispersion + beta * totalImbalance + gamma * totalFragments;
 }
 // ==========================================
@@ -501,30 +502,85 @@ export function partitionGreedy(
           }
           progress = true;
         } else {
-          // Truly isolated zone (no path exists in graph G)
-          // This means the zone shares no polygon edges with any other zone.
-          // Assign to nearest district by centroid distance as last resort.
-          // This is a data quality issue — the polygon data should be fixed.
-          let nearestDistrict = 0;
-          let minD = Infinity;
-          for (let d = 0; d < m; d++) {
-            const seedIdx = seedIndices[d]!;
-            const dist = haversineDistance(
-              zones[startIdx]!.centroid,
-              zones[seedIdx]!.centroid,
-            );
-            if (dist < minD) {
-              minD = dist;
-              nearestDistrict = d;
+          // Zone bị cô lập hoàn toàn — không tìm được path trong adjacency graph.
+          // Theo Valid Inequality (19/20) của Salazar-Aguilar et al. (2011):
+          //   "Nếu zone j được assign vào territory q, ít nhất một neighbor của j
+          //    phải cùng ở territory q."
+          // → KHÔNG ĐƯỢC assign theo centroid distance (vi phạm constraint này).
+          //
+          // Fix: Tìm zone đã-assigned gần nhất theo BIÊN GIỚI (boundary distance),
+          //      thêm cạnh động vào adjMatrix, rồi assign qua BFS path.
+          // Điều này đảm bảo zone luôn có ít nhất một neighbor trong cùng district.
+
+          let nearestAssignedIdx = -1;
+          let minBoundaryDist = Infinity;
+
+          for (let i = 0; i < zones.length; i++) {
+            if (assignment[i] === -1) continue; // bỏ qua zone chưa assigned
+            const d = getMinBoundaryDistKm(zones[startIdx]!, zones[i]!);
+            if (d < minBoundaryDist) {
+              minBoundaryDist = d;
+              nearestAssignedIdx = i;
             }
           }
-          assignment[startIdx] = nearestDistrict;
-          unassigned--;
-          progress = true;
-          console.warn(
-            `[TerriMap] Zone "${zones[startIdx]!.id}" is isolated (no shared edges). ` +
-            `Assigned to district ${nearestDistrict} by distance fallback.`,
-          );
+
+          if (nearestAssignedIdx >= 0) {
+            // Thêm cạnh động vào adjMatrix để kết nối zone cô lập với zone gần nhất
+            const startId   = zones[startIdx]!.id;
+            const nearestId = zones[nearestAssignedIdx]!.id;
+
+            if (!adjMatrix[startId]!.includes(nearestId)) {
+              adjMatrix[startId]!.push(nearestId);
+              adjMatrix[nearestId]!.push(startId);
+            }
+
+            // BFS có thể tìm được path → assign qua graph (đảm bảo liên thông)
+            const newPath = bfsShortestPathToAssigned(
+              zones, adjMatrix, idToIdx, assignment, startIdx,
+            );
+
+            if (newPath) {
+              const { path, targetDistrict } = newPath;
+              for (const idx of path) {
+                if (assignment[idx] === -1) {
+                  assignment[idx] = targetDistrict;
+                  unassigned--;
+                  // Mở rộng frontier của targetDistrict
+                  const zId = zones[idx]!.id;
+                  for (const neighborId of (adjMatrix[zId] ?? [])) {
+                    const nIdx = idToIdx.get(neighborId);
+                    if (nIdx !== undefined && assignment[nIdx] === -1) {
+                      frontiers[targetDistrict]!.add(nIdx);
+                    }
+                  }
+                }
+              }
+              progress = true;
+            } else {
+              // Không thể xảy ra sau khi đã thêm dynamic edge — fallback an toàn:
+              // Assign trực tiếp vào district của nearestAssignedIdx.
+              // Dynamic edge đã thêm → constraint (19) vẫn được thỏa mãn.
+              const targetDistrict = assignment[nearestAssignedIdx]!;
+              assignment[startIdx] = targetDistrict;
+              unassigned--;
+              progress = true;
+              console.warn(
+                `[TerriMap] Zone "${zones[startIdx]!.id}" isolated. ` +
+                `Added dynamic edge to "${nearestId}" ` +
+                `(dist=${minBoundaryDist.toFixed(3)}km). ` +
+                `Assigned to district ${targetDistrict}.`,
+              );
+            }
+          } else {
+            // Không có zone nào đã assigned — edge case cực hiếm (nên không xảy ra).
+            assignment[startIdx] = 0;
+            unassigned--;
+            progress = true;
+            console.error(
+              `[TerriMap] CRITICAL: Zone "${zones[startIdx]!.id}" could not be ` +
+              `reconnected (no assigned zones found). Assigned to district 0.`,
+            );
+          }
         }
       }
     }

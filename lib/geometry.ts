@@ -475,7 +475,7 @@ function segPairMinDistKm(
  *
  * @internal
  */
-function getMinBoundaryDistKm(zoneA: Zone, zoneB: Zone): number {
+export function getMinBoundaryDistKm(zoneA: Zone, zoneB: Zone): number {
   const edgesA = extractEdges(zoneA.polygon);
   const edgesB = extractEdges(zoneB.polygon);
   let minDist = Infinity;
