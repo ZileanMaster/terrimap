@@ -567,13 +567,14 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Secondary (always-on): near-BOUNDARY adjacency for zones with drawing gaps ≤500m
+  // Secondary (always-on): near-BOUNDARY adjacency for zones with drawing gaps ≤1km
   // Uses segment-to-segment min distance (not vertex-to-vertex) so irregular polygons
   // (triangles, V-shapes) are correctly detected as adjacent even when edges are close
   // at non-vertex points.
   // - Lower bound dist > 1e-6: excludes corner-only diagonal touch.
-  // - Upper bound 0.5km: covers all realistic hand-drawn zone gaps.
-  const NEAR_BOUNDARY_KM = 0.5;
+  // - Upper bound 1km: covers realistic hand-drawn zone gaps including
+  //   streets (~30m), small rivers (~200m), vacant lots (~500m).
+  const NEAR_BOUNDARY_KM = 1.0;
   for (let i = 0; i < zones.length - 1; i++) {
     for (let j = i + 1; j < zones.length; j++) {
       const zi = zones[i]!;
@@ -583,6 +584,26 @@ export function buildAdjacencyMatrix(
       if (dist > 1e-6 && dist <= NEAR_BOUNDARY_KM) {
         matrix[zi.id]!.push(zj.id);
         matrix[zj.id]!.push(zi.id);
+      }
+    }
+  }
+
+  // Tertiary: ONLY if graph is still disconnected after primary + secondary.
+  // Adds edges ≤2km to bridge large gaps (e.g., zones across major rivers/bridges).
+  // 2km is strict enough to prevent false adjacency between different neighborhoods.
+  const TERTIARY_KM = 2.0;
+  const components = countConnectedComponents(zones, matrix);
+  if (components > 1) {
+    for (let i = 0; i < zones.length - 1; i++) {
+      for (let j = i + 1; j < zones.length; j++) {
+        const zi = zones[i]!;
+        const zj = zones[j]!;
+        if (matrix[zi.id]!.includes(zj.id)) continue;
+        const dist = getMinBoundaryDistKm(zi, zj);
+        if (dist > 1e-5 && dist <= TERTIARY_KM) {
+          matrix[zi.id]!.push(zj.id);
+          matrix[zj.id]!.push(zi.id);
+        }
       }
     }
   }
