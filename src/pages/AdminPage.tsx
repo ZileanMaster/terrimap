@@ -144,6 +144,13 @@ export default function AdminPage() {
     try {
       let partResult: AlgorithmResultVM
 
+      if (!currentRegionId) {
+        console.warn('[AdminPage] Phải chọn khu vực (region) trước khi chạy thuật toán')
+        alert('Vui lòng chọn khu vực (region) trước khi chạy thuật toán.\nThuật toán chỉ phân chia zones trong cùng 1 khu vực.')
+        setAlgoRunning(false)
+        return
+      }
+
       if (displayZones.length < 2) {
         console.warn('[AdminPage] Not enough zones in region to run algorithm (need ≥2)')
         setAlgoRunning(false)
@@ -188,7 +195,7 @@ export default function AdminPage() {
       console.error('[AdminPage] runAlgorithm error:', e)
       setAlgoRunning(false)
     }
-  }, [ctx, displayZones, displayAgents, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])
+  }, [ctx, displayZones, displayAgents, currentRegionId, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])
 
   // ── Auto-suggest SA ────────────────────────────────────────────────────────
 
