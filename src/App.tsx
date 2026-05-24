@@ -122,11 +122,15 @@ export default function App() {
           {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
               {activeTab === 'overview' && <OverviewView />}
-              {activeTab === 'regions' && <RegionsView />}
+              {activeTab === 'regions' && (
+                effectiveRole === 'admin' ? <AdminPage mode="regions" /> :
+                effectiveRole === 'coordinator' ? <CoordinatorPage mode="regions" /> :
+                <OverviewView />
+              )}
               {activeTab === 'users' && <UsersView />}
               {activeTab === 'assignments' && (
-                effectiveRole === 'admin' ? <AdminPage /> :
-                effectiveRole === 'coordinator' ? <CoordinatorPage /> :
+                effectiveRole === 'admin' ? <AdminPage mode="assignments" /> :
+                effectiveRole === 'coordinator' ? <CoordinatorPage mode="assignments" /> :
                 <SalesPage />
               )}
               {activeTab === 'algorithms' && <AlgorithmComparator />}
@@ -156,11 +160,15 @@ function OfflineApp() {
           {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
               {activeTab === 'overview' && <OverviewView />}
-              {activeTab === 'regions' && <RegionsView />}
+              {activeTab === 'regions' && (
+                role === 'admin' ? <AdminPage mode="regions" /> :
+                role === 'coordinator' ? <CoordinatorPage mode="regions" /> :
+                <OverviewView />
+              )}
               {activeTab === 'users' && <UsersView />}
               {activeTab === 'assignments' && (
-                role === 'admin' ? <AdminPage /> :
-                role === 'coordinator' ? <CoordinatorPage /> :
+                role === 'admin' ? <AdminPage mode="assignments" /> :
+                role === 'coordinator' ? <CoordinatorPage mode="assignments" /> :
                 <SalesPage />
               )}
               {activeTab === 'algorithms' && <AlgorithmComparator />}

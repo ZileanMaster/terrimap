@@ -25,7 +25,11 @@ import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 
 import { useSAWorker } from '../hooks/useSAWorker.js'
 
-export default function AdminPage() {
+export interface AdminPageProps {
+  mode?: 'regions' | 'assignments'
+}
+
+export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   // ── Global data store (shared across pages) ────────────────────────────────
   const zones              = useDataStore((s) => s.zones)
   const assignments        = useDataStore((s) => s.assignments)
@@ -287,6 +291,7 @@ export default function AdminPage() {
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
           onFlyTo={handleFlyTo}
+          mode={mode}
         />
       </div>
 
@@ -304,7 +309,9 @@ export default function AdminPage() {
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
         >
-          <DrawingToolbar onZoneCreated={handleZoneCreated} existingZones={zones} />
+          {mode === 'regions' && (
+            <DrawingToolbar onZoneCreated={handleZoneCreated} existingZones={zones} />
+          )}
         </TerritoryMap>
         <SnapshotManager />
         <ZoneInfoPanel
@@ -315,19 +322,6 @@ export default function AdminPage() {
           onDeleteZone={handleDeleteZone}
         />
       </div>
-
-      <RightPanel
-        result={result}
-        onRun={handleRun}
-        progress={progress}
-        currentCost={currentCost}
-        snapshots={snapshots}
-        matrixData={matrixData}
-        zones={zones}
-        onRunSA={handleRunSA}
-        report={reportData}
-        assignments={assignments}
-      />
     </div>
   )
 }
