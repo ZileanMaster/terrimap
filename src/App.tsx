@@ -19,7 +19,9 @@ import { useUIStore } from './store/uiStore.js'
 import { useDataStore } from './store/dataStore.js'
 import { useAuthStore } from './store/authStore.js'
 import { isOnline } from './lib/supabase.js'
-import TopBar from './components/layout/TopBar.js'
+import DashboardLayout from './components/layout/DashboardLayout.js'
+import { OverviewView, RegionsView, UsersView, SettingsView } from './pages/DashboardViews.js'
+import AlgorithmComparator from './components/algorithm/AlgorithmComparator.js'
 
 // ── Lazy-loaded pages (code splitting) ───────────────────────────────────────
 const AdminPage       = React.lazy(() => import('./pages/AdminPage.js'))
@@ -116,16 +118,22 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
-        <div style={styles.root}>
-          <TopBar />
-          <main style={styles.main}>
+        <DashboardLayout>
+          {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
-              {effectiveRole === 'admin'       && <AdminPage />}
-              {effectiveRole === 'coordinator' && <CoordinatorPage />}
-              {effectiveRole === 'sales'       && <SalesPage />}
+              {activeTab === 'overview' && <OverviewView />}
+              {activeTab === 'regions' && <RegionsView />}
+              {activeTab === 'users' && <UsersView />}
+              {activeTab === 'assignments' && (
+                effectiveRole === 'admin' ? <AdminPage /> :
+                effectiveRole === 'coordinator' ? <CoordinatorPage /> :
+                <SalesPage />
+              )}
+              {activeTab === 'algorithms' && <AlgorithmComparator />}
+              {activeTab === 'settings' && <SettingsView />}
             </Suspense>
-          </main>
-        </div>
+          )}
+        </DashboardLayout>
       </FacadeProvider>
     </QueryClientProvider>
   )
@@ -144,16 +152,22 @@ function OfflineApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
-        <div style={styles.root}>
-          <TopBar />
-          <main style={styles.main}>
+        <DashboardLayout>
+          {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
-              {role === 'admin'       && <AdminPage />}
-              {role === 'coordinator' && <CoordinatorPage />}
-              {role === 'sales'       && <SalesPage />}
+              {activeTab === 'overview' && <OverviewView />}
+              {activeTab === 'regions' && <RegionsView />}
+              {activeTab === 'users' && <UsersView />}
+              {activeTab === 'assignments' && (
+                role === 'admin' ? <AdminPage /> :
+                role === 'coordinator' ? <CoordinatorPage /> :
+                <SalesPage />
+              )}
+              {activeTab === 'algorithms' && <AlgorithmComparator />}
+              {activeTab === 'settings' && <SettingsView />}
             </Suspense>
-          </main>
-        </div>
+          )}
+        </DashboardLayout>
       </FacadeProvider>
     </QueryClientProvider>
   )
