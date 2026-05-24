@@ -59,21 +59,57 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     if (!supabase || !currentProjectId) return
     setLoading(true)
     try {
-      const { data } = await supabase
+      // 8s timeout to prevent infinite hang
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 8000)
+
+      // Attempt 1: joined query (needs FK relationship)
+      const { data, error } = await supabase
         .from('project_members')
         .select('*, profiles:user_id(email, full_name)')
         .eq('project_id', currentProjectId)
         .order('joined_at', { ascending: true })
+        .abortSignal(controller.signal)
 
-      if (data) {
+      clearTimeout(timer)
+
+      if (!error && data && data.length > 0) {
         const mapped = data.map((m: any) => ({
           ...m,
           profile: m.profiles ?? undefined,
         })) as MemberWithProfile[]
         setMembers(mapped)
+      } else {
+        // Fallback: query without join, then fetch profiles separately
+        console.warn('[MemberManager] Joined query failed, trying fallback:', error?.message)
+        const { data: rawMembers } = await supabase
+          .from('project_members')
+          .select('*')
+          .eq('project_id', currentProjectId)
+          .order('joined_at', { ascending: true })
+
+        if (rawMembers && rawMembers.length > 0) {
+          // Fetch profiles for each member
+          const userIds = rawMembers.map((m: any) => m.user_id)
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, full_name')
+            .in('id', userIds)
+
+          const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]))
+          const mapped = rawMembers.map((m: any) => ({
+            ...m,
+            profile: profileMap.get(m.user_id) ?? undefined,
+          })) as MemberWithProfile[]
+          setMembers(mapped)
+        }
       }
-    } catch (e) {
-      console.error('[MemberManager] load error:', e)
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        console.error('[MemberManager] Load timeout (8s)')
+      } else {
+        console.error('[MemberManager] load error:', e)
+      }
     } finally {
       setLoading(false)
     }
