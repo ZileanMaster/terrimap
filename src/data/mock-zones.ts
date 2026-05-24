@@ -144,7 +144,7 @@ const hcmZones: Zone[] = [
 export const MOCK_ZONES: Zone[] = [...hnZones, ...hcmZones]
 
 export const MOCK_ASSIGNMENTS: Assignment[] = [
-  // HN — 5 districts (4 zones each, contiguous blocks)
+  // HN — 5 districts, 1 agent each (sa0-sa4)
   { zoneId: 'hn01', districtId: 0, salesAgentId: 'sa0' },
   { zoneId: 'hn02', districtId: 0, salesAgentId: 'sa0' },
   { zoneId: 'hn06', districtId: 0, salesAgentId: 'sa0' },
@@ -165,24 +165,24 @@ export const MOCK_ASSIGNMENTS: Assignment[] = [
   { zoneId: 'hn16', districtId: 3, salesAgentId: 'sa3' },
   { zoneId: 'hn17', districtId: 3, salesAgentId: 'sa3' },
 
-  { zoneId: 'hn13', districtId: 4, salesAgentId: 'sa0' },
-  { zoneId: 'hn14', districtId: 4, salesAgentId: 'sa0' },
-  { zoneId: 'hn18', districtId: 4, salesAgentId: 'sa0' },
-  { zoneId: 'hn19', districtId: 4, salesAgentId: 'sa0' },
+  { zoneId: 'hn13', districtId: 4, salesAgentId: 'sa4' },
+  { zoneId: 'hn14', districtId: 4, salesAgentId: 'sa4' },
+  { zoneId: 'hn18', districtId: 4, salesAgentId: 'sa4' },
+  { zoneId: 'hn19', districtId: 4, salesAgentId: 'sa4' },
 
-  // HCM — 3 districts (4 zones each, contiguous blocks)
-  { zoneId: 'sg01', districtId: 5, salesAgentId: 'sa1' },
-  { zoneId: 'sg02', districtId: 5, salesAgentId: 'sa1' },
-  { zoneId: 'sg05', districtId: 5, salesAgentId: 'sa1' },
-  { zoneId: 'sg06', districtId: 5, salesAgentId: 'sa1' },
+  // HCM — 3 districts, 1 agent each (sa5-sa7)
+  { zoneId: 'sg01', districtId: 5, salesAgentId: 'sa5' },
+  { zoneId: 'sg02', districtId: 5, salesAgentId: 'sa5' },
+  { zoneId: 'sg05', districtId: 5, salesAgentId: 'sa5' },
+  { zoneId: 'sg06', districtId: 5, salesAgentId: 'sa5' },
 
-  { zoneId: 'sg03', districtId: 6, salesAgentId: 'sa2' },
-  { zoneId: 'sg04', districtId: 6, salesAgentId: 'sa2' },
-  { zoneId: 'sg07', districtId: 6, salesAgentId: 'sa2' },
-  { zoneId: 'sg08', districtId: 6, salesAgentId: 'sa2' },
+  { zoneId: 'sg03', districtId: 6, salesAgentId: 'sa6' },
+  { zoneId: 'sg04', districtId: 6, salesAgentId: 'sa6' },
+  { zoneId: 'sg07', districtId: 6, salesAgentId: 'sa6' },
+  { zoneId: 'sg08', districtId: 6, salesAgentId: 'sa6' },
 
-  { zoneId: 'sg09', districtId: 7, salesAgentId: 'sa3' },
-  { zoneId: 'sg10', districtId: 7, salesAgentId: 'sa3' },
-  { zoneId: 'sg11', districtId: 7, salesAgentId: 'sa3' },
-  { zoneId: 'sg12', districtId: 7, salesAgentId: 'sa3' },
+  { zoneId: 'sg09', districtId: 7, salesAgentId: 'sa7' },
+  { zoneId: 'sg10', districtId: 7, salesAgentId: 'sa7' },
+  { zoneId: 'sg11', districtId: 7, salesAgentId: 'sa7' },
+  { zoneId: 'sg12', districtId: 7, salesAgentId: 'sa7' },
 ]
