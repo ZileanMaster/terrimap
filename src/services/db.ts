@@ -163,17 +163,29 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
 export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
   if (!isOnline()) return MOCK_AGENTS
 
+  // Fetch agents matching this project OR agents without any project (legacy)
   let query = supabase!.from('sales_agents').select('*').order('id')
-  if (projectId) query = query.eq('project_id', projectId)
+  if (projectId) {
+    query = query.or(`project_id.eq.${projectId},project_id.is.null`)
+  }
 
   const { data, error } = await query
 
-  if (error || !data) {
-    console.error('[DB] loadAgents error:', error)
+  if (error || !data || data.length === 0) {
+    console.error('[DB] loadAgents error or empty:', error)
     return MOCK_AGENTS
   }
 
-  return (data as DbSalesAgent[]).map((a) => ({
+  // Deduplicate by id — prefer the one WITH project_id
+  const agentMap = new Map<string, DbSalesAgent>()
+  for (const a of data as DbSalesAgent[]) {
+    const existing = agentMap.get(a.id)
+    if (!existing || (a as any).project_id) {
+      agentMap.set(a.id, a)
+    }
+  }
+
+  return Array.from(agentMap.values()).map((a) => ({
     id:           a.id,
     name:         a.name,
     activeRegion: a.active_region,

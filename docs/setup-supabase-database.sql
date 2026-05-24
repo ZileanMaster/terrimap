@@ -285,17 +285,16 @@ INSERT INTO public.regions (id, name, center, zoom) VALUES
   ('region-hue', 'Huế',              '{"lat":16.46,"lng":107.59}', 13)
 ON CONFLICT (id) DO NOTHING;
 
--- Seed sales_agents
+-- Seed sales_agents (sa0-sa4: HN, sa5-sa7: HCM)
 INSERT INTO public.sales_agents (id, name, active_region, capacity, region_id) VALUES
-  ('sa0', 'Nguyễn Văn Alpha', 'Tây-Bắc Hà Nội', 400, 'region-hn'),
-  ('sa1', 'Trần Thị Beta', 'Đông-Bắc Hà Nội', 500, 'region-hn'),
-  ('sa2', 'Lê Quốc Gamma', 'Đông-Nam Hà Nội', 600, 'region-hn'),
-  ('sa3', 'Phạm Hữu Delta', 'Tây-Nam Hà Nội', 350, 'region-hn'),
-  ('sa-hcm0', 'Võ Minh Tâm', 'Bắc TP.HCM', 500, 'region-hcm'),
-  ('sa-hcm1', 'Ngô Thanh Hương', 'Trung TP.HCM', 600, 'region-hcm'),
-  ('sa-hcm2', 'Đỗ Anh Khoa', 'Nam TP.HCM', 450, 'region-hcm'),
-  ('sa-hue0', 'Hồ Xuân Phong', 'Bắc Huế', 300, 'region-hue'),
-  ('sa-hue1', 'Lý Thị Ngọc', 'Nam Huế', 350, 'region-hue')
+  ('sa0', 'Nguyễn Văn A',  'Hà Nội',      400, 'region-hn'),
+  ('sa1', 'Trần Thị B',    'Hà Nội',      500, 'region-hn'),
+  ('sa2', 'Lê Văn C',      'Hà Nội',      600, 'region-hn'),
+  ('sa3', 'Phạm Thị D',    'Hà Nội',      350, 'region-hn'),
+  ('sa4', 'Hoàng Văn E',   'Hà Nội',      450, 'region-hn'),
+  ('sa5', 'Vũ Thị F',      'Hồ Chí Minh', 550, 'region-hcm'),
+  ('sa6', 'Đặng Minh G',   'Hồ Chí Minh', 480, 'region-hcm'),
+  ('sa7', 'Bùi Thanh H',   'Hồ Chí Minh', 520, 'region-hcm')
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed zones
