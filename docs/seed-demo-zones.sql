@@ -11,15 +11,19 @@ DELETE FROM public.activities WHERE zone_id IN (SELECT id FROM public.zones WHER
 DELETE FROM public.assignments WHERE zone_id IN (SELECT id FROM public.zones WHERE project_id = 'test-project-terrimap');
 DELETE FROM public.zones WHERE project_id = 'test-project-terrimap';
 DELETE FROM public.sales_agents WHERE project_id = 'test-project-terrimap';
+-- Xóa agents legacy (không có project_id) cùng id để tránh trùng
+DELETE FROM public.sales_agents WHERE id IN ('sa0','sa1','sa2','sa3','sa4','sa5','sa6','sa7') AND project_id IS NULL;
 
--- ── SALES AGENTS ─────────────────────────────────────────────
+-- ── SALES AGENTS — sa0-sa4: Hà Nội, sa5-sa7: HCM ──────────
 INSERT INTO public.sales_agents (id, name, active_region, capacity, project_id) VALUES
   ('sa0', 'Nguyễn Văn A',  'Hà Nội',      400, 'test-project-terrimap'),
   ('sa1', 'Trần Thị B',    'Hà Nội',      500, 'test-project-terrimap'),
   ('sa2', 'Lê Văn C',      'Hà Nội',      600, 'test-project-terrimap'),
-  ('sa3', 'Phạm Thị D',    'Hồ Chí Minh', 350, 'test-project-terrimap'),
-  ('sa4', 'Hoàng Văn E',   'Hồ Chí Minh', 450, 'test-project-terrimap'),
-  ('sa5', 'Vũ Thị F',      'Hồ Chí Minh', 550, 'test-project-terrimap')
+  ('sa3', 'Phạm Thị D',    'Hà Nội',      350, 'test-project-terrimap'),
+  ('sa4', 'Hoàng Văn E',   'Hà Nội',      450, 'test-project-terrimap'),
+  ('sa5', 'Vũ Thị F',      'Hồ Chí Minh', 550, 'test-project-terrimap'),
+  ('sa6', 'Đặng Minh G',   'Hồ Chí Minh', 480, 'test-project-terrimap'),
+  ('sa7', 'Bùi Thanh H',   'Hồ Chí Minh', 520, 'test-project-terrimap')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name, active_region = EXCLUDED.active_region,
   capacity = EXCLUDED.capacity, project_id = EXCLUDED.project_id;
