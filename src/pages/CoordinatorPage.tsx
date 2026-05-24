@@ -27,7 +27,11 @@ function currentPeriodDefault() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-export default function CoordinatorPage() {
+export interface CoordinatorPageProps {
+  mode?: 'regions' | 'assignments'
+}
+
+export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPageProps) {
   // ── Global store ───────────────────────────────────────────────────────────
   const zones              = useDataStore((s) => s.zones)
   const assignments        = useDataStore((s) => s.assignments)
@@ -153,38 +157,42 @@ export default function CoordinatorPage() {
           </select>
         </div>
 
-        {/* Period selector + metrics toggle */}
-        <div style={styles.metricBar}>
-          <input
-            type="month"
-            value={currentPeriod}
-            onChange={(e) => setCurrentPeriod(e.target.value)}
-            style={styles.monthInput}
-          />
-          <button
-            onClick={() => setShowMetricsInput((v) => !v)}
-            style={{
-              ...styles.metricsBtn,
-              background: showMetricsInput ? 'var(--color-accent)' : 'transparent',
-              color:      showMetricsInput ? '#fff' : 'var(--color-text)',
-            }}
-          >
-            {showMetricsInput ? '▲ Ẩn' : '📊 Nhập chỉ số tháng'}
-          </button>
-        </div>
+        {mode === 'assignments' && (
+          <>
+            {/* Period selector + metrics toggle */}
+            <div style={styles.metricBar}>
+              <input
+                type="month"
+                value={currentPeriod}
+                onChange={(e) => setCurrentPeriod(e.target.value)}
+                style={styles.monthInput}
+              />
+              <button
+                onClick={() => setShowMetricsInput((v) => !v)}
+                style={{
+                  ...styles.metricsBtn,
+                  background: showMetricsInput ? 'var(--color-accent)' : 'transparent',
+                  color:      showMetricsInput ? '#fff' : 'var(--color-text)',
+                }}
+              >
+                {showMetricsInput ? '▲ Ẩn' : '📊 Nhập chỉ số tháng'}
+              </button>
+            </div>
 
-        {/* Metrics input panel */}
-        {showMetricsInput && (
-          <div style={styles.metricsPanel}>
-            <MetricsInput
-              period={currentPeriod}
-              zones={displayZones}
-              onRunWithMetrics={handleRunWithMetrics}
-            />
-          </div>
+            {/* Metrics input panel */}
+            {showMetricsInput && (
+              <div style={styles.metricsPanel}>
+                <MetricsInput
+                  period={currentPeriod}
+                  zones={displayZones}
+                  onRunWithMetrics={handleRunWithMetrics}
+                />
+              </div>
+            )}
+          </>
         )}
 
-        <Sidebar zones={displayZones} assignments={displayAssignments} />
+        <Sidebar zones={displayZones} assignments={displayAssignments} mode={mode} />
       </div>
 
       <div style={styles.mapArea}>
@@ -200,7 +208,7 @@ export default function CoordinatorPage() {
         <ZoneInfoPanel
           zones={displayZones}
           assignments={displayAssignments}
-          onAssign={handleAssign}
+          onAssign={mode === 'assignments' ? handleAssign : undefined}
           districtCount={districtCount}
         />
       </div>

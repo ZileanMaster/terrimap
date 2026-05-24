@@ -31,15 +31,16 @@ interface SidebarProps {
   disconnectedDistrictIds?: Set<number>
   /** Fly map to given coordinates (from province search) */
   onFlyTo?: (lat: number, lng: number, zoom: number) => void
+  mode?: 'regions' | 'assignments'
 }
 
-export default function Sidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo }: SidebarProps) {
+export default function Sidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo, mode = 'assignments' }: SidebarProps) {
   const role = useUIStore((s) => s.role)
 
   return (
     <aside style={styles.sidebar} data-testid="sidebar">
-      {role === 'admin'       && <AdminSidebar zones={zones} assignments={assignments} onCreateSnapshot={onCreateSnapshot} islandZoneIds={islandZoneIds} disconnectedDistrictIds={disconnectedDistrictIds} onFlyTo={onFlyTo} />}
-      {role === 'coordinator' && <CoordinatorSidebar zones={zones} assignments={assignments} />}
+      {role === 'admin'       && <AdminSidebar zones={zones} assignments={assignments} onCreateSnapshot={onCreateSnapshot} islandZoneIds={islandZoneIds} disconnectedDistrictIds={disconnectedDistrictIds} onFlyTo={onFlyTo} mode={mode} />}
+      {role === 'coordinator' && <CoordinatorSidebar zones={zones} assignments={assignments} mode={mode} />}
       {role === 'sales'       && <SalesSidebar />}
     </aside>
   )
@@ -207,12 +208,11 @@ const ZoneCard = React.memo(function ZoneCard({
   )
 })
 
-// ── Admin Sidebar ──────────────────────────────────────────────────────────────
-
-function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo }: {
+function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo, mode }: {
   zones: Zone[]; assignments: Assignment[]; onCreateSnapshot?: () => void;
   islandZoneIds?: Set<string>; disconnectedDistrictIds?: Set<number>;
   onFlyTo?: (lat: number, lng: number, zoom: number) => void;
+  mode?: 'regions' | 'assignments';
 }) {
   const { t } = useTranslation()
   const ctx                = useFacade()
@@ -225,6 +225,16 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   if (ctx.role !== 'admin') return null
   const mgmt = ctx.facade.getSalesManagement(zones, assignments, agents)
   const districtCount = new Set(assignments.map((a) => a.districtId)).size
+
+  if (mode === 'regions') {
+    return (
+      <div style={styles.content}>
+        <RegionManager onFlyTo={onFlyTo} />
+        <div style={styles.divider} />
+        <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
+      </div>
+    )
+  }
 
   return (
     <div style={styles.content}>
@@ -332,9 +342,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   )
 }
 
-// ── Coordinator Sidebar ────────────────────────────────────────────────────────
-
-function CoordinatorSidebar({ zones, assignments }: { zones: Zone[]; assignments: Assignment[] }) {
+function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assignments: Assignment[]; mode?: 'regions' | 'assignments' }) {
   const { t } = useTranslation()
   const ctx                    = useFacade()
   const highlightedSalesId     = useUIStore((s) => s.highlightedSalesId)
@@ -343,6 +351,14 @@ function CoordinatorSidebar({ zones, assignments }: { zones: Zone[]; assignments
 
   if (ctx.role !== 'coordinator') return null
   const overview = ctx.facade.getTeamOverview(zones, assignments, agents)
+
+  if (mode === 'regions') {
+    return (
+      <div style={styles.content}>
+        <ZoneCardList zones={zones} assignments={assignments} />
+      </div>
+    )
+  }
 
   return (
     <div style={styles.content} data-testid="team-overview">
