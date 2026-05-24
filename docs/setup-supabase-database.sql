@@ -234,7 +234,7 @@ CREATE POLICY "projects_update" ON public.projects FOR UPDATE USING (owner_id = 
 CREATE POLICY "projects_delete" ON public.projects FOR DELETE USING (owner_id = auth.uid());
 
 -- Cấu hình chính sách cho project_members
-CREATE POLICY "pm_select" ON public.project_members FOR SELECT USING (user_id = auth.uid() OR public.is_project_owner(project_id, auth.uid()));
+CREATE POLICY "pm_select" ON public.project_members FOR SELECT USING (public.is_project_member(project_id, auth.uid()) OR public.is_project_owner(project_id, auth.uid()));
 CREATE POLICY "pm_insert" ON public.project_members FOR INSERT WITH CHECK (public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) IN ('admin', 'coordinator'));
 CREATE POLICY "pm_update" ON public.project_members FOR UPDATE USING (public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) = 'admin');
 CREATE POLICY "pm_delete" ON public.project_members FOR DELETE USING (public.is_project_owner(project_id, auth.uid()) OR public.get_member_role(project_id, auth.uid()) = 'admin');
