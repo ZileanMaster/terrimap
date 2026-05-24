@@ -91,12 +91,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return
     }
 
+    // 8s hard timeout: if Supabase is slow/down, show login instead of infinite splash
+    const timeout = setTimeout(() => {
+      console.warn('[AuthStore] initialize timeout (8s) — showing login')
+      set({ loading: false })
+    }, 8_000)
+
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         set({ user: session.user, session })
-        await get().loadProfile()
-        await get().loadProjects()
+        // Load profile + projects in parallel (faster)
+        await Promise.all([
+          get().loadProfile(),
+          get().loadProjects(),
+        ])
 
         // Auto-select last used project from localStorage
         const lastProject = localStorage.getItem('terrimap_project')
@@ -110,6 +119,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } catch (e) {
       console.error('[AuthStore] initialize error:', e)
     } finally {
+      clearTimeout(timeout)
       set({ loading: false })
     }
 
@@ -133,17 +143,33 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
     set({ authError: null, loading: true })
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      set({ authError: error.message, loading: false })
+    // 10s timeout: prevent infinite spinner
+    const timeout = setTimeout(() => {
+      set({ authError: 'Đăng nhập quá lâu. Vui lòng thử lại.', loading: false })
+    }, 10_000)
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        clearTimeout(timeout)
+        set({ authError: error.message, loading: false })
+        return false
+      }
+
+      set({ user: data.user, session: data.session })
+      // Load profile + projects in parallel
+      await Promise.all([
+        get().loadProfile(),
+        get().loadProjects(),
+      ])
+      clearTimeout(timeout)
+      set({ loading: false })
+      return true
+    } catch (e: any) {
+      clearTimeout(timeout)
+      set({ authError: e?.message || 'Lỗi đăng nhập', loading: false })
       return false
     }
-
-    set({ user: data.user, session: data.session })
-    await get().loadProfile()
-    await get().loadProjects()
-    set({ loading: false })
-    return true
   },
 
   // ── Sign Up ─────────────────────────────────────────────────────────────
