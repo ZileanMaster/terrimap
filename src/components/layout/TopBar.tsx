@@ -188,11 +188,29 @@ export default function TopBar() {
 
             {/* Sign out */}
             <button
-              onClick={signOut}
+              onClick={async () => {
+                try {
+                  const timeout = setTimeout(() => {
+                    // Force clear state if signOut hangs
+                    useAuthStore.setState({
+                      user: null, session: null, profile: null,
+                      projects: [], currentProjectId: null, membership: null,
+                    })
+                  }, 5000)
+                  await signOut()
+                  clearTimeout(timeout)
+                } catch {
+                  // Force clear even on error
+                  useAuthStore.setState({
+                    user: null, session: null, profile: null,
+                    projects: [], currentProjectId: null, membership: null,
+                  })
+                }
+              }}
               style={styles.signOutBtn}
               title="Đăng xuất"
             >
-              ⏻
+              ⏻ Đăng xuất
             </button>
           </div>
         )}
@@ -374,16 +392,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
   },
   signOutBtn: {
-    width: 30,
-    height: 30,
+    padding: '5px 12px',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-sm)',
     background: 'transparent',
     cursor: 'pointer',
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: 600,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
     color: 'var(--color-text-muted)',
+    whiteSpace: 'nowrap' as const,
+    transition: 'all 150ms',
   },
 }
