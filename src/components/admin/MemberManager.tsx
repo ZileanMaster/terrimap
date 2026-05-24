@@ -133,64 +133,85 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       ? ['sales']
       : []
 
-  // Handle invite
+  // Handle invite — try/finally guarantees UI never stays frozen
   const handleInvite = useCallback(async () => {
     if (!inviteEmail.trim()) return
     setSubmitting(true)
     clearError()
-    const ok = await inviteMember(inviteEmail.trim(), inviteRole)
-    setSubmitting(false)
-    if (ok) {
-      setInviteEmail('')
-      setInviteOpen(false)
-      await reload()
+    try {
+      // 10s timeout: if Supabase hangs, unlock UI
+      let timedOut = false
+      const timeoutId = setTimeout(() => {
+        timedOut = true
+        setSubmitting(false)
+        alert('⏳ Mời thành viên bị timeout. Vui lòng thử lại.')
+      }, 10_000)
+
+      const ok = await inviteMember(inviteEmail.trim(), inviteRole)
+      clearTimeout(timeoutId)
+      if (timedOut) return  // timeout already handled
+
+      if (ok) {
+        setInviteEmail('')
+        setInviteOpen(false)
+        reload()  // fire-and-forget, don't await
+      }
+    } catch (e) {
+      console.error('[MemberManager] invite error:', e)
+      alert('❌ Lỗi khi mời thành viên. Vui lòng thử lại.')
+    } finally {
+      setSubmitting(false)
     }
   }, [inviteEmail, inviteRole, inviteMember, clearError, reload])
 
-  // Handle role change
+  // Handle role change — with try/finally
   const handleRoleChange = useCallback(async (member: MemberWithProfile, newRole: string) => {
-    // Guard: can't change own role
     if (member.user_id === user?.id) {
       alert('Không thể tự đổi vai trò của mình')
       return
     }
-    // Guard: can't promote above own level
     const targetLevel = ROLE_CONFIG[newRole]?.level ?? 0
     if (targetLevel > myLevel) {
       alert('Không thể phân quyền cao hơn vai trò của bạn')
       return
     }
-    // Guard: removing last admin
     if (member.role === 'admin' && newRole !== 'admin' && adminCount <= 1) {
       alert('Phải có ít nhất 1 quản trị viên trong dự án')
       return
     }
     if (!window.confirm(`Đổi vai trò ${member.profile?.full_name ?? 'thành viên'} thành ${ROLE_CONFIG[newRole]?.label}?`)) return
-    await updateRole(member.id, newRole)
-    await reload()
+    try {
+      await updateRole(member.id, newRole)
+      reload()
+    } catch (e) {
+      console.error('[MemberManager] role change error:', e)
+      alert('❌ Lỗi khi đổi vai trò. Vui lòng thử lại.')
+    }
   }, [user, myLevel, adminCount, updateRole, reload])
 
-  // Handle remove
+  // Handle remove — with try/finally
   const handleRemove = useCallback(async (member: MemberWithProfile) => {
-    // Guard: can't remove self
     if (member.user_id === user?.id) {
       alert('Không thể tự xóa mình khỏi dự án')
       return
     }
-    // Guard: can't remove higher/equal role
     const memberLevel = ROLE_CONFIG[member.role]?.level ?? 0
     if (memberLevel >= myLevel) {
       alert('Không thể xóa thành viên có vai trò bằng hoặc cao hơn bạn')
       return
     }
-    // Guard: last admin
     if (member.role === 'admin' && adminCount <= 1) {
       alert('Không thể xóa quản trị viên duy nhất')
       return
     }
     if (!window.confirm(`Xóa ${member.profile?.full_name ?? member.user_id} khỏi dự án?`)) return
-    await removeMember(member.id)
-    await reload()
+    try {
+      await removeMember(member.id)
+      reload()
+    } catch (e) {
+      console.error('[MemberManager] remove error:', e)
+      alert('❌ Lỗi khi xóa thành viên. Vui lòng thử lại.')
+    }
   }, [user, myLevel, adminCount, removeMember, reload])
 
   if (!open) return null
