@@ -332,65 +332,80 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // ── Invite Member ───────────────────────────────────────────────────────
   inviteMember: async (email, role, regionId) => {
-    if (!supabase) return false
+    if (!supabase) { set({ authError: 'Không có kết nối cơ sở dữ liệu' }); return false }
     const projectId = get().currentProjectId
-    if (!projectId) return false
+    if (!projectId) { set({ authError: 'Chưa chọn dự án' }); return false }
 
-    // Find user by email — try direct query first, fallback to RPC
-    let profileId: string | null = null
+    try {
+      // 8s timeout for all DB operations
+      const deadline = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), 8_000),
+      )
 
-    // Attempt 1: Direct profiles query (works if RLS allows reading other profiles)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .single()
+      const doInvite = async (): Promise<boolean> => {
+        // Find user by email — try direct query first, fallback to RPC
+        let profileId: string | null = null
 
-    if (profile) {
-      profileId = profile.id
-    } else {
-      // Attempt 2: Use SECURITY DEFINER function (bypasses RLS)
-      const { data: rpcResult } = await supabase
-        .rpc('lookup_profile_by_email', { lookup_email: email })
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .single()
 
-      if (rpcResult && rpcResult.length > 0) {
-        profileId = rpcResult[0].id
+        if (profile) {
+          profileId = profile.id
+        } else {
+          const { data: rpcResult } = await supabase
+            .rpc('lookup_profile_by_email', { lookup_email: email })
+
+          if (rpcResult && rpcResult.length > 0) {
+            profileId = rpcResult[0].id
+          }
+        }
+
+        if (!profileId) {
+          set({ authError: `Không tìm thấy tài khoản với email: ${email}` })
+          return false
+        }
+
+        // Check if already a member
+        const { data: existing } = await supabase
+          .from('project_members')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('user_id', profileId)
+          .single()
+
+        if (existing) {
+          set({ authError: 'Người dùng đã là thành viên của dự án' })
+          return false
+        }
+
+        const { error } = await supabase
+          .from('project_members')
+          .insert({
+            project_id: projectId,
+            user_id: profileId,
+            role,
+            region_id: regionId || null,
+          })
+
+        if (error) {
+          set({ authError: error.message })
+          return false
+        }
+
+        return true
       }
-    }
 
-    if (!profileId) {
-      set({ authError: `Không tìm thấy tài khoản với email: ${email}` })
+      return await Promise.race([doInvite(), deadline])
+    } catch (e: any) {
+      const msg = e?.message === 'TIMEOUT'
+        ? 'Thao tác quá lâu (8s). Vui lòng thử lại.'
+        : `Lỗi: ${e?.message ?? 'Không xác định'}`
+      set({ authError: msg })
       return false
     }
-
-    // Check if already a member
-    const { data: existing } = await supabase
-      .from('project_members')
-      .select('id')
-      .eq('project_id', projectId)
-      .eq('user_id', profileId)
-      .single()
-
-    if (existing) {
-      set({ authError: 'Người dùng đã là thành viên của dự án' })
-      return false
-    }
-
-    const { error } = await supabase
-      .from('project_members')
-      .insert({
-        project_id: projectId,
-        user_id: profileId,
-        role,
-        region_id: regionId || null,
-      })
-
-    if (error) {
-      set({ authError: error.message })
-      return false
-    }
-
-    return true
   },
 
   // ── Update Member Role ──────────────────────────────────────────────────
