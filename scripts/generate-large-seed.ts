@@ -28,7 +28,7 @@ const sqlLines: string[] = [
   '',
   'DO $$',
   'DECLARE',
-  '  v_project_id UUID;',
+  '  v_project_id TEXT;',
   '  v_region_hn TEXT;',
   '  v_sales_id UUID;',
 ]
