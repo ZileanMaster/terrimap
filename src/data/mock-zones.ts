@@ -1,11 +1,8 @@
 /**
- * Mock Zones — 20 zones Hà Nội + 12 zones TP.HCM = 32 total
+ * Mock Zones — 500 zones Hà Nội (25x20 grid) + 12 zones TP.HCM = 512 total
  *
  * THIẾT KẾ: Grid tiling — mỗi zone là hình chữ nhật, biên chia sẻ
  * chính xác (shared edges) → ZERO overlap, ZERO gap.
- *
- * Hà Nội: 20 zones (5×4 grid) — khu vực nội thành
- * HCM: 12 zones (4×3 grid) — khu vực Q1/Q3/Phú Nhuận
  */
 
 import type { Zone, Assignment } from '../../facades/viewmodels.js'
@@ -45,71 +42,60 @@ function makeZone(
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// HÀ NỘI — 20 zones (5 cols × 4 rows)
-// Khu vực thực tế: Ba Đình → Hoàn Kiếm → Đống Đa → Hai Bà Trưng
+// HÀ NỘI — 500 zones (25 cols × 20 rows)
 // Grid: lat 21.000 → 21.048, lng 105.810 → 105.860
-// Cell: ~0.012 lat × 0.010 lng ≈ 1.3km × 1.0km
-//
-//   ┌────────┬────────┬────────┬────────┬────────┐  Row 3: 21.036→21.048
-//   │ hn01   │ hn02   │ hn03   │ hn04   │ hn05   │
-//   ├────────┼────────┼────────┼────────┼────────┤  Row 2: 21.024→21.036
-//   │ hn06   │ hn07   │ hn08   │ hn09   │ hn10   │
-//   ├────────┼────────┼────────┼────────┼────────┤  Row 1: 21.012→21.024
-//   │ hn11   │ hn12   │ hn13   │ hn14   │ hn15   │
-//   ├────────┼────────┼────────┼────────┼────────┤  Row 0: 21.000→21.012
-//   │ hn16   │ hn17   │ hn18   │ hn19   │ hn20   │
-//   └────────┴────────┴────────┴────────┴────────┘
-//   Col 0      Col 1     Col 2     Col 3     Col 4
-//  105.810   105.820   105.830   105.840   105.850   105.860
+// Cell: ~0.002 lat × 0.0024 lng ≈ 220m × 260m (diện tích nhỏ hơn nhiều so với cũ)
 // ══════════════════════════════════════════════════════════════════════════════
 
-const HC = [105.810, 105.820, 105.830, 105.840, 105.850, 105.860] // 6 col edges
-const HR = [21.000, 21.012, 21.024, 21.036, 21.048]               // 5 row edges
+const hnZones: Zone[] = []
+const hnHN_ASSIGNMENTS: Assignment[] = []
 
-function hnRect(col: number, row: number): number[][] {
-  return rect(HC[col]!, HR[row]!, HC[col + 1]!, HR[row + 1]!)
+const COLS = 25
+const ROWS = 20
+
+const lngMin = 105.810
+const lngMax = 105.860
+const latMin = 21.000
+const latMax = 21.048
+
+const colWidth = (lngMax - lngMin) / COLS // 0.002
+const rowHeight = (latMax - latMin) / ROWS // 0.0024
+
+for (let col = 0; col < COLS; col++) {
+  for (let row = 0; row < ROWS; row++) {
+    const id = `hn_${col.toString().padStart(2, '0')}_${row.toString().padStart(2, '0')}`
+    const name = `Vùng HN-${col + 1}-${row + 1}`
+    
+    const left = lngMin + col * colWidth
+    const right = left + colWidth
+    const bottom = latMin + row * rowHeight
+    const top = bottom + rowHeight
+    const ring = rect(left, bottom, right, top)
+    
+    // Deterministic customers and orders using sine/cosine to distribute nicely
+    const customers = Math.floor((Math.sin(col / 2.0) + Math.cos(row / 2.0) + 2) * 50) + 20
+    const orders = Math.floor(customers * 0.7)
+    
+    hnZones.push(makeZone(id, name, 'region-hn', ring, customers, orders))
+    
+    // Assign to 20 districts
+    const districtId = (col % 5) + (row % 4) * 5
+    // Map to 20 Hanoi sales agents
+    const salesAgentId = districtId === 0 ? 'sales.test@terrimap.vn' : `sales_hn_${districtId}@terrimap.vn`
+    
+    hnHN_ASSIGNMENTS.push({
+      zoneId: id,
+      districtId,
+      salesAgentId
+    })
+  }
 }
-
-const hnZones: Zone[] = [
-  // Row 3 (top) — Tây Hồ / Ba Đình
-  makeZone('hn01', 'Phúc Xá',        'region-hn', hnRect(0, 3), 85,  55),
-  makeZone('hn02', 'Trúc Bạch',      'region-hn', hnRect(1, 3), 120, 80),
-  makeZone('hn03', 'Quán Thánh',     'region-hn', hnRect(2, 3), 95,  65),
-  makeZone('hn04', 'Phú Thượng',     'region-hn', hnRect(3, 3), 110, 75),
-  makeZone('hn05', 'Nhật Tân',       'region-hn', hnRect(4, 3), 70,  45),
-  // Row 2 — Ba Đình / Hoàn Kiếm
-  makeZone('hn06', 'Cống Vị',        'region-hn', hnRect(0, 2), 140, 95),
-  makeZone('hn07', 'Ngọc Hà',        'region-hn', hnRect(1, 2), 180, 125),
-  makeZone('hn08', 'Hàng Bông',      'region-hn', hnRect(2, 2), 310, 220),
-  makeZone('hn09', 'Hàng Bạc',       'region-hn', hnRect(3, 2), 290, 200),
-  makeZone('hn10', 'Đồng Xuân',      'region-hn', hnRect(4, 2), 250, 170),
-  // Row 1 — Đống Đa / Hai Bà Trưng
-  makeZone('hn11', 'Láng Thượng',    'region-hn', hnRect(0, 1), 160, 110),
-  makeZone('hn12', 'Ô Chợ Dừa',     'region-hn', hnRect(1, 1), 200, 140),
-  makeZone('hn13', 'Quang Trung',    'region-hn', hnRect(2, 1), 175, 120),
-  makeZone('hn14', 'Phạm Đình Hổ',  'region-hn', hnRect(3, 1), 220, 155),
-  makeZone('hn15', 'Bạch Mai',       'region-hn', hnRect(4, 1), 260, 180),
-  // Row 0 (bottom) — Thanh Xuân / Hoàng Mai
-  makeZone('hn16', 'Thanh Xuân Bắc', 'region-hn', hnRect(0, 0), 130, 90),
-  makeZone('hn17', 'Khương Đình',    'region-hn', hnRect(1, 0), 150, 100),
-  makeZone('hn18', 'Khương Thượng',  'region-hn', hnRect(2, 0), 115, 75),
-  makeZone('hn19', 'Phương Liệt',   'region-hn', hnRect(3, 0), 190, 130),
-  makeZone('hn20', 'Tương Mai',      'region-hn', hnRect(4, 0), 210, 145),
-]
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TP.HCM — 12 zones (4 cols × 3 rows)
 // Khu vực: Q1 / Q3 / Phú Nhuận / Bình Thạnh
 // Grid: lat 10.775 → 10.811, lng 106.675 → 106.715
-//
-//   ┌────────┬────────┬────────┬────────┐  Row 2: 10.799→10.811
-//   │ sg01   │ sg02   │ sg03   │ sg04   │
-//   ├────────┼────────┼────────┼────────┤  Row 1: 10.787→10.799
-//   │ sg05   │ sg06   │ sg07   │ sg08   │
-//   ├────────┼────────┼────────┼────────┤  Row 0: 10.775→10.787
-//   │ sg09   │ sg10   │ sg11   │ sg12   │
-//   └────────┴────────┴────────┴────────┘
-//  106.675  106.685  106.695  106.705  106.715
+// Cell: ~0.012 lat × 0.010 lng ≈ 1.3km × 1.0km
 // ══════════════════════════════════════════════════════════════════════════════
 
 const SC = [106.675, 106.685, 106.695, 106.705, 106.715] // 5 col edges
@@ -144,32 +130,7 @@ const hcmZones: Zone[] = [
 export const MOCK_ZONES: Zone[] = [...hnZones, ...hcmZones]
 
 export const MOCK_ASSIGNMENTS: Assignment[] = [
-  // HN — 5 districts, 1 agent each
-  { zoneId: 'hn01', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
-  { zoneId: 'hn02', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
-  { zoneId: 'hn06', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
-  { zoneId: 'hn07', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
-
-  { zoneId: 'hn03', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
-  { zoneId: 'hn04', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
-  { zoneId: 'hn08', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
-  { zoneId: 'hn09', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
-
-  { zoneId: 'hn05', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
-  { zoneId: 'hn10', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
-  { zoneId: 'hn15', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
-  { zoneId: 'hn20', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
-
-  { zoneId: 'hn11', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
-  { zoneId: 'hn12', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
-  { zoneId: 'hn16', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
-  { zoneId: 'hn17', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
-
-  { zoneId: 'hn13', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
-  { zoneId: 'hn14', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
-  { zoneId: 'hn18', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
-  { zoneId: 'hn19', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
-
+  ...hnHN_ASSIGNMENTS,
   // HCM — 2 districts (district 5 and 6, matching 2 mock agents sales_hcm_1 and sales_hcm_2)
   { zoneId: 'sg01', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
   { zoneId: 'sg02', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
