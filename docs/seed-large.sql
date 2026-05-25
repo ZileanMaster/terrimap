@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 DO $$
 DECLARE
-  v_project_id UUID;
+  v_project_id TEXT;
   v_region_hn TEXT;
   v_sales_id UUID;
   v_sales_hn_1_id UUID := gen_random_uuid();
