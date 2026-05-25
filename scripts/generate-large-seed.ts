@@ -71,7 +71,7 @@ sqlLines.push(
   "  DELETE FROM public.activities WHERE zone_id LIKE 'hn_%';",
   "  DELETE FROM public.zones WHERE id LIKE 'hn_%' OR region_id = v_region_hn;",
   "  DELETE FROM public.project_members WHERE (user_id IN (SELECT id FROM auth.users WHERE email LIKE 'sales_hn_%@terrimap.vn') OR user_id = v_sales_id) AND project_id = v_project_id;",
-  "  DELETE FROM public.sales_agents WHERE id LIKE 'sales_hn_%' OR id IN (SELECT id FROM auth.users WHERE email LIKE 'sales_hn_%@terrimap.vn') OR id = v_sales_id OR region_id = v_region_hn;",
+  "  DELETE FROM public.sales_agents WHERE id LIKE 'sales_hn_%' OR id IN (SELECT id::text FROM auth.users WHERE email LIKE 'sales_hn_%@terrimap.vn') OR id = v_sales_id::text OR region_id = v_region_hn;",
   "  DELETE FROM public.profiles WHERE id IN (SELECT id FROM auth.users WHERE email LIKE 'sales_hn_%@terrimap.vn') OR id = v_sales_id;",
   "  DELETE FROM auth.identities WHERE user_id IN (SELECT id FROM auth.users WHERE email LIKE 'sales_hn_%@terrimap.vn');",
   "  DELETE FROM auth.users WHERE email LIKE 'sales_hn_%@terrimap.vn';",
@@ -124,10 +124,10 @@ sqlLines.push('')
 sqlLines.push('  -- Insert sales_agents')
 sqlLines.push('  INSERT INTO public.sales_agents (id, name, active_region, capacity, region_id, project_id) VALUES')
 const salesAgentLines: string[] = []
-salesAgentLines.push(`    (v_sales_id, 'Nhân Viên Test (Admin/Sales)', 'Hà Nội', 450, v_region_hn, v_project_id)`)
+salesAgentLines.push(`    (v_sales_id::text, 'Nhân Viên Test (Admin/Sales)', 'Hà Nội', 450, v_region_hn, v_project_id)`)
 for (let i = 1; i <= 19; i++) {
   const capacity = 350 + (i * 15) % 300
-  salesAgentLines.push(`    (v_sales_hn_${i}_id, 'Nhân Viên HN-${i}', 'Hà Nội', ${capacity}, v_region_hn, v_project_id)`)
+  salesAgentLines.push(`    (v_sales_hn_${i}_id::text, 'Nhân Viên HN-${i}', 'Hà Nội', ${capacity}, v_region_hn, v_project_id)`)
 }
 sqlLines.push(salesAgentLines.join(',\n') + ';')
 sqlLines.push('')
@@ -174,7 +174,7 @@ for (let col = 0; col < COLS; col++) {
     actLines.push(`    ('${id}-o', '${id}', 'ORDER', ${orders})`)
 
     const districtId = (col % 5) + (row % 4) * 5
-    const salesAgentIdVar = districtId === 0 ? 'v_sales_id' : `v_sales_hn_${districtId}_id`
+    const salesAgentIdVar = districtId === 0 ? 'v_sales_id::text' : `v_sales_hn_${districtId}_id::text`
     assLines.push(`    ('${id}', ${districtId}, ${salesAgentIdVar})`)
   }
 }
