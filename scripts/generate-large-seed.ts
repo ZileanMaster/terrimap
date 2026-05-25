@@ -106,7 +106,7 @@ profileLines.push(`    (v_sales_id, 'sales.test@terrimap.vn', 'Nhân Viên Test 
 for (let i = 1; i <= 19; i++) {
   profileLines.push(`    (v_sales_hn_${i}_id, 'sales_hn_${i}@terrimap.vn', 'Nhân Viên HN-${i}')`)
 }
-sqlLines.push(profileLines.join(',\n') + ';')
+sqlLines.push(profileLines.join(',\n') + '\n  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name;')
 sqlLines.push('')
 
 // 4. Insert project_members
@@ -117,7 +117,7 @@ memberLines.push(`    (v_project_id, v_sales_id, 'sales', v_region_hn)`)
 for (let i = 1; i <= 19; i++) {
   memberLines.push(`    (v_project_id, v_sales_hn_${i}_id, 'sales', v_region_hn)`)
 }
-sqlLines.push(memberLines.join(',\n') + ';')
+sqlLines.push(memberLines.join(',\n') + '\n  ON CONFLICT (project_id, user_id) DO NOTHING;')
 sqlLines.push('')
 
 // 5. Insert sales_agents
@@ -129,7 +129,7 @@ for (let i = 1; i <= 19; i++) {
   const capacity = 350 + (i * 15) % 300
   salesAgentLines.push(`    (v_sales_hn_${i}_id::text, 'Nhân Viên HN-${i}', 'Hà Nội', ${capacity}, v_region_hn, v_project_id)`)
 }
-sqlLines.push(salesAgentLines.join(',\n') + ';')
+sqlLines.push(salesAgentLines.join(',\n') + '\n  ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, active_region = EXCLUDED.active_region, capacity = EXCLUDED.capacity, region_id = EXCLUDED.region_id, project_id = EXCLUDED.project_id;')
 sqlLines.push('')
 
 // 6. Generate 500 Hanoi Zones
