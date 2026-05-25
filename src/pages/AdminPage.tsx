@@ -260,13 +260,22 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   }, [addZone, currentRegionId])
 
   // ── Delete zone ────────────────────────────────────────────────────────────
-
   const handleDeleteZone = useCallback(async (zoneId: string) => {
     selectZone(null)
     await removeZone(zoneId)  // awaits DB delete
   }, [selectZone, removeZone])
 
+  // ── Move zone region ────────────────────────────────────────────────────────
+  const handleMoveRegion = useCallback(async (zoneId: string, newRegionId: string) => {
+    const zone = zones.find((z) => z.id === zoneId)
+    if (!zone) return
+    const updatedZone = { ...zone, regionId: newRegionId }
+    await updateZone(updatedZone)
+    selectZone(null)
+  }, [zones, updateZone, selectZone])
+
   const districtCount = new Set(assignments.map((a) => a.districtId)).size
+  const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -285,8 +294,8 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     <div style={styles.layout}>
       <div style={styles.leftCol}>
         <Sidebar
-          zones={zones}
-          assignments={assignments}
+          zones={displayZones}
+          assignments={displayAssignments}
           onCreateSnapshot={handleSnapshot}
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
@@ -299,7 +308,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
       <div style={styles.mapArea}>
         <TerritoryMap
           zones={displayZones}
-          assignments={assignments}
+          assignments={displayAssignments}
           onZoneClick={selectZone}
           selectedZoneId={selectedZoneId}
           highlightedSalesId={highlightedSalesId}
@@ -313,13 +322,28 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
             <DrawingToolbar onZoneCreated={handleZoneCreated} existingZones={zones} />
           )}
         </TerritoryMap>
+
+        {/* Floating Region Header */}
+        <div style={styles.floatingRegionHeader}>
+          <span style={styles.floatingRegionLabel}>
+            📍 Khu vực: <strong>{selectedRegion?.name || 'Chưa chọn'}</strong>
+          </span>
+          <button
+            style={styles.changeRegionBtn}
+            onClick={() => setCurrentRegion(null)}
+          >
+            Đổi khu vực
+          </button>
+        </div>
+
         <SnapshotManager />
         <ZoneInfoPanel
-          zones={zones}
-          assignments={assignments}
+          zones={displayZones}
+          assignments={displayAssignments}
           districtCount={districtCount}
           onUpdateActivity={handleUpdateActivity}
           onDeleteZone={handleDeleteZone}
+          onMoveRegion={mode === 'regions' ? handleMoveRegion : undefined}
         />
       </div>
     </div>
@@ -365,5 +389,34 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-muted)',
     fontSize: 14,
     margin: 0,
+  },
+  floatingRegionHeader: {
+    position: 'absolute',
+    top: 16,
+    left: 60,
+    zIndex: 1000,
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: '8px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    boxShadow: 'var(--shadow-md)',
+    backdropFilter: 'blur(8px)',
+  },
+  floatingRegionLabel: {
+    fontSize: 13,
+    color: 'var(--color-text)',
+  },
+  changeRegionBtn: {
+    padding: '4px 10px',
+    borderRadius: 'var(--radius-sm)',
+    border: 'none',
+    background: 'var(--color-accent-light)',
+    color: 'var(--color-accent)',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
   },
 }

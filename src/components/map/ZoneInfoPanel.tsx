@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUIStore } from '../../store/uiStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
+import { useDataStore } from '../../store/dataStore.js'
 import type { Zone, Assignment } from '../../../facades/viewmodels.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
 
@@ -18,14 +19,16 @@ interface ZoneInfoPanelProps {
   districtCount:      number
   onUpdateActivity?:  (zoneId: string, data: { customers?: number; orders?: number }) => void
   onDeleteZone?:      (zoneId: string) => void
+  onMoveRegion?:      (zoneId: string, newRegionId: string) => Promise<void>
 }
 
 export default function ZoneInfoPanel({
-  zones, assignments, onAssign, districtCount, onUpdateActivity, onDeleteZone,
+  zones, assignments, onAssign, districtCount, onUpdateActivity, onDeleteZone, onMoveRegion,
 }: ZoneInfoPanelProps) {
   const { t }          = useTranslation()
   const role           = useUIStore((s) => s.role)
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
+  const regions        = useDataStore((s) => s.regions)
   const [targetDistrict, setTargetDistrict] = useState(0)
   const [assigning, setAssigning]           = useState(false)
 
@@ -36,11 +39,17 @@ export default function ZoneInfoPanel({
   // Delete confirm state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+  // Move region state
+  const [targetRegionId, setTargetRegionId] = useState('')
+  const [moving, setMoving]                 = useState(false)
+
   // Reset state when selected zone changes (must be before early return for Rules of Hooks)
   useEffect(() => {
     setShowDeleteConfirm(false)
     setEditCustomers('')
     setEditOrders('')
+    setTargetRegionId('')
+    setMoving(false)
   }, [selectedZoneId])
 
   if (!selectedZoneId) return (
@@ -210,6 +219,45 @@ export default function ZoneInfoPanel({
           >
             {assigning ? '...' : t('map.assign_confirm')}
           </button>
+        </div>
+      )}
+
+      {/* Move zone to another region */}
+      {onMoveRegion && (
+        <div style={styles.moveRegionRow}>
+          <label style={styles.assignLabel}>Chuyển sang khu vực:</label>
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <select
+              style={styles.select}
+              value={targetRegionId || (zone as any).regionId || ''}
+              onChange={(e) => setTargetRegionId(e.target.value)}
+              data-testid="move-region-select"
+            >
+              <option value="" disabled>-- Chọn khu vực --</option>
+              {regions.map((r) => (
+                <option key={r.id} value={r.id} disabled={r.id === (zone as any).regionId}>
+                  {r.name}{r.id === (zone as any).regionId ? ' (Hiện tại)' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              style={styles.assignBtn}
+              onClick={async () => {
+                const destRegionId = targetRegionId || (zone as any).regionId;
+                if (!destRegionId || destRegionId === (zone as any).regionId) return;
+                setMoving(true);
+                try {
+                  await onMoveRegion(zone.id, destRegionId);
+                } finally {
+                  setMoving(false);
+                }
+              }}
+              disabled={moving || !targetRegionId || targetRegionId === (zone as any).regionId}
+              data-testid="move-region-btn"
+            >
+              {moving ? '...' : 'Chuyển'}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -384,6 +432,14 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   assignRow: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 6,
+    paddingTop: 10,
+    borderTop: '1px solid var(--color-border)',
+    marginTop: 4,
+  },
+  moveRegionRow: {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 6,

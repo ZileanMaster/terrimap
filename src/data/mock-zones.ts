@@ -144,45 +144,45 @@ const hcmZones: Zone[] = [
 export const MOCK_ZONES: Zone[] = [...hnZones, ...hcmZones]
 
 export const MOCK_ASSIGNMENTS: Assignment[] = [
-  // HN — 5 districts, 1 agent each (sa0-sa4)
-  { zoneId: 'hn01', districtId: 0, salesAgentId: 'sa0' },
-  { zoneId: 'hn02', districtId: 0, salesAgentId: 'sa0' },
-  { zoneId: 'hn06', districtId: 0, salesAgentId: 'sa0' },
-  { zoneId: 'hn07', districtId: 0, salesAgentId: 'sa0' },
+  // HN — 5 districts, 1 agent each
+  { zoneId: 'hn01', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
+  { zoneId: 'hn02', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
+  { zoneId: 'hn06', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
+  { zoneId: 'hn07', districtId: 0, salesAgentId: 'sales.test@terrimap.vn' },
 
-  { zoneId: 'hn03', districtId: 1, salesAgentId: 'sa1' },
-  { zoneId: 'hn04', districtId: 1, salesAgentId: 'sa1' },
-  { zoneId: 'hn08', districtId: 1, salesAgentId: 'sa1' },
-  { zoneId: 'hn09', districtId: 1, salesAgentId: 'sa1' },
+  { zoneId: 'hn03', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
+  { zoneId: 'hn04', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
+  { zoneId: 'hn08', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
+  { zoneId: 'hn09', districtId: 1, salesAgentId: 'sales_hn_1@terrimap.vn' },
 
-  { zoneId: 'hn05', districtId: 2, salesAgentId: 'sa2' },
-  { zoneId: 'hn10', districtId: 2, salesAgentId: 'sa2' },
-  { zoneId: 'hn15', districtId: 2, salesAgentId: 'sa2' },
-  { zoneId: 'hn20', districtId: 2, salesAgentId: 'sa2' },
+  { zoneId: 'hn05', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
+  { zoneId: 'hn10', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
+  { zoneId: 'hn15', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
+  { zoneId: 'hn20', districtId: 2, salesAgentId: 'sales_hn_2@terrimap.vn' },
 
-  { zoneId: 'hn11', districtId: 3, salesAgentId: 'sa3' },
-  { zoneId: 'hn12', districtId: 3, salesAgentId: 'sa3' },
-  { zoneId: 'hn16', districtId: 3, salesAgentId: 'sa3' },
-  { zoneId: 'hn17', districtId: 3, salesAgentId: 'sa3' },
+  { zoneId: 'hn11', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
+  { zoneId: 'hn12', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
+  { zoneId: 'hn16', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
+  { zoneId: 'hn17', districtId: 3, salesAgentId: 'sales_hn_3@terrimap.vn' },
 
-  { zoneId: 'hn13', districtId: 4, salesAgentId: 'sa4' },
-  { zoneId: 'hn14', districtId: 4, salesAgentId: 'sa4' },
-  { zoneId: 'hn18', districtId: 4, salesAgentId: 'sa4' },
-  { zoneId: 'hn19', districtId: 4, salesAgentId: 'sa4' },
+  { zoneId: 'hn13', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
+  { zoneId: 'hn14', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
+  { zoneId: 'hn18', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
+  { zoneId: 'hn19', districtId: 4, salesAgentId: 'sales.test@terrimap.vn' },
 
-  // HCM — 3 districts, 1 agent each (sa5-sa7)
-  { zoneId: 'sg01', districtId: 5, salesAgentId: 'sa5' },
-  { zoneId: 'sg02', districtId: 5, salesAgentId: 'sa5' },
-  { zoneId: 'sg05', districtId: 5, salesAgentId: 'sa5' },
-  { zoneId: 'sg06', districtId: 5, salesAgentId: 'sa5' },
+  // HCM — 2 districts (district 5 and 6, matching 2 mock agents sales_hcm_1 and sales_hcm_2)
+  { zoneId: 'sg01', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
+  { zoneId: 'sg02', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
+  { zoneId: 'sg05', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
+  { zoneId: 'sg06', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
 
-  { zoneId: 'sg03', districtId: 6, salesAgentId: 'sa6' },
-  { zoneId: 'sg04', districtId: 6, salesAgentId: 'sa6' },
-  { zoneId: 'sg07', districtId: 6, salesAgentId: 'sa6' },
-  { zoneId: 'sg08', districtId: 6, salesAgentId: 'sa6' },
+  { zoneId: 'sg03', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
+  { zoneId: 'sg04', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
+  { zoneId: 'sg07', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
+  { zoneId: 'sg08', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
 
-  { zoneId: 'sg09', districtId: 7, salesAgentId: 'sa7' },
-  { zoneId: 'sg10', districtId: 7, salesAgentId: 'sa7' },
-  { zoneId: 'sg11', districtId: 7, salesAgentId: 'sa7' },
-  { zoneId: 'sg12', districtId: 7, salesAgentId: 'sa7' },
+  { zoneId: 'sg09', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
+  { zoneId: 'sg10', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
+  { zoneId: 'sg11', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
+  { zoneId: 'sg12', districtId: 6, salesAgentId: 'sales_hcm_2@terrimap.vn' },
 ]
