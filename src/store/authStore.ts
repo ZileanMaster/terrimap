@@ -72,6 +72,7 @@ interface AuthStore {
   updateMemberRole: (memberId: string, newRole: string) => Promise<boolean>
   removeMember: (memberId: string) => Promise<boolean>
   loadMembers: () => Promise<ProjectMember[]>
+  updateProfile: (fullName: string) => Promise<boolean>
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -523,5 +524,41 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       .order('joined_at', { ascending: true })
 
     return (data ?? []) as ProjectMember[]
+  },
+
+  // ── Update Profile ───────────────────────────────────────────────────────
+  updateProfile: async (fullName) => {
+    if (!supabase) {
+      // Offline mode: update mock profile in store
+      const currentProfile = get().profile
+      if (currentProfile) {
+        set({ profile: { ...currentProfile, full_name: fullName } })
+      } else {
+        set({ profile: { id: 'mock-user', email: 'admin.test@terrimap.vn', full_name: fullName, avatar_url: null, created_at: new Date().toISOString() } })
+      }
+      return true
+    }
+    const user = get().user
+    if (!user) return false
+    set({ loading: true, authError: null })
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ full_name: fullName })
+        .eq('id', user.id)
+      if (error) {
+        set({ authError: error.message, loading: false })
+        return false
+      }
+      const currentProfile = get().profile
+      if (currentProfile) {
+        set({ profile: { ...currentProfile, full_name: fullName } })
+      }
+      set({ loading: false })
+      return true
+    } catch (e: any) {
+      set({ authError: e?.message || 'Lỗi cập nhật thông tin', loading: false })
+      return false
+    }
   },
 }))

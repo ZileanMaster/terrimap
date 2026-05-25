@@ -7,8 +7,6 @@
  * 3. User but no project → ProjectSelectPage
  * 4. User + project → Dashboard (role-based page)
  *
- * Code splitting: Pages are lazy-loaded to reduce initial bundle (~40% smaller).
- * Role is determined by project_members.role (not user-selectable tabs)
  * Admin can use "view-as" mode to preview other roles.
  */
 
@@ -22,6 +20,7 @@ import { isOnline } from './lib/supabase.js'
 import DashboardLayout from './components/layout/DashboardLayout.js'
 import { OverviewView, RegionsView, UsersView, SettingsView } from './pages/DashboardViews.js'
 import AlgorithmComparator from './components/algorithm/AlgorithmComparator.js'
+import RegionSelector from './components/layout/RegionSelector.js'
 
 // ── Lazy-loaded pages (code splitting) ───────────────────────────────────────
 const AdminPage       = React.lazy(() => import('./pages/AdminPage.js'))
@@ -60,6 +59,7 @@ export default function App() {
 
   // Data store
   const initData       = useDataStore((s) => s.init)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
 
   // Initialize auth on mount
   React.useEffect(() => { initAuth() }, [initAuth])
@@ -75,6 +75,10 @@ export default function App() {
   React.useEffect(() => {
     if (membership && membership.role !== 'admin') {
       useUIStore.getState().setRole(membership.role as any)
+    }
+    // Auto-select assigned region for non-admin roles
+    if (membership?.role && membership.role !== 'admin' && membership.region_id) {
+      useDataStore.getState().setCurrentRegion(membership.region_id)
     }
   }, [membership])
 
@@ -123,12 +127,14 @@ export default function App() {
             <Suspense fallback={<PageLoader />}>
               {activeTab === 'overview' && <OverviewView />}
               {activeTab === 'regions' && (
+                currentRegionId === null ? <RegionSelector /> :
                 effectiveRole === 'admin' ? <AdminPage mode="regions" /> :
                 effectiveRole === 'coordinator' ? <CoordinatorPage mode="regions" /> :
                 <OverviewView />
               )}
               {activeTab === 'users' && <UsersView />}
               {activeTab === 'assignments' && (
+                currentRegionId === null ? <RegionSelector /> :
                 effectiveRole === 'admin' ? <AdminPage mode="assignments" /> :
                 effectiveRole === 'coordinator' ? <CoordinatorPage mode="assignments" /> :
                 <SalesPage />
@@ -150,6 +156,7 @@ export default function App() {
 function OfflineApp() {
   const role = useUIStore((s) => s.role)
   const init = useDataStore((s) => s.init)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
 
   React.useEffect(() => { init() }, [init])
 
@@ -161,12 +168,14 @@ function OfflineApp() {
             <Suspense fallback={<PageLoader />}>
               {activeTab === 'overview' && <OverviewView />}
               {activeTab === 'regions' && (
+                currentRegionId === null ? <RegionSelector /> :
                 role === 'admin' ? <AdminPage mode="regions" /> :
                 role === 'coordinator' ? <CoordinatorPage mode="regions" /> :
                 <OverviewView />
               )}
               {activeTab === 'users' && <UsersView />}
               {activeTab === 'assignments' && (
+                currentRegionId === null ? <RegionSelector /> :
                 role === 'admin' ? <AdminPage mode="assignments" /> :
                 role === 'coordinator' ? <CoordinatorPage mode="assignments" /> :
                 <SalesPage />

@@ -218,7 +218,11 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   const ctx                = useFacade()
   const highlightedSalesId = useUIStore((s) => s.highlightedSalesId)
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
-  const agents = useDataStore((s) => s.agents)
+  const allAgents = useDataStore((s) => s.agents)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
+  const agents = currentRegionId
+    ? allAgents.filter((a) => (a as any).region_id === currentRegionId || (a as any).regionId === currentRegionId)
+    : allAgents
   const [agentModalOpen, setAgentModalOpen] = useState(false)
   const [memberModalOpen, setMemberModalOpen] = useState(false)
 
@@ -238,9 +242,6 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 
   return (
     <div style={styles.content}>
-      <RegionManager onFlyTo={onFlyTo} />
-
-      <div style={styles.divider} />
       <h2 style={styles.sectionTitle}>📊 Tổng quan hệ thống</h2>
       <div style={styles.statsGrid}>
         <StatCard label="Vùng" value={zones.length} />
@@ -347,7 +348,11 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
   const ctx                    = useFacade()
   const highlightedSalesId     = useUIStore((s) => s.highlightedSalesId)
   const setHighlightedSalesId  = useUIStore((s) => s.setHighlightedSalesId)
-  const agents                 = useDataStore((s) => s.agents)
+  const allAgents = useDataStore((s) => s.agents)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
+  const agents = currentRegionId
+    ? allAgents.filter((a) => (a as any).region_id === currentRegionId || (a as any).regionId === currentRegionId)
+    : allAgents
 
   if (ctx.role !== 'coordinator') return null
   const overview = ctx.facade.getTeamOverview(zones, assignments, agents)

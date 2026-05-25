@@ -39,6 +39,9 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const regions            = useDataStore((s) => s.regions)
   const loading            = useDataStore((s) => s.loading)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
+  const currentRegionId    = useDataStore((s) => s.currentRegionId)
+  const setCurrentRegion   = useDataStore((s) => s.setCurrentRegion)
+  const updateZone         = useDataStore((s) => s.updateZone)
 
   const selectedZoneId     = useUIStore((s) => s.selectedZoneId)
   const selectZone         = useUIStore((s) => s.selectZone)
@@ -46,20 +49,18 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const ctx                = useFacade()
 
   // ── Local UI state ─────────────────────────────────────────────────────────
-  // Adjust 4: Region dropdown — không auto-detect, user chọn
-  const [selectedRegionId, setSelectedRegionId] = useState<string>('')
   const [currentPeriod, setCurrentPeriod]       = useState(currentPeriodDefault())
   const [showMetricsInput, setShowMetricsInput] = useState(false)
 
   // Filter zones theo region đang chọn
   const displayZones = useMemo<Zone[]>(() => {
-    if (!selectedRegionId) return zones
-    return zones.filter((z) => (z as any).regionId === selectedRegionId)
-  }, [zones, selectedRegionId])
+    if (!currentRegionId) return zones
+    return zones.filter((z) => (z as any).regionId === currentRegionId)
+  }, [zones, currentRegionId])
 
   // Compute map center/zoom from selected region (for flyTo animation)
-  const selectedRegion = selectedRegionId
-    ? regions.find((r) => r.id === selectedRegionId)
+  const selectedRegion = currentRegionId
+    ? regions.find((r) => r.id === currentRegionId)
     : null
   const mapCenter: [number, number] = selectedRegion
     ? [selectedRegion.center.lat, selectedRegion.center.lng]
@@ -94,7 +95,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
       // Check source district still connected
       if (!isDistrictConnected(zones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
-        alert('\u26a0\ufe0f Chuy\u1ec3n zone n\u00e0y s\u1ebd l\u00e0m district b\u1ecb t\u00e1ch r\u1eddi. Kh\u00f4ng th\u1ec3 th\u1ef1c hi\u1ec7n.')
+        alert('⚠️ Chuyển zone này sẽ làm district bị tách rời. Không thể thực hiện.')
         return
       }
     }
@@ -115,6 +116,15 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       console.error('[CoordinatorPage] assignZone error:', e)
     }
   }, [ctx, assignments, zones, persistAssignments, selectZone])
+
+  // ── Move zone region ────────────────────────────────────────────────────────
+  const handleMoveRegion = useCallback(async (zoneId: string, newRegionId: string) => {
+    const zone = zones.find((z) => z.id === zoneId)
+    if (!zone) return
+    const updatedZone = { ...zone, regionId: newRegionId }
+    await updateZone(updatedZone)
+    selectZone(null)
+  }, [zones, updateZone, selectZone])
 
   /**
    * Adjust 2: Chạy thuật toán với bản copy zones (metrics override).
@@ -142,21 +152,6 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
     <div style={styles.layout}>
       {/* Left sidebar */}
       <div style={styles.leftCol}>
-        {/* Region selector — Adjust 4 */}
-        <div style={styles.regionBar}>
-          <span style={styles.regionLabel}>📍 Khu vực:</span>
-          <select
-            value={selectedRegionId}
-            onChange={(e) => setSelectedRegionId(e.target.value)}
-            style={styles.regionSelect}
-          >
-            <option value="">Tất cả khu vực</option>
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </div>
-
         {mode === 'assignments' && (
           <>
             {/* Period selector + metrics toggle */}
@@ -205,11 +200,26 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
           center={mapCenter}
           zoom={mapZoom}
         />
+
+        {/* Floating Region Header */}
+        <div style={styles.floatingRegionHeader}>
+          <span style={styles.floatingRegionLabel}>
+            📍 Khu vực: <strong>{selectedRegion?.name || 'Chưa chọn'}</strong>
+          </span>
+          <button
+            style={styles.changeRegionBtn}
+            onClick={() => setCurrentRegion(null)}
+          >
+            Đổi khu vực
+          </button>
+        </div>
+
         <ZoneInfoPanel
           zones={displayZones}
           assignments={displayAssignments}
           onAssign={mode === 'assignments' ? handleAssign : undefined}
           districtCount={districtCount}
+          onMoveRegion={mode === 'regions' ? handleMoveRegion : undefined}
         />
       </div>
     </div>
@@ -303,4 +313,33 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'spin 0.8s linear infinite',
   },
   loadingText: { color: 'var(--color-text-muted)', fontSize: 14, margin: 0 },
+  floatingRegionHeader: {
+    position: 'absolute',
+    top: 16,
+    left: 60,
+    zIndex: 1000,
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: '8px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    boxShadow: 'var(--shadow-md)',
+    backdropFilter: 'blur(8px)',
+  },
+  floatingRegionLabel: {
+    fontSize: 13,
+    color: 'var(--color-text)',
+  },
+  changeRegionBtn: {
+    padding: '4px 10px',
+    borderRadius: 'var(--radius-sm)',
+    border: 'none',
+    background: 'var(--color-accent-light)',
+    color: 'var(--color-accent)',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
 }
