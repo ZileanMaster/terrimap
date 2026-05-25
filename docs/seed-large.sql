@@ -130,7 +130,8 @@ BEGIN
     (v_sales_hn_16_id, 'sales_hn_16@terrimap.vn', 'Nhân Viên HN-16'),
     (v_sales_hn_17_id, 'sales_hn_17@terrimap.vn', 'Nhân Viên HN-17'),
     (v_sales_hn_18_id, 'sales_hn_18@terrimap.vn', 'Nhân Viên HN-18'),
-    (v_sales_hn_19_id, 'sales_hn_19@terrimap.vn', 'Nhân Viên HN-19');
+    (v_sales_hn_19_id, 'sales_hn_19@terrimap.vn', 'Nhân Viên HN-19')
+  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name;
 
   -- Insert project_members
   INSERT INTO public.project_members (project_id, user_id, role, region_id) VALUES
@@ -153,7 +154,8 @@ BEGIN
     (v_project_id, v_sales_hn_16_id, 'sales', v_region_hn),
     (v_project_id, v_sales_hn_17_id, 'sales', v_region_hn),
     (v_project_id, v_sales_hn_18_id, 'sales', v_region_hn),
-    (v_project_id, v_sales_hn_19_id, 'sales', v_region_hn);
+    (v_project_id, v_sales_hn_19_id, 'sales', v_region_hn)
+  ON CONFLICT (project_id, user_id) DO NOTHING;
 
   -- Insert sales_agents
   INSERT INTO public.sales_agents (id, name, active_region, capacity, region_id, project_id) VALUES
@@ -176,7 +178,8 @@ BEGIN
     (v_sales_hn_16_id::text, 'Nhân Viên HN-16', 'Hà Nội', 590, v_region_hn, v_project_id),
     (v_sales_hn_17_id::text, 'Nhân Viên HN-17', 'Hà Nội', 605, v_region_hn, v_project_id),
     (v_sales_hn_18_id::text, 'Nhân Viên HN-18', 'Hà Nội', 620, v_region_hn, v_project_id),
-    (v_sales_hn_19_id::text, 'Nhân Viên HN-19', 'Hà Nội', 635, v_region_hn, v_project_id);
+    (v_sales_hn_19_id::text, 'Nhân Viên HN-19', 'Hà Nội', 635, v_region_hn, v_project_id)
+  ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, active_region = EXCLUDED.active_region, capacity = EXCLUDED.capacity, region_id = EXCLUDED.region_id, project_id = EXCLUDED.project_id;
 
   -- Insert 500 zones in Hanoi
   INSERT INTO public.zones (id, name, status, polygon, centroid, region_id, project_id) VALUES
