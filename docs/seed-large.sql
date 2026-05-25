@@ -29,10 +29,10 @@ DECLARE
   v_sales_hn_18_id UUID := gen_random_uuid();
   v_sales_hn_19_id UUID := gen_random_uuid();
 BEGIN
-  -- Get the first project ID as target
-  SELECT id INTO v_project_id FROM public.projects LIMIT 1;
+  -- Get the test project ID specifically
+  SELECT id INTO v_project_id FROM public.projects WHERE id = 'test-project-terrimap' OR owner_id = (SELECT id FROM auth.users WHERE email = 'admin.test@terrimap.vn' LIMIT 1) LIMIT 1;
   IF v_project_id IS NULL THEN
-    RAISE EXCEPTION 'Không tìm thấy project nào trong database. Vui lòng đăng nhập và tạo project trước!';
+    RAISE EXCEPTION 'Không tìm thấy project test nào (ID: test-project-terrimap hoặc do admin.test@terrimap.vn sở hữu) trong database. Vui lòng đăng ký/đăng nhập tài khoản test và tạo project trước!';
   END IF;
 
   -- Get the Hanoi region ID dynamically based on name and project_id
