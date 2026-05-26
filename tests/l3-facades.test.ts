@@ -80,7 +80,9 @@ const salesAgents = [
   { id: 'sa1', name: 'Agent One', activeRegion: 'South', capacity: 200 },
 ] as any[];
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // AdminFacade — PERMISSION MATRIX

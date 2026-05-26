@@ -11,6 +11,8 @@ import {
   polygonCentroid,
   buildAdjacencyMatrix,
   buildDistanceMatrix,
+  assertNoPolygonTopologyViolations,
+  GeometryError,
   type AdjMatrix,
   type DistMatrix,
 } from '../lib/geometry.js';
@@ -113,6 +115,19 @@ export class MapService {
       zones.push(zone);
     }
 
+    try {
+      assertNoPolygonTopologyViolations(zones);
+    } catch (err) {
+      if (err instanceof GeometryError) {
+        throw new ServiceError({
+          code: 'INVALID_INPUT',
+          message: err.message,
+          originalError: err,
+        });
+      }
+      throw err;
+    }
+
     return zones;
   }
 
@@ -162,6 +177,7 @@ export class MapService {
    * @complexity O(n²) — n = zones.length.
    */
   computeMatrices(zones: Zone[]): { adj: AdjMatrix; dist: DistMatrix } {
+    assertNoPolygonTopologyViolations(zones);
     return {
       adj: buildAdjacencyMatrix(zones, 50),
       dist: buildDistanceMatrix(zones),

@@ -8,7 +8,7 @@ import { useUIStore } from '../store/uiStore.js';
 import { useAuthStore } from '../store/authStore.js';
 import { isOnline, supabase } from '../lib/supabase.js';
 import { loadSnapshots } from '../services/db.js';
-import { buildAdjacencyMatrix } from '../../lib/geometry.js';
+import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../lib/geometry.js';
 
 // Clean email-based mock members for offline mode
 const MOCK_MEMBERS = [
@@ -102,6 +102,7 @@ export function OverviewView() {
   // Compute total violations and islands across all regions
   let totalContiguityViolations = 0;
   let totalIslandZones = 0;
+  let totalTopologyErrors = 0;
 
   const regionStatsList = regions.map((r) => {
     const regionZones = zones.filter((z) => (z as any).regionId === r.id);
@@ -114,6 +115,8 @@ export function OverviewView() {
 
     // Contiguity & Island zones
     const adj = buildAdjacencyMatrix(regionZones, 50);
+    const topologyErrors = findPolygonTopologyViolations(regionZones).length;
+    totalTopologyErrors += topologyErrors;
     const islandCount = regionZones.filter((z) => (adj[z.id] ?? []).length === 0).length;
     totalIslandZones += islandCount;
 
@@ -186,6 +189,7 @@ export function OverviewView() {
       zonesCount: regionZonesCount,
       assignedCount: regionAssignedCount,
       islandCount,
+      topologyErrors,
       contiguityViolations: regionContiguityViolations,
       overloadedCount,
       underloadedCount,
@@ -195,7 +199,22 @@ export function OverviewView() {
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>📊 Tổng quan dự án</h3>
+      <div style={styles.workflowHero}>
+        <div>
+          <span style={styles.workflowKicker}>Workflow readiness</span>
+          <h3 style={styles.viewHeader}>Tổng quan dự án</h3>
+          <p style={styles.workflowText}>
+            TerriMap sẵn sàng chạy phân chia khi khu vực có zones, sales, topology hợp lệ và graph liên thông.
+          </p>
+        </div>
+        <div style={styles.workflowSteps}>
+          <span style={regions.length > 0 ? styles.stepOk : styles.stepWarn}>1. Khu vực</span>
+          <span style={zones.length > 0 ? styles.stepOk : styles.stepWarn}>2. Zones</span>
+          <span style={agents.length > 1 ? styles.stepOk : styles.stepWarn}>3. Sales</span>
+          <span style={totalTopologyErrors === 0 ? styles.stepOk : styles.stepWarn}>4. Topology</span>
+          <span style={totalContiguityViolations === 0 ? styles.stepOk : styles.stepWarn}>5. Liên thông</span>
+        </div>
+      </div>
 
       {/* Metric Cards Deck */}
       <div style={styles.cardGrid}>
@@ -759,6 +778,50 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     color: 'var(--color-text)',
     marginBottom: '10px',
+  },
+  workflowHero: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '16px',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    padding: '4px 0 2px',
+  },
+  workflowKicker: {
+    fontSize: '12px',
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
+    textTransform: 'uppercase',
+    letterSpacing: '.04em',
+  },
+  workflowText: {
+    maxWidth: '680px',
+    color: 'var(--color-text-2)',
+    marginTop: '-4px',
+  },
+  workflowSteps: {
+    display: 'flex',
+    gap: '8px',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
+  stepOk: {
+    border: '1px solid #bbf7d0',
+    background: '#f0fdf4',
+    color: '#047857',
+    borderRadius: '999px',
+    padding: '6px 10px',
+    fontSize: '12px',
+    fontWeight: 800,
+  },
+  stepWarn: {
+    border: '1px solid #fecaca',
+    background: '#fef2f2',
+    color: '#b91c1c',
+    borderRadius: '999px',
+    padding: '6px 10px',
+    fontSize: '12px',
+    fontWeight: 800,
   },
   cardGrid: {
     display: 'flex',

@@ -24,10 +24,10 @@ const zone2: Zone = {
   id: 'z2',
   name: 'Zone 2',
   status: 'unassigned',
-  centroid: { lat: 21.1, lng: 105.9 },
+  centroid: { lat: 21.0, lng: 106.0 },
   polygon: { type: 'Polygon' as const, coordinates: [
-    [[105.8, 21.0], [106.0, 21.0], [106.0, 21.2],
-     [105.8, 21.2], [105.8, 21.0]]
+    [[105.9, 20.9], [106.1, 20.9], [106.1, 21.1],
+     [105.9, 21.1], [105.9, 20.9]]
   ]},
   activities: [
     { id: 'a3', type: 'CUSTOMER' as const, value: 80 },
@@ -105,6 +105,32 @@ describe('MapService smoke tests', () => {
   it('[SMOKE-M2] importGeoJSON throw khi không phải FeatureCollection', () => {
     const svc = new MapService()
     expect(() => svc.importGeoJSON({ type: 'Feature' })).toThrow()
+  })
+
+  it('[SMOKE-M2b] importGeoJSON reject polygon overlap/crossing', () => {
+    const svc = new MapService()
+    const geojson = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { id: 'z1' },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[0,0],[1,0],[1,1],[0,1],[0,0]]],
+          },
+        },
+        {
+          type: 'Feature',
+          properties: { id: 'z2' },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[0.5,0.5],[1.5,0.5],[1.5,1.5],[0.5,1.5],[0.5,0.5]]],
+          },
+        },
+      ],
+    }
+    expect(() => svc.importGeoJSON(geojson)).toThrow(/overlapping\/crossing/)
   })
 
   it('[SMOKE-M3] exportGeoJSON trả FeatureCollection hợp lệ', () => {

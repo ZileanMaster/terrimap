@@ -17,6 +17,10 @@ import {
   buildAdjacencyMatrix,
   buildDistanceMatrix,
   meanCoordinate,
+  polygonSelfIntersects,
+  polygonsOverlap,
+  findPolygonTopologyViolations,
+  assertNoPolygonTopologyViolations,
   GeometryError,
 } from '../lib/geometry.js';
 import type { Zone, Coordinate } from '../types/domain.js';
@@ -794,5 +798,53 @@ describe('buildDistanceMatrix', () => {
       ),
       { numRuns: 300 }
     );
+  });
+});
+
+describe('polygon topology validation', () => {
+  const squareA = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]];
+  const squareB = [[1, 0], [2, 0], [2, 1], [1, 1], [1, 0]];
+  const overlapping = [[0.5, 0.5], [1.5, 0.5], [1.5, 1.5], [0.5, 1.5], [0.5, 0.5]];
+  const bowTie = [[0, 0], [1, 1], [0, 1], [1, 0], [0, 0]];
+
+  const zoneFromRing = (id: string, ring: number[][]): Zone => ({
+    id,
+    name: id,
+    polygon: { type: 'Polygon', coordinates: [ring] },
+    centroid: { lat: 0, lng: 0 },
+    activities: [],
+    status: 'unassigned',
+  });
+
+  it('[TOPO-1] shared boundary is allowed, not overlap', () => {
+    expect(polygonsOverlap(squareA, squareB)).toBe(false);
+    expect(findPolygonTopologyViolations([
+      zoneFromRing('a', squareA),
+      zoneFromRing('b', squareB),
+    ])).toEqual([]);
+  });
+
+  it('[TOPO-2] crossing/overlapping polygons are rejected', () => {
+    expect(polygonsOverlap(squareA, overlapping)).toBe(true);
+    const violations = findPolygonTopologyViolations([
+      zoneFromRing('a', squareA),
+      zoneFromRing('b', overlapping),
+    ]);
+    expect(violations).toContainEqual({ type: 'OVERLAP', zoneAId: 'a', zoneBId: 'b' });
+  });
+
+  it('[TOPO-3] duplicate polygons are rejected', () => {
+    expect(polygonsOverlap(squareA, squareA)).toBe(true);
+    expect(() => assertNoPolygonTopologyViolations([
+      zoneFromRing('a', squareA),
+      zoneFromRing('b', squareA),
+    ])).toThrow(GeometryError);
+  });
+
+  it('[TOPO-4] self-intersecting polygon ring is rejected', () => {
+    expect(polygonSelfIntersects(bowTie)).toBe(true);
+    expect(() => assertNoPolygonTopologyViolations([
+      zoneFromRing('bad', bowTie),
+    ])).toThrow(/self-intersecting/);
   });
 });

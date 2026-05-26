@@ -1,10 +1,43 @@
 /**
- * RegionSelector.tsx — Card-based region selector for Admin and Coordinator
+ * RegionSelector - workflow entry for choosing or creating an operating region.
  */
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useUIStore } from '../../store/uiStore.js'
+import { findPolygonTopologyViolations, buildAdjacencyMatrix } from '../../../lib/geometry.js'
+
+const cityPresets = [
+  { name: 'Hà Nội', center: { lat: 21.03, lng: 105.83 }, zoom: 12 },
+  { name: 'TP. Hồ Chí Minh', center: { lat: 10.82, lng: 106.63 }, zoom: 12 },
+  { name: 'Đà Nẵng', center: { lat: 16.06, lng: 108.22 }, zoom: 12 },
+  { name: 'Huế', center: { lat: 16.46, lng: 107.59 }, zoom: 13 },
+]
+
+function componentCount(zoneIds: string[], adj: Record<string, string[]>): number {
+  if (zoneIds.length === 0) return 0
+  const ids = new Set(zoneIds)
+  const visited = new Set<string>()
+  let count = 0
+
+  for (const id of zoneIds) {
+    if (visited.has(id)) continue
+    count++
+    const queue = [id]
+    visited.add(id)
+    for (let head = 0; head < queue.length; head++) {
+      const current = queue[head]!
+      for (const next of adj[current] ?? []) {
+        if (ids.has(next) && !visited.has(next)) {
+          visited.add(next)
+          queue.push(next)
+        }
+      }
+    }
+  }
+
+  return count
+}
 
 export default function RegionSelector() {
   const regions = useDataStore((s) => s.regions)
@@ -14,351 +47,337 @@ export default function RegionSelector() {
   const addRegion = useDataStore((s) => s.addRegion)
   const role = useUIStore((s) => s.role)
 
-  // Creation form state
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
-  const [lat, setLat] = useState('21.0285')
-  const [lng, setLng] = useState('105.8542')
+  const [lat, setLat] = useState('21.0300')
+  const [lng, setLng] = useState('105.8300')
   const [zoom, setZoom] = useState('12')
+
+  const regionCards = useMemo(() => regions.map((region) => {
+    const regionZones = zones.filter((z) => (z as any).regionId === region.id)
+    const adj = buildAdjacencyMatrix(regionZones, 50)
+    const topologyErrors = findPolygonTopologyViolations(regionZones).length
+    const components = componentCount(regionZones.map((z) => z.id), adj)
+    const islandCount = regionZones.filter((z) => (adj[z.id] ?? []).length === 0).length
+    const regionAgents = agents.filter((a) =>
+      a.activeRegion === region.id
+      || a.activeRegion === region.name
+      || (a as any).regionId === region.id
+      || (a as any).region_id === region.id,
+    )
+    return { region, regionZones, topologyErrors, components, islandCount, regionAgents }
+  }), [regions, zones, agents])
+
+  const handlePreset = (preset: typeof cityPresets[number]) => {
+    setName(preset.name)
+    setLat(String(preset.center.lat))
+    setLng(String(preset.center.lng))
+    setZoom(String(preset.zoom))
+    setCreating(true)
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
-
-    try {
-      const region = await addRegion(
-        name.trim(),
-        { lat: parseFloat(lat), lng: parseFloat(lng) },
-        parseInt(zoom),
-      )
-      setName('')
-      setCreating(false)
-      setCurrentRegion(region.id)
-    } catch (err: any) {
-      alert(`❌ Lỗi khi tạo khu vực: ${err.message}`)
-    }
+    const region = await addRegion(
+      name.trim(),
+      { lat: Number(lat), lng: Number(lng) },
+      Number(zoom),
+    )
+    setName('')
+    setCreating(false)
+    setCurrentRegion(region.id)
   }
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
-        <span style={styles.headerIcon}>📍</span>
-        <h2 style={styles.title}>Chọn Khu vực Hoạt động</h2>
-        <p style={styles.subtitle}>
-          Vui lòng chọn một khu vực địa lý để xem bản đồ, danh sách zone, phân công và chạy so sánh thuật toán.
-        </p>
-      </div>
+      <section style={styles.hero}>
+        <div>
+          <div style={styles.kicker}>Bước 1</div>
+          <h1 style={styles.title}>Chọn khu vực vận hành</h1>
+          <p style={styles.subtitle}>
+            Mọi thao tác vẽ zone, kiểm tra liên thông và chạy thuật toán đều nên bắt đầu từ một khu vực cụ thể.
+          </p>
+        </div>
+        {role === 'admin' && (
+          <button style={styles.primaryBtn} onClick={() => setCreating(true)}>
+            Tạo khu vực
+          </button>
+        )}
+      </section>
 
-      <div style={styles.grid}>
-        {regions.map((region) => {
-          const regionZones = zones.filter((z) => (z as any).regionId === region.id)
-          const assignedCount = regionZones.filter((z) => z.status === 'assigned').length
-          const coordinator = agents.find((a) => a.id === region.coordinatorId)
+      {regions.length === 0 && (
+        <section style={styles.emptyBand}>
+          <h2 style={styles.emptyTitle}>Dự án chưa có khu vực</h2>
+          <p style={styles.emptyText}>Tạo khu vực đầu tiên để bắt đầu nhập zones và phân chia lãnh thổ.</p>
+          <div style={styles.presetRow}>
+            {cityPresets.map((preset) => (
+              <button key={preset.name} style={styles.secondaryBtn} onClick={() => handlePreset(preset)}>
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
+      {creating && role === 'admin' && (
+        <form onSubmit={handleCreate} style={styles.form}>
+          <div style={styles.formHeader}>
+            <h2 style={styles.formTitle}>Tạo khu vực mới</h2>
+            <button type="button" style={styles.ghostBtn} onClick={() => setCreating(false)}>Đóng</button>
+          </div>
+          <div style={styles.presetRow}>
+            {cityPresets.map((preset) => (
+              <button key={preset.name} type="button" style={styles.secondaryBtn} onClick={() => handlePreset(preset)}>
+                {preset.name}
+              </button>
+            ))}
+          </div>
+          <div style={styles.formGrid}>
+            <label style={styles.field}>
+              <span>Tên khu vực</span>
+              <input value={name} onChange={(e) => setName(e.target.value)} required style={styles.input} />
+            </label>
+            <label style={styles.field}>
+              <span>Vĩ độ trung tâm</span>
+              <input type="number" step="0.0001" value={lat} onChange={(e) => setLat(e.target.value)} required style={styles.input} />
+            </label>
+            <label style={styles.field}>
+              <span>Kinh độ trung tâm</span>
+              <input type="number" step="0.0001" value={lng} onChange={(e) => setLng(e.target.value)} required style={styles.input} />
+            </label>
+            <label style={styles.field}>
+              <span>Zoom</span>
+              <input type="number" min="1" max="20" value={zoom} onChange={(e) => setZoom(e.target.value)} required style={styles.input} />
+            </label>
+          </div>
+          <button type="submit" style={styles.primaryBtn}>Lưu và mở khu vực</button>
+        </form>
+      )}
+
+      <section style={styles.grid}>
+        {regionCards.map(({ region, regionZones, topologyErrors, components, islandCount, regionAgents }) => {
+          const blocked = topologyErrors > 0 || components > 1
           return (
-            <div
+            <button
               key={region.id}
               style={styles.card}
               onClick={() => setCurrentRegion(region.id)}
             >
-              <div style={styles.cardHeader}>
-                <span style={styles.cardIcon}>🏙️</span>
-                <h3 style={styles.cardTitle}>{region.name}</h3>
+              <div style={styles.cardTop}>
+                <div>
+                  <span style={styles.kicker}>Khu vực</span>
+                  <h3 style={styles.cardTitle}>{region.name}</h3>
+                </div>
+                <span style={{
+                  ...styles.status,
+                  background: blocked ? '#fef2f2' : '#ecfdf5',
+                  color: blocked ? '#b91c1c' : '#047857',
+                }}>
+                  {blocked ? 'Cần xử lý' : 'Sẵn sàng'}
+                </span>
               </div>
-
-              <div style={styles.stats}>
-                <div style={styles.statRow}>
-                  <span style={styles.statLabel}>Tổng số Zones:</span>
-                  <strong style={styles.statVal}>{regionZones.length} zones</strong>
-                </div>
-                <div style={styles.statRow}>
-                  <span style={styles.statLabel}>Đã phân công:</span>
-                  <strong style={styles.statVal}>
-                    {assignedCount}/{regionZones.length} ({regionZones.length > 0 ? Math.round((assignedCount / regionZones.length) * 100) : 0}%)
-                  </strong>
-                </div>
-                <div style={styles.statRow}>
-                  <span style={styles.statLabel}>Điều phối phụ trách:</span>
-                  <strong style={styles.statVal}>
-                    {coordinator ? coordinator.name : 'Chưa gán'}
-                  </strong>
-                </div>
+              <div style={styles.metrics}>
+                <Metric label="Zones" value={regionZones.length} />
+                <Metric label="Sales" value={regionAgents.length} />
+                <Metric label="Topology" value={topologyErrors} warn={topologyErrors > 0} />
+                <Metric label="Components" value={components} warn={components > 1} />
               </div>
-
-              <button style={styles.selectBtn}>
-                Vào khu vực này →
-              </button>
-            </div>
+              <div style={styles.cardFooter}>
+                <span>{islandCount} zone cô lập</span>
+                <strong>Mở khu vực</strong>
+              </div>
+            </button>
           )
         })}
+      </section>
+    </div>
+  )
+}
 
-        {/* Create Region Card (Admin Only) */}
-        {role === 'admin' && (
-          <div style={{ ...styles.card, ...styles.createCard }}>
-            {!creating ? (
-              <div style={styles.createPlaceholder} onClick={() => setCreating(true)}>
-                <span style={styles.plusIcon}>+</span>
-                <span style={styles.createText}>Tạo Khu vực mới</span>
-              </div>
-            ) : (
-              <form onSubmit={handleCreate} style={styles.form}>
-                <h4 style={styles.formTitle}>➕ Thêm khu vực mới</h4>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Tên khu vực:</label>
-                  <input
-                    type="text"
-                    placeholder="Ví dụ: Đà Nẵng"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={styles.input}
-                    required
-                  />
-                </div>
-                <div style={styles.formRow}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Vĩ độ (Lat):</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={lat}
-                      onChange={(e) => setLat(e.target.value)}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Kinh độ (Lng):</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      value={lng}
-                      onChange={(e) => setLng(e.target.value)}
-                      style={styles.input}
-                      required
-                    />
-                  </div>
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Độ phóng (Zoom):</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={zoom}
-                    onChange={(e) => setZoom(e.target.value)}
-                    style={styles.input}
-                    required
-                  />
-                </div>
-                <div style={styles.formBtns}>
-                  <button type="submit" style={styles.confirmBtn}>Lưu</button>
-                  <button type="button" style={styles.cancelBtn} onClick={() => setCreating(false)}>Hủy</button>
-                </div>
-              </form>
-            )}
-          </div>
-        )}
-      </div>
-
-      {regions.length === 0 && role !== 'admin' && (
-        <div style={styles.emptyState}>
-          📭 Dự án hiện chưa được thiết lập khu vực hoạt động nào. Vui lòng liên hệ Admin để tạo.
-        </div>
-      )}
+function Metric({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
+  return (
+    <div style={styles.metric}>
+      <span style={styles.metricValue}>{value}</span>
+      <span style={{ ...styles.metricLabel, color: warn ? '#b91c1c' : 'var(--color-text-2)' }}>{label}</span>
     </div>
   )
 }
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: '40px 24px',
-    maxWidth: '1200px',
+    padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 20,
+    maxWidth: 1280,
     margin: '0 auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '32px',
-    minHeight: '100%',
   },
-  header: {
-    textAlign: 'center',
+  hero: {
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '12px',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 16,
+    padding: '10px 0 4px',
+    flexWrap: 'wrap',
   },
-  headerIcon: {
-    fontSize: '48px',
+  kicker: {
+    color: 'var(--color-text-2)',
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: .4,
   },
   title: {
-    fontSize: '28px',
-    fontWeight: 800,
-    color: 'var(--color-text)',
-    margin: 0,
+    fontSize: 28,
+    lineHeight: 1.15,
+    margin: '4px 0 8px',
   },
   subtitle: {
-    fontSize: '15px',
-    color: 'var(--color-text-muted)',
-    maxWidth: '600px',
-    lineHeight: 1.6,
-    margin: 0,
+    maxWidth: 680,
+    color: 'var(--color-text-2)',
+    fontSize: 15,
   },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '24px',
-    marginTop: '16px',
-  },
-  card: {
-    backgroundColor: 'var(--color-surface, #161b22)',
-    border: '1.5px solid var(--color-border, #30363d)',
-    borderRadius: '16px',
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
+  primaryBtn: {
+    border: 0,
+    borderRadius: 8,
+    background: '#2563eb',
+    color: '#fff',
+    padding: '10px 14px',
+    fontWeight: 800,
     cursor: 'pointer',
-    transition: 'transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease',
-    boxShadow: 'var(--shadow-sm)',
-    ':hover': {
-      transform: 'translateY(-4px)',
-      borderColor: 'var(--color-accent, #1f6feb)',
-      boxShadow: 'var(--shadow-lg)',
-    },
   },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  cardIcon: {
-    fontSize: '24px',
-  },
-  cardTitle: {
-    fontSize: '20px',
-    fontWeight: 700,
+  secondaryBtn: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    background: 'var(--color-bg)',
     color: 'var(--color-text)',
-    margin: 0,
+    padding: '8px 10px',
+    fontWeight: 700,
+    cursor: 'pointer',
   },
-  stats: {
+  ghostBtn: {
+    border: 0,
+    background: 'transparent',
+    color: 'var(--color-text-2)',
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  emptyBand: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    background: 'var(--color-surface)',
+    padding: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    marginBottom: 6,
+  },
+  emptyText: {
+    color: 'var(--color-text-2)',
+    marginBottom: 14,
+  },
+  presetRow: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  form: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    background: 'var(--color-surface)',
+    padding: 18,
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
-    fontSize: '13px',
-    padding: '12px 0',
-    borderTop: '1px solid var(--color-border)',
-    borderBottom: '1px solid var(--color-border)',
+    gap: 14,
   },
-  statRow: {
+  formHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  statLabel: {
-    color: 'var(--color-text-muted)',
-  },
-  statVal: {
-    color: 'var(--color-text)',
-  },
-  selectBtn: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: 'var(--color-accent-light, rgba(31, 111, 235, 0.1))',
-    color: 'var(--color-accent, #1f6feb)',
-    border: 'none',
-    borderRadius: '8px',
-    fontWeight: 700,
-    fontSize: '13px',
-    cursor: 'pointer',
-    textAlign: 'center',
-    transition: 'background-color 150ms ease, color 150ms ease',
-  },
-  createCard: {
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '260px',
-  },
-  createPlaceholder: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '12px',
-    color: 'var(--color-accent)',
-  },
-  plusIcon: {
-    fontSize: '48px',
-    fontWeight: 300,
-    lineHeight: 1,
-  },
-  createText: {
-    fontSize: '16px',
-    fontWeight: 700,
-  },
-  form: {
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
+    gap: 12,
   },
   formTitle: {
-    fontSize: '15px',
-    fontWeight: 700,
-    margin: '0 0 4px 0',
-    color: 'var(--color-text)',
+    fontSize: 18,
   },
-  formGroup: {
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: 12,
+  },
+  field: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
-  },
-  formRow: {
-    display: 'flex',
-    gap: '12px',
-  },
-  formLabel: {
-    fontSize: '12px',
-    color: 'var(--color-text-muted)',
+    gap: 6,
+    color: 'var(--color-text-2)',
+    fontWeight: 700,
+    fontSize: 13,
   },
   input: {
-    padding: '8px 12px',
-    borderRadius: '6px',
-    backgroundColor: 'var(--color-surface-2, #1f2937)',
+    height: 38,
     border: '1px solid var(--color-border)',
+    borderRadius: 7,
+    padding: '0 10px',
+    background: 'var(--color-bg)',
     color: 'var(--color-text)',
-    fontSize: '13px',
-    outline: 'none',
   },
-  formBtns: {
-    display: 'flex',
-    gap: '8px',
-    marginTop: '6px',
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: 16,
   },
-  confirmBtn: {
-    flex: 1,
-    padding: '8px',
-    backgroundColor: 'var(--color-accent)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 700,
-    fontSize: '12px',
-    cursor: 'pointer',
-  },
-  cancelBtn: {
-    padding: '8px 12px',
-    backgroundColor: 'transparent',
+  card: {
+    textAlign: 'left',
     border: '1px solid var(--color-border)',
-    color: 'var(--color-text-muted)',
-    borderRadius: '6px',
-    fontSize: '12px',
+    borderRadius: 8,
+    background: 'var(--color-bg)',
+    padding: 18,
     cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    boxShadow: 'var(--shadow-sm)',
   },
-  emptyState: {
-    textAlign: 'center',
-    padding: '40px',
-    color: 'var(--color-text-muted)',
-    border: '1.5px dashed var(--color-border)',
-    borderRadius: '16px',
-    backgroundColor: 'var(--color-surface-2)',
+  cardTop: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  cardTitle: {
+    fontSize: 20,
+    marginTop: 4,
+  },
+  status: {
+    height: 28,
+    borderRadius: 999,
+    padding: '5px 9px',
+    fontSize: 12,
+    fontWeight: 800,
+  },
+  metrics: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 8,
+  },
+  metric: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 7,
+    padding: 10,
+    background: 'var(--color-surface)',
+  },
+  metricValue: {
+    display: 'block',
+    fontWeight: 900,
+    fontSize: 20,
+  },
+  metricLabel: {
+    fontSize: 11,
+    fontWeight: 750,
+  },
+  cardFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    color: 'var(--color-text-2)',
+    fontSize: 13,
   },
 }
