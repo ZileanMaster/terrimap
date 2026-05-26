@@ -56,7 +56,7 @@ export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: Snaps
             <div style={styles.snapMeta}>
               <span>{summaryA.zoneCount} vùng</span>
               <span>·</span>
-              <span>{summaryA.distCount} districts</span>
+              <span>{summaryA.distCount} cụm</span>
             </div>
           </div>
           <div style={styles.vsLabel}>VS</div>
@@ -66,7 +66,7 @@ export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: Snaps
             <div style={styles.snapMeta}>
               <span>{summaryB.zoneCount} vùng</span>
               <span>·</span>
-              <span>{summaryB.distCount} districts</span>
+              <span>{summaryB.distCount} cụm</span>
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: Snaps
         }}>
           {diffs.length === 0
             ? '✅ Hai snapshots có phân vùng hoàn toàn giống nhau'
-            : `⚡ ${diffs.length} vùng có sự thay đổi district`}
+            : `${diffs.length} vùng có sự thay đổi cụm`}
         </div>
 
         {/* Diff table */}
@@ -89,16 +89,16 @@ export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: Snaps
               <thead>
                 <tr>
                   <th style={styles.th}>Vùng</th>
-                  <th style={styles.th}>District (A)</th>
-                  <th style={styles.th}>District (B)</th>
+                  <th style={styles.th}>Cụm (A)</th>
+                  <th style={styles.th}>Cụm (B)</th>
                 </tr>
               </thead>
               <tbody>
                 {diffs.map((d) => (
                   <tr key={d.zoneId} style={styles.diffRow}>
                     <td style={styles.td}>{d.zoneName}</td>
-                    <td style={{ ...styles.td, ...styles.distCell }}>D{d.districtA}</td>
-                    <td style={{ ...styles.td, ...styles.distCellB }}>D{d.districtB} ⚡</td>
+                    <td style={{ ...styles.td, ...styles.distCell }}>C{d.districtA}</td>
+                    <td style={{ ...styles.td, ...styles.distCellB }}>C{d.districtB}</td>
                   </tr>
                 ))}
               </tbody>

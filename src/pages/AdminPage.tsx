@@ -19,6 +19,7 @@ import Sidebar from '../components/layout/Sidebar.js'
 import RightPanel from '../components/layout/RightPanel.js'
 import TerritoryMap from '../components/map/TerritoryMap.js'
 import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
+import MapLegend from '../components/map/MapLegend.js'
 import DrawingToolbar from '../components/map/DrawingToolbar.js'
 import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 
@@ -261,8 +262,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
     const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
     if (disconnected) {
-      alert('Không thể chuyển polygon: thao tác này sẽ làm district mất liên thông.')
-      return
+      throw new Error('Không thể chuyển polygon vì thao tác này sẽ làm cụm mất liên thông.')
     }
 
     const scopedZoneIds = new Set(displayZones.map((z) => z.id))
@@ -366,6 +366,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
         </div>
 
         <SnapshotManager />
+        <MapLegend assignments={displayAssignments} disconnectedDistrictIds={disconnectedDistrictIds} />
         <ZoneInfoPanel
           zones={displayZones}
           assignments={displayAssignments}

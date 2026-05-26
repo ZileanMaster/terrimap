@@ -29,6 +29,7 @@ export default function ZoneInfoPanel({
 
   const [targetDistrict, setTargetDistrict] = useState(0)
   const [assigning, setAssigning] = useState(false)
+  const [assignError, setAssignError] = useState('')
   const [editCustomers, setEditCustomers] = useState('')
   const [editOrders, setEditOrders] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -42,8 +43,17 @@ export default function ZoneInfoPanel({
     return Array.from({ length: districtCount }, (_, i) => i)
   }, [districtCount, districtIds])
 
+  const targetZoneCount = assignments.filter((a) => a.districtId === targetDistrict).length
+  const sourceZoneCount = districtId >= 0
+    ? assignments.filter((a) => a.districtId === districtId).length
+    : 0
+  const currentSalesId = assignment?.salesAgentId ?? 'Chưa gán'
+  const targetSalesId =
+    assignments.find((a) => a.districtId === targetDistrict)?.salesAgentId ?? currentSalesId
+
   useEffect(() => {
     setShowDeleteConfirm(false)
+    setAssignError('')
     setEditCustomers('')
     setEditOrders('')
   }, [selectedZoneId])
@@ -57,11 +67,7 @@ export default function ZoneInfoPanel({
   }, [availableDistrictIds, districtId, selectedZoneId])
 
   if (!selectedZoneId) {
-    return (
-      <div style={styles.hint}>
-        {t('map.click_hint')}
-      </div>
-    )
+    return <div style={styles.hint}>{t('map.click_hint')}</div>
   }
 
   if (!zone) return null
@@ -73,12 +79,16 @@ export default function ZoneInfoPanel({
     .filter((a) => a.type === 'ORDER')
     .reduce((s, a) => s + a.value, 0)
   const distColor = districtId >= 0 ? getDistrictFillColor(districtId) : '#888'
+  const targetColor = targetDistrict >= 0 ? getDistrictFillColor(targetDistrict) : '#888'
 
   async function handleAssign() {
     if (!onAssign || !selectedZoneId) return
+    setAssignError('')
     setAssigning(true)
     try {
       await onAssign(selectedZoneId, targetDistrict)
+    } catch (error) {
+      setAssignError(error instanceof Error ? error.message : 'Không thể chuyển polygon.')
     } finally {
       setAssigning(false)
     }
@@ -106,17 +116,22 @@ export default function ZoneInfoPanel({
   return (
     <div style={styles.panel}>
       <div style={styles.header}>
-        <h3 style={styles.zoneName}>{zone.name}</h3>
+        <div>
+          <h3 style={styles.zoneName}>{zone.name}</h3>
+          <div style={styles.zoneSub}>Polygon {zone.id}</div>
+        </div>
         {districtId >= 0 && (
           <span style={{ ...styles.badge, background: distColor }}>
-            D{districtId}
+            C{districtId}
           </span>
         )}
       </div>
 
-      <div style={styles.statsRow}>
+      <div style={styles.statsGrid}>
         <Stat label={t('map.zone_customers')} value={customers} />
         <Stat label={t('map.zone_orders')} value={orders} />
+        <Stat label="Cụm hiện tại" value={districtId >= 0 ? `C${districtId}` : 'Chưa gán'} />
+        <Stat label="Sales" value={currentSalesId} />
       </div>
 
       {role === 'admin' && onUpdateActivity && (
@@ -156,6 +171,54 @@ export default function ZoneInfoPanel({
         </div>
       )}
 
+      {(role === 'admin' || role === 'coordinator') && onAssign && availableDistrictIds.length > 0 && (
+        <div style={styles.assignRow}>
+          <div style={styles.assignHeader}>
+            <label style={styles.assignLabel}>Chuyển sang cụm</label>
+            {targetDistrict !== districtId && (
+              <span style={{ ...styles.targetChip, borderColor: targetColor, color: targetColor }}>
+                C{districtId} {'->'} C{targetDistrict}
+              </span>
+            )}
+          </div>
+          <div style={styles.assignControls}>
+            <select
+              style={styles.select}
+              value={targetDistrict}
+              onChange={(e) => {
+                setTargetDistrict(Number(e.target.value))
+                setAssignError('')
+              }}
+              data-testid="assign-district-select"
+            >
+              {availableDistrictIds.map((id) => {
+                const zoneCount = assignments.filter((a) => a.districtId === id).length
+                return (
+                  <option key={id} value={id} disabled={id === districtId}>
+                    Cụm {id} ({zoneCount} vùng){id === districtId ? ' - hiện tại' : ''}
+                  </option>
+                )
+              })}
+            </select>
+            <button
+              style={styles.assignBtn}
+              onClick={handleAssign}
+              disabled={assigning || targetDistrict === districtId}
+              data-testid="assign-district-btn"
+            >
+              {assigning ? 'Đang kiểm tra...' : t('map.assign_confirm')}
+            </button>
+          </div>
+          {targetDistrict !== districtId && (
+            <div style={styles.movePreview}>
+              Cụm nguồn còn {Math.max(0, sourceZoneCount - 1)} vùng; cụm đích sẽ có {targetZoneCount + 1} vùng.
+              Sales phụ trách sau chuyển: {targetSalesId}.
+            </div>
+          )}
+          {assignError && <div style={styles.inlineError}>{assignError}</div>}
+        </div>
+      )}
+
       {role === 'admin' && onDeleteZone && (
         <div style={styles.deleteSection}>
           {!showDeleteConfirm ? (
@@ -192,46 +255,15 @@ export default function ZoneInfoPanel({
           )}
         </div>
       )}
-
-      {(role === 'admin' || role === 'coordinator') && onAssign && availableDistrictIds.length > 0 && (
-        <div style={styles.assignRow}>
-          <label style={styles.assignLabel}>Chuyển sang district:</label>
-          <div style={styles.assignControls}>
-            <select
-              style={styles.select}
-              value={targetDistrict}
-              onChange={(e) => setTargetDistrict(Number(e.target.value))}
-              data-testid="assign-district-select"
-            >
-              {availableDistrictIds.map((id) => {
-                const zoneCount = assignments.filter((a) => a.districtId === id).length
-                return (
-                  <option key={id} value={id} disabled={id === districtId}>
-                    District {id} ({zoneCount} vùng){id === districtId ? ' - hiện tại' : ''}
-                  </option>
-                )
-              })}
-            </select>
-            <button
-              style={styles.assignBtn}
-              onClick={handleAssign}
-              disabled={assigning || targetDistrict === districtId}
-              data-testid="assign-district-btn"
-            >
-              {assigning ? '...' : t('map.assign_confirm')}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div style={styles.stat}>
-      <span style={styles.statLabel}>{label}:</span>
-      <strong>{value}</strong>
+      <span style={styles.statLabel}>{label}</span>
+      <strong style={styles.statValue}>{value}</strong>
     </div>
   )
 }
@@ -245,11 +277,10 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--color-surface)',
     border: '1px solid var(--color-border)',
     borderRadius: 'var(--radius-md)',
-    padding: '12px 16px',
+    padding: 14,
     boxShadow: 'var(--shadow-lg)',
     zIndex: 999,
-    minWidth: 280,
-    maxWidth: 420,
+    width: 'min(440px, calc(100vw - 32px))',
   },
   hint: {
     position: 'absolute',
@@ -268,91 +299,178 @@ const styles: Record<string, React.CSSProperties> = {
   },
   header: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   zoneName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 700,
     color: 'var(--color-text)',
     margin: 0,
   },
-  badge: {
-    padding: '2px 10px',
-    borderRadius: 99,
-    color: '#fff',
+  zoneSub: {
+    color: 'var(--color-text-muted)',
     fontSize: 11,
-    fontWeight: 700,
+    marginTop: 3,
   },
-  statsRow: {
-    display: 'flex',
-    gap: 20,
+  badge: {
+    padding: '4px 10px',
+    borderRadius: 6,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 800,
+  },
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 8,
     marginBottom: 10,
   },
   stat: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontSize: 13,
+    minWidth: 0,
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '7px 8px',
+    background: 'var(--color-surface-2)',
   },
   statLabel: {
+    display: 'block',
     color: 'var(--color-text-2)',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  statValue: {
+    display: 'block',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    color: 'var(--color-text)',
+    fontSize: 13,
   },
   editSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    padding: '8px 0',
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr auto',
+    alignItems: 'end',
+    gap: 8,
+    padding: '10px 0',
     borderTop: '1px solid var(--color-border)',
     marginTop: 2,
   },
   editRow: {
     display: 'flex',
-    alignItems: 'center',
-    gap: 8,
+    flexDirection: 'column',
+    gap: 4,
+    minWidth: 0,
   },
   editLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'var(--color-text-2)',
-    minWidth: 52,
   },
   editInput: {
-    flex: 1,
-    padding: '4px 8px',
+    padding: '6px 8px',
     borderRadius: 'var(--radius-sm)',
     border: '1px solid var(--color-border)',
     background: 'var(--color-surface-2)',
     color: 'var(--color-text)',
     fontSize: 13,
     width: '100%',
+    minWidth: 0,
   },
   saveBtn: {
-    padding: '6px 12px',
+    padding: '7px 12px',
     borderRadius: 'var(--radius-sm)',
     border: 'none',
     background: 'var(--color-accent)',
     color: '#fff',
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: 'pointer',
-    alignSelf: 'flex-end',
+    whiteSpace: 'nowrap',
+  },
+  assignRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    paddingTop: 10,
+    borderTop: '1px solid var(--color-border)',
+    marginTop: 8,
+  },
+  assignHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  assignControls: {
+    display: 'flex',
+    gap: 8,
+  },
+  assignLabel: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: 'var(--color-text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  targetChip: {
+    border: '1px solid',
+    borderRadius: 999,
+    padding: '2px 8px',
+    fontSize: 11,
+    fontWeight: 800,
+    background: 'var(--color-surface)',
+  },
+  select: {
+    flex: 1,
+    minWidth: 0,
+    padding: '7px 10px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text)',
+    fontSize: 13,
+  },
+  assignBtn: {
+    padding: '7px 14px',
+    borderRadius: 'var(--radius-sm)',
+    border: 'none',
+    background: 'var(--color-accent)',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  movePreview: {
+    color: 'var(--color-text-2)',
+    fontSize: 12,
+    lineHeight: 1.45,
+  },
+  inlineError: {
+    border: '1px solid #fecaca',
+    background: '#fef2f2',
+    color: '#b91c1c',
+    borderRadius: 'var(--radius-sm)',
+    padding: '8px 10px',
+    fontSize: 12,
+    lineHeight: 1.4,
   },
   deleteSection: {
     borderTop: '1px solid var(--color-border)',
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 10,
+    paddingTop: 10,
   },
   deleteBtn: {
     width: '100%',
-    padding: '6px 12px',
+    padding: '7px 12px',
     borderRadius: 'var(--radius-sm)',
     border: '1px solid #dc2626',
     background: 'transparent',
     color: '#dc2626',
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: 'pointer',
   },
   confirmRow: {
@@ -364,7 +482,7 @@ const styles: Record<string, React.CSSProperties> = {
   confirmText: {
     fontSize: 12,
     color: '#dc2626',
-    fontWeight: 600,
+    fontWeight: 700,
     flex: 1,
     minWidth: 120,
   },
@@ -375,7 +493,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#dc2626',
     color: '#fff',
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: 'pointer',
   },
   confirmNo: {
@@ -386,45 +504,5 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     fontSize: 12,
     cursor: 'pointer',
-  },
-  assignRow: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    paddingTop: 10,
-    borderTop: '1px solid var(--color-border)',
-    marginTop: 8,
-  },
-  assignControls: {
-    display: 'flex',
-    gap: 8,
-  },
-  assignLabel: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: 'var(--color-text-muted)',
-    textTransform: 'uppercase',
-    letterSpacing: 0,
-  },
-  select: {
-    flex: 1,
-    minWidth: 0,
-    padding: '6px 10px',
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface-2)',
-    color: 'var(--color-text)',
-    fontSize: 13,
-  },
-  assignBtn: {
-    padding: '6px 14px',
-    borderRadius: 'var(--radius-sm)',
-    border: 'none',
-    background: 'var(--color-accent)',
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
   },
 }

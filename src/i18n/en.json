@@ -13,7 +13,7 @@
   "algo.sa": "Simulated Annealing",
   "algo.run": "Run Partition",
   "algo.running": "Running...",
-  "algo.districts": "Districts",
+  "algo.districts": "Clusters",
   "algo.constraints": "Constraint Config",
   "algo.adj_threshold": "Adj. Threshold (km)",
   "algo.balance_threshold": "Balance Threshold",
@@ -29,11 +29,11 @@
   "metrics.suggest_sa": "💡 Low balanceScore detected. Try running again with Simulated Annealing for better balance.",
 
   "map.zone_info": "Zone Info",
-  "map.assign_to": "Assign to District",
+  "map.assign_to": "Assign to Cluster",
   "map.assign_confirm": "Confirm Assignment",
   "map.zone_customers": "Customers",
   "map.zone_orders": "Orders",
-  "map.zone_district": "District",
+  "map.zone_district": "Cluster",
   "map.click_hint": "Click a zone on the map to view details",
   "map.edit_customers": "Customers",
   "map.edit_orders": "Orders",
@@ -43,7 +43,7 @@
   "map.overlap_error": "Polygon overlaps with zone \"{{name}}\". Please redraw.",
 
   "sidebar.team_overview": "Team Overview",
-  "sidebar.my_district": "My District",
+  "sidebar.my_district": "My Cluster",
   "sidebar.forecast": "Order Forecast",
   "sidebar.customers_total": "Total Customers",
   "sidebar.orders_total": "Total Orders",
@@ -65,7 +65,7 @@
   "draw.zone_name_prompt": "New zone name:",
 
   "edge_case.island": "Isolated zone — no adjacent zones",
-  "edge_case.disconnected": "District is disconnected",
+  "edge_case.disconnected": "Cluster is disconnected",
   "edge_case.suggest_sa_detail": "Low balance. Try Simulated Annealing to improve?",
 
   "common.loading": "Loading...",

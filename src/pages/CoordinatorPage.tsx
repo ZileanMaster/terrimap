@@ -17,6 +17,7 @@ import { useFacade } from '../context/FacadeContext.js'
 import Sidebar from '../components/layout/Sidebar.js'
 import TerritoryMap from '../components/map/TerritoryMap.js'
 import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
+import MapLegend from '../components/map/MapLegend.js'
 import MetricsInput from '../components/coordinator/MetricsInput.js'
 import { buildAdjacencyMatrix } from '../../lib/geometry.js'
 import { isDistrictConnected } from '../../lib/partition.js'
@@ -99,8 +100,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
       // Check source district still connected
       if (!isDistrictConnected(displayZones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
-        alert('⚠️ Chuyển zone này sẽ làm district bị tách rời. Không thể thực hiện.')
-        return
+        throw new Error('Không thể chuyển polygon vì thao tác này sẽ làm cụm nguồn bị tách rời.')
       }
     }
 
@@ -120,8 +120,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
       const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
       if (disconnected) {
-        alert('Không thể chuyển polygon: thao tác này sẽ làm district mất liên thông.')
-        return
+        throw new Error('Không thể chuyển polygon vì thao tác này sẽ làm cụm mất liên thông.')
       }
 
       const scopedZoneIds = new Set(displayZones.map((z) => z.id))
@@ -224,6 +223,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
           </button>
         </div>
 
+        <MapLegend assignments={displayAssignments} />
         <ZoneInfoPanel
           zones={displayZones}
           assignments={displayAssignments}
