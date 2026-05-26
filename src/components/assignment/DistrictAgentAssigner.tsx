@@ -82,7 +82,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
               background: getDistrictFillColor(d.districtId),
             }} />
             <div style={styles.labelCol}>
-              <span style={styles.label}>District {d.districtId}</span>
+              <span style={styles.label}>Cụm {d.districtId}</span>
               <span style={styles.meta}>
                 {d.zoneCount} vùng · {d.totalCustomers.toLocaleString()} KH
               </span>

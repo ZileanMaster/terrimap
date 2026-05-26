@@ -268,11 +268,11 @@ export default function TerritoryMap({
                 <div style={{ minWidth: 120 }}>
                   <strong>{zone.name}</strong>
                   <div style={{ fontSize: 11, marginTop: 2, color: '#666' }}>
-                    {isAssigned ? `District ${districtId!} · ` : 'Chưa phân vùng · '}{customers} KH
+                    {isAssigned ? `Cụm ${districtId!} · ` : 'Chưa phân vùng · '}{customers} KH
                   </div>
                   {isDisconnected && (
                     <div style={{ fontSize: 11, marginTop: 3, color: '#dc2626', fontWeight: 600 }}>
-                      🔴 District bị tách rời
+                      Cụm bị tách rời
                     </div>
                   )}
                   {isIsland && !isDisconnected && (

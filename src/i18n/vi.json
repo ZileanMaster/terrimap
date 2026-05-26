@@ -13,7 +13,7 @@
   "algo.sa": "Simulated Annealing",
   "algo.run": "Chạy phân chia",
   "algo.running": "Đang chạy...",
-  "algo.districts": "Số districts",
+  "algo.districts": "Số cụm",
   "algo.constraints": "Cấu hình ràng buộc",
   "algo.adj_threshold": "Ngưỡng kề (km)",
   "algo.balance_threshold": "Ngưỡng cân bằng",
@@ -29,11 +29,11 @@
   "metrics.suggest_sa": "💡 Kết quả này có balanceScore thấp. Thử chạy lại với Simulated Annealing để cải thiện.",
 
   "map.zone_info": "Thông tin vùng",
-  "map.assign_to": "Gán sang district",
+  "map.assign_to": "Gán sang cụm",
   "map.assign_confirm": "Xác nhận gán",
   "map.zone_customers": "Khách hàng",
   "map.zone_orders": "Đơn hàng",
-  "map.zone_district": "District",
+  "map.zone_district": "Cụm",
   "map.click_hint": "Nhấp vào vùng trên bản đồ để xem chi tiết",
   "map.edit_customers": "Số KH",
   "map.edit_orders": "Số đơn",
@@ -43,7 +43,7 @@
   "map.overlap_error": "Polygon chồng lắp với vùng \"{{name}}\". Vui lòng vẽ lại.",
 
   "sidebar.team_overview": "Tổng quan đội ngũ",
-  "sidebar.my_district": "District của tôi",
+  "sidebar.my_district": "Cụm của tôi",
   "sidebar.forecast": "Dự báo đơn hàng",
   "sidebar.customers_total": "Tổng KH",
   "sidebar.orders_total": "Tổng đơn",
@@ -65,7 +65,7 @@
   "draw.zone_name_prompt": "Tên vùng mới:",
 
   "edge_case.island": "Vùng cô lập — không kề vùng nào",
-  "edge_case.disconnected": "District bị tách rời",
+  "edge_case.disconnected": "Cụm bị tách rời",
   "edge_case.suggest_sa_detail": "Balance thấp. Thử Simulated Annealing để cải thiện?",
 
   "common.loading": "Đang tải...",

@@ -51,7 +51,7 @@ export default function RightPanel({
         <AlgorithmSelector value={algo} onChange={setAlgo} disabled={isRunning} />
 
         <div style={styles.district}>
-          <label style={styles.label}>Số districts</label>
+          <label style={styles.label}>Số cụm</label>
           <div style={styles.stepper}>
             <button
               style={styles.stepBtn}

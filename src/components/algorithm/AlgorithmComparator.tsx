@@ -236,7 +236,7 @@ function ScenarioCard({
           </select>
         </label>
         <label style={styles.field}>
-          <span>Số district</span>
+          <span>Số cụm</span>
           <input type="number" min={2} max={30} value={m} onChange={(e) => setM(Number(e.target.value))} style={styles.input} />
         </label>
       </div>

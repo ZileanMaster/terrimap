@@ -201,7 +201,7 @@ const ZoneCard = React.memo(function ZoneCard({
           )}
         </div>
         <div style={styles.zoneMeta}>
-          {districtId >= 0 ? `D${districtId}` : '—'} · {customers} KH
+          {districtId >= 0 ? `C${districtId}` : '—'} · {customers} KH
         </div>
       </div>
     </div>
@@ -245,7 +245,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
       <h2 style={styles.sectionTitle}>📊 Tổng quan hệ thống</h2>
       <div style={styles.statsGrid}>
         <StatCard label="Vùng" value={zones.length} />
-        <StatCard label="Districts" value={districtCount} />
+        <StatCard label="Cụm" value={districtCount} />
         <StatCard label="Sales" value={mgmt.sales.length} />
       </div>
 
@@ -314,7 +314,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
                 <div style={styles.agentName}>
                   {agent.name}
                   {isAgentDisconnected && (
-                    <span style={styles.disconnectedBadge} title="District bị tách rời">🔴</span>
+                    <span style={styles.disconnectedBadge} title="Cụm bị tách rời">🔴</span>
                   )}
                 </div>
                 <div style={styles.agentMeta}>
