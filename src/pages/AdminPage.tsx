@@ -10,7 +10,6 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { useUIStore } from '../store/uiStore.js'
 import { useDataStore } from '../store/dataStore.js'
 import { useFacade } from '../context/FacadeContext.js'
-import { saveZone } from '../services/db.js'
 import { isOnline } from '../lib/supabase.js'
 import type {
   Zone, GeoJSONPolygon, Assignment, AlgorithmResultVM, Snapshot,
@@ -24,6 +23,7 @@ import DrawingToolbar from '../components/map/DrawingToolbar.js'
 import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 
 import { useSAWorker } from '../hooks/useSAWorker.js'
+import { validatePartition } from '../../lib/validator.js'
 
 export interface AdminPageProps {
   mode?: 'regions' | 'assignments'
@@ -39,7 +39,6 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const currentRegionId    = useDataStore((s) => s.currentRegionId)
   const addZone            = useDataStore((s) => s.addZone)
   const removeZone         = useDataStore((s) => s.removeZone)
-  const updateZone         = useDataStore((s) => s.updateZone)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
 
   // Filter zones/agents/assignments by currentRegionId — MANDATORY:
@@ -55,6 +54,11 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const displayAssignments = currentRegionId
     ? assignments.filter((a) => displayZones.some((z) => z.id === a.zoneId))
     : assignments
+
+  const districtIds = useMemo(
+    () => [...new Set(displayAssignments.map((a) => a.districtId))].sort((a, b) => a - b),
+    [displayAssignments],
+  )
 
   // Compute map center/zoom from selected region (for flyTo animation)
   const selectedRegion = currentRegionId
@@ -231,11 +235,45 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     try {
       const newZones = ctx.facade.updateZoneActivity(zoneId, zones, data)
       const updated = newZones.find((z) => z.id === zoneId)
-      if (updated) updateZone(updated)  // awaited inside store
+      if (updated) useDataStore.getState().updateZone(updated)  // awaited inside store
     } catch (e) {
       console.error('[AdminPage] updateActivity error:', e)
     }
-  }, [ctx, zones, updateZone])
+  }, [ctx, zones])
+
+  const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
+    if (ctx.role !== 'admin') return
+
+    const existing = displayAssignments.find((a) => a.zoneId === zoneId)
+    const targetSalesAgentId =
+      displayAssignments.find((a) => a.districtId === toDistrict)?.salesAgentId
+      ?? displayAgents[toDistrict]?.id
+      ?? `sa${toDistrict}`
+
+    const nextScopedAssignments = existing
+      ? displayAssignments.map((a) =>
+          a.zoneId === zoneId
+            ? { ...a, districtId: toDistrict, salesAgentId: targetSalesAgentId }
+            : a,
+        )
+      : [...displayAssignments, { zoneId, districtId: toDistrict, salesAgentId: targetSalesAgentId }]
+
+    const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
+    const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
+    if (disconnected) {
+      alert('Không thể chuyển polygon: thao tác này sẽ làm district mất liên thông.')
+      return
+    }
+
+    const scopedZoneIds = new Set(displayZones.map((z) => z.id))
+    const mergedAssignments = [
+      ...assignments.filter((a) => !scopedZoneIds.has(a.zoneId)),
+      ...nextScopedAssignments,
+    ]
+
+    await persistAssignments(mergedAssignments)
+    selectZone(null)
+  }, [ctx, displayAssignments, displayAgents, displayZones, assignments, persistAssignments, selectZone])
 
   // ── Draw zone ──────────────────────────────────────────────────────────────
 
@@ -265,16 +303,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     await removeZone(zoneId)  // awaits DB delete
   }, [selectZone, removeZone])
 
-  // ── Move zone region ────────────────────────────────────────────────────────
-  const handleMoveRegion = useCallback(async (zoneId: string, newRegionId: string) => {
-    const zone = zones.find((z) => z.id === zoneId)
-    if (!zone) return
-    const updatedZone = { ...zone, regionId: newRegionId }
-    await updateZone(updatedZone)
-    selectZone(null)
-  }, [zones, updateZone, selectZone])
-
-  const districtCount = new Set(assignments.map((a) => a.districtId)).size
+  const districtCount = districtIds.length
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -341,9 +370,10 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
           zones={displayZones}
           assignments={displayAssignments}
           districtCount={districtCount}
+          districtIds={districtIds}
+          onAssign={handleAssign}
           onUpdateActivity={handleUpdateActivity}
           onDeleteZone={handleDeleteZone}
-          onMoveRegion={mode === 'regions' ? handleMoveRegion : undefined}
         />
       </div>
     </div>
