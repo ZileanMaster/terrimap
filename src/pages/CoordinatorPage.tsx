@@ -20,6 +20,7 @@ import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
 import MetricsInput from '../components/coordinator/MetricsInput.js'
 import { buildAdjacencyMatrix } from '../../lib/geometry.js'
 import { isDistrictConnected } from '../../lib/partition.js'
+import { validatePartition } from '../../lib/validator.js'
 import type { Zone } from '../../facades/viewmodels.js'
 
 function currentPeriodDefault() {
@@ -35,13 +36,11 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   // ── Global store ───────────────────────────────────────────────────────────
   const zones              = useDataStore((s) => s.zones)
   const assignments        = useDataStore((s) => s.assignments)
-  const agents             = useDataStore((s) => s.agents)
   const regions            = useDataStore((s) => s.regions)
   const loading            = useDataStore((s) => s.loading)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
   const currentRegionId    = useDataStore((s) => s.currentRegionId)
   const setCurrentRegion   = useDataStore((s) => s.setCurrentRegion)
-  const updateZone         = useDataStore((s) => s.updateZone)
 
   const selectedZoneId     = useUIStore((s) => s.selectedZoneId)
   const selectZone         = useUIStore((s) => s.selectZone)
@@ -72,29 +71,34 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
     [assignments, displayZones],
   )
 
+  const districtIds = useMemo(
+    () => [...new Set(displayAssignments.map((a) => a.districtId))].sort((a, b) => a - b),
+    [displayAssignments],
+  )
+
   const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
     if (ctx.role !== 'coordinator') return
 
     // 3C: BFS connectivity check — verify source district remains connected after move
-    const currentAssignment = assignments.find((a) => a.zoneId === zoneId)
+    const currentAssignment = displayAssignments.find((a) => a.zoneId === zoneId)
     const fromDistrict = currentAssignment?.districtId ?? -1
 
     if (fromDistrict !== toDistrict && fromDistrict >= 0) {
       // Build temp assignment array (index-based)
-      const tempAssignments = assignments.map((a) =>
+      const tempAssignments = displayAssignments.map((a) =>
         a.zoneId === zoneId ? { ...a, districtId: toDistrict } : a,
       )
-      const assignmentArr = zones.map((z) => {
+      const assignmentArr = displayZones.map((z) => {
         const a = tempAssignments.find((a) => a.zoneId === z.id)
         return a?.districtId ?? -1
       })
 
       // Build adjacency matrix from zones
-      const adjMatrix = buildAdjacencyMatrix(zones)
-      const idToIdx   = new Map(zones.map((z, i) => [z.id, i]))
+      const adjMatrix = buildAdjacencyMatrix(displayZones)
+      const idToIdx   = new Map(displayZones.map((z, i) => [z.id, i]))
 
       // Check source district still connected
-      if (!isDistrictConnected(zones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
+      if (!isDistrictConnected(displayZones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
         alert('⚠️ Chuyển zone này sẽ làm district bị tách rời. Không thể thực hiện.')
         return
       }
@@ -102,29 +106,35 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
     // OK — persist
     try {
-      const result = await ctx.facade.assignZone(zoneId, toDistrict, assignments, zones)
-      if (result.ok) {
-        const newAssignments = assignments.map((a) =>
-          a.zoneId === zoneId
-            ? { ...a, districtId: toDistrict, salesAgentId: `sa${toDistrict}` }
-            : a,
-        )
-        await persistAssignments(newAssignments)
-        selectZone(null)
+      const targetSalesAgentId =
+        displayAssignments.find((a) => a.districtId === toDistrict)?.salesAgentId
+        ?? `sa${toDistrict}`
+      const nextScopedAssignments = currentAssignment
+        ? displayAssignments.map((a) =>
+            a.zoneId === zoneId
+              ? { ...a, districtId: toDistrict, salesAgentId: targetSalesAgentId }
+              : a,
+          )
+        : [...displayAssignments, { zoneId, districtId: toDistrict, salesAgentId: targetSalesAgentId }]
+
+      const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
+      const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
+      if (disconnected) {
+        alert('Không thể chuyển polygon: thao tác này sẽ làm district mất liên thông.')
+        return
       }
+
+      const scopedZoneIds = new Set(displayZones.map((z) => z.id))
+      const mergedAssignments = [
+        ...assignments.filter((a) => !scopedZoneIds.has(a.zoneId)),
+        ...nextScopedAssignments,
+      ]
+      await persistAssignments(mergedAssignments)
+      selectZone(null)
     } catch (e) {
       console.error('[CoordinatorPage] assignZone error:', e)
     }
-  }, [ctx, assignments, zones, persistAssignments, selectZone])
-
-  // ── Move zone region ────────────────────────────────────────────────────────
-  const handleMoveRegion = useCallback(async (zoneId: string, newRegionId: string) => {
-    const zone = zones.find((z) => z.id === zoneId)
-    if (!zone) return
-    const updatedZone = { ...zone, regionId: newRegionId }
-    await updateZone(updatedZone)
-    selectZone(null)
-  }, [zones, updateZone, selectZone])
+  }, [ctx, assignments, displayAssignments, displayZones, persistAssignments, selectZone])
 
   /**
    * Adjust 2: Chạy thuật toán với bản copy zones (metrics override).
@@ -137,7 +147,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
     alert(`✅ Chạy phân vùng với ${zonesWithMetrics.length} zones (chỉ số tháng ${currentPeriod}).\nTính năng chạy thuật toán sẽ được tích hợp sau.`)
   }, [currentPeriod])
 
-  const districtCount = new Set(assignments.map((a) => a.districtId)).size
+  const districtCount = districtIds.length
 
   if (loading) {
     return (
@@ -217,9 +227,9 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
         <ZoneInfoPanel
           zones={displayZones}
           assignments={displayAssignments}
-          onAssign={mode === 'assignments' ? handleAssign : undefined}
+          onAssign={handleAssign}
           districtCount={districtCount}
-          onMoveRegion={mode === 'regions' ? handleMoveRegion : undefined}
+          districtIds={districtIds}
         />
       </div>
     </div>
