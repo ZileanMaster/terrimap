@@ -86,7 +86,7 @@ interface DataStore {
 | **Tìm kiếm cục bộ** | `local-search` | 2-opt swap + BFS validation | O(n²·iter) |
 | Simulated Annealing | `sa` | Chấp nhận nghiệm xấu theo nhiệt độ | O(n·iter·T) |
 
-> **Lưu ý quan trọng**: K-Means đã được **xóa hoàn toàn** khỏi hệ thống (Phase 1). K-Means vi phạm ràng buộc liên thông địa lý và không phù hợp với bài toán phân vùng thương mại.
+> **Lưu ý quan trọng**: Hệ thống chỉ hỗ trợ `greedy`, `local-search` và `sa`; các thuật toán phân cụm thuần khoảng cách không còn là API hợp lệ.
 
 ### 3.2 Hàm mục tiêu (Objective Function)
 

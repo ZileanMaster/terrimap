@@ -360,6 +360,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // ── Invite Member ───────────────────────────────────────────────────────
   inviteMember: async (email, role, regionId) => {
     if (!supabase) { set({ authError: 'Không có kết nối cơ sở dữ liệu' }); return false }
+    const client = supabase
     const projectId = get().currentProjectId
     if (!projectId) { set({ authError: 'Chưa chọn dự án' }); return false }
 
@@ -373,7 +374,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         // Find user by email — try direct query first, fallback to RPC
         let profileId: string | null = null
 
-        const { data: profile } = await supabase
+        const { data: profile } = await client
           .from('profiles')
           .select('id')
           .eq('email', email)
@@ -382,7 +383,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         if (profile) {
           profileId = profile.id
         } else {
-          const { data: rpcResult } = await supabase
+          const { data: rpcResult } = await client
             .rpc('lookup_profile_by_email', { lookup_email: email })
 
           if (rpcResult && rpcResult.length > 0) {
@@ -396,7 +397,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
 
         // Check if already a member
-        const { data: existing } = await supabase
+        const { data: existing } = await client
           .from('project_members')
           .select('id')
           .eq('project_id', projectId)
@@ -408,7 +409,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           return false
         }
 
-        const { error } = await supabase
+        const { error } = await client
           .from('project_members')
           .insert({
             project_id: projectId,

@@ -1,74 +1,98 @@
 /**
- * DashboardLayout.tsx — Classic administrative dashboard shell
- * 
- * Layout:
- * - Left Sidebar (Dark, Collapsible): brand logo, user profile, search bar, navigation menu
- * - Top Bar (Light): hamburger toggle, breadcrumbs, mock actions, user settings
- * - Center Panel: content area rendering the selected component (e.g., Algorithm Center)
+ * DashboardLayout.tsx - workflow shell for TerriMap.
+ *
+ * The shell keeps navigation role-aware, fixes mobile behavior, and avoids
+ * fake controls that do not lead to real work.
  */
 
-import React, { useState } from 'react';
-import { useUIStore } from '../../store/uiStore.js';
-import { useAuthStore } from '../../store/authStore.js';
+import React, { useEffect, useMemo, useState } from 'react'
+import { useUIStore } from '../../store/uiStore.js'
+import { useAuthStore } from '../../store/authStore.js'
 
 interface DashboardLayoutProps {
-  children: (activeTab: string) => React.ReactNode;
+  children: (activeTab: string) => React.ReactNode
+}
+
+const navItems = [
+  { id: 'overview', label: 'Tổng quan', icon: 'OV', roles: ['admin', 'coordinator', 'sales'] },
+  { id: 'regions', label: 'Khu vực & bản đồ', icon: 'MP', roles: ['admin', 'coordinator'] },
+  { id: 'users', label: 'Nhân sự Sales', icon: 'US', roles: ['admin'] },
+  { id: 'assignments', label: 'Phân chia lãnh thổ', icon: 'TR', roles: ['admin', 'coordinator', 'sales'] },
+  { id: 'algorithms', label: 'So sánh thuật toán', icon: 'CP', roles: ['admin', 'coordinator'] },
+  { id: 'settings', label: 'Cài đặt', icon: 'ST', roles: ['admin', 'coordinator', 'sales'] },
+]
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 760)
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 760)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return isMobile
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [activeTab, setActiveTab] = useState<string>('overview');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeTab, setActiveTab] = useState('overview')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const theme = useUIStore((s) => s.theme);
-  const role = useUIStore((s) => s.role);
-  const profile = useAuthStore((s) => s.profile);
-  const signOut = useAuthStore((s) => s.signOut);
+  const isMobile = useIsMobile()
+  const role = useUIStore((s) => s.role)
+  const profile = useAuthStore((s) => s.profile)
+  const signOut = useAuthStore((s) => s.signOut)
 
-  // Collapsible menu items list with role restrictions
-  const menuItems = [
-    { id: 'overview', label: 'Tổng quan', icon: '📊', roles: ['admin', 'coordinator', 'sales'] },
-    { id: 'regions', label: 'Quản lý khu vực', icon: '📍', roles: ['admin', 'coordinator'] },
-    { id: 'users', label: 'Quản lý User', icon: '👥', roles: ['admin'] },
-    { id: 'assignments', label: 'Quản lý phân công', icon: '📋', roles: ['admin', 'coordinator', 'sales'] },
-    { id: 'algorithms', label: 'Chạy thuật toán', icon: '⚡', roles: ['admin', 'coordinator'] },
-    { id: 'settings', label: 'Cài đặt hệ thống', icon: '⚙️', roles: ['admin', 'coordinator', 'sales'] },
-  ];
+  const visibleItems = useMemo(() => (
+    navItems.filter((item) =>
+      item.roles.includes(role)
+      && item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+    )
+  ), [role, searchQuery])
 
-  // Filter menu items based on search query and user role
-  const filteredMenuItems = menuItems.filter((item) => {
-    const matchesSearch = item.label.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = !item.roles || item.roles.includes(role);
-    return matchesSearch && matchesRole;
-  });
+  const activeItem = navItems.find((item) => item.id === activeTab) ?? navItems[0]!
+  const currentRoleLabel = role === 'admin'
+    ? 'Quản trị viên'
+    : role === 'coordinator'
+      ? 'Điều phối viên'
+      : 'Nhân viên Sales'
 
-  // Compute breadcrumbs title based on active tab
-  const getBreadcrumbs = () => {
-    const item = menuItems.find((m) => m.id === activeTab);
-    return ['Tổng quan', item ? item.label : ''];
-  };
+  const expanded = isMobile ? sidebarOpen : !sidebarCollapsed
+  const sidebarWidth = expanded ? 280 : 72
 
-  const currentRoleLabel = role === 'admin' ? 'Quản trị viên' : role === 'coordinator' ? 'Điều phối viên' : 'Nhân viên';
+  const selectTab = (id: string) => {
+    setActiveTab(id)
+    if (isMobile) setSidebarOpen(false)
+  }
 
   return (
     <div style={styles.container}>
-      {/* ── LEFT SIDEBAR (Dark Theme) ────────────────────────────────────────── */}
-      <aside style={{
-        ...styles.sidebar,
-        width: sidebarCollapsed ? 70 : 'var(--sidebar-w, 280px)',
-      }}>
-        {/* Brand/Logo */}
+      {isMobile && sidebarOpen && (
+        <button
+          aria-label="Đóng menu"
+          onClick={() => setSidebarOpen(false)}
+          style={styles.backdrop}
+        />
+      )}
+
+      <aside
+        style={{
+          ...styles.sidebar,
+          width: sidebarWidth,
+          transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+          position: isMobile ? 'fixed' : 'relative',
+        }}
+      >
         <div style={styles.brand}>
-          <span style={styles.brandIcon}>⬡</span>
-          {!sidebarCollapsed && <span style={styles.brandText}>TerriMap</span>}
+          <span style={styles.brandMark}>TM</span>
+          {expanded && <span style={styles.brandText}>TerriMap</span>}
         </div>
 
-        {/* User profile section */}
         <div style={styles.profileSection}>
-          <div style={styles.avatar}>
-            {profile?.email?.[0]?.toUpperCase() || 'A'}
-          </div>
-          {!sidebarCollapsed && (
+          <div style={styles.avatar}>{profile?.email?.[0]?.toUpperCase() || 'A'}</div>
+          {expanded && (
             <div style={styles.profileInfo}>
               <span style={styles.profileName}>{profile?.email?.split('@')[0] || 'Admin Account'}</span>
               <span style={styles.profileRole}>{currentRoleLabel}</span>
@@ -76,115 +100,99 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           )}
         </div>
 
-        {/* Sidebar Search Bar */}
-        {!sidebarCollapsed && (
+        {expanded && (
           <div style={styles.searchWrapper}>
             <input
               type="text"
-              placeholder="Tìm kiếm mục..."
+              placeholder="Lọc mục điều hướng"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={styles.searchInput}
             />
-            <span style={styles.searchIcon}>🔍</span>
           </div>
         )}
 
-        {/* Navigation Menu */}
-        <nav style={styles.menu}>
-          {filteredMenuItems.map((item) => {
-            const isActive = activeTab === item.id;
+        <nav style={styles.menu} aria-label="Điều hướng chính">
+          {visibleItems.map((item) => {
+            const active = item.id === activeTab
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => selectTab(item.id)}
                 title={item.label}
                 style={{
                   ...styles.menuItem,
-                  backgroundColor: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-                  color: isActive ? '#fff' : '#8b949e',
-                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                  justifyContent: expanded ? 'flex-start' : 'center',
+                  background: active ? '#2563eb' : 'transparent',
+                  color: active ? '#fff' : '#9ca3af',
                 }}
               >
-                <span style={styles.menuIcon}>{item.icon}</span>
-                {!sidebarCollapsed && <span style={styles.menuText}>{item.label}</span>}
+                <span style={{
+                  ...styles.menuIcon,
+                  background: active ? 'rgba(255,255,255,.18)' : '#111827',
+                  color: active ? '#fff' : '#93c5fd',
+                  marginRight: expanded ? 12 : 0,
+                }}>
+                  {item.icon}
+                </span>
+                {expanded && <span style={styles.menuText}>{item.label}</span>}
               </button>
-            );
+            )
           })}
         </nav>
 
-        {/* Sidebar Footer (Collapse toggle & Logout) */}
         <div style={styles.sidebarFooter}>
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            style={styles.footerBtn}
-            title={sidebarCollapsed ? 'Mở rộng menu' : 'Thu nhỏ menu'}
-          >
-            {sidebarCollapsed ? '▶' : '◀'}
-          </button>
-          {!sidebarCollapsed && (
+          {!isMobile && (
             <button
-              onClick={signOut}
-              style={{ ...styles.footerBtn, color: 'var(--color-danger, #f06060)' }}
-              title="Đăng xuất"
+              onClick={() => setSidebarCollapsed((v) => !v)}
+              style={styles.footerBtn}
+              title={sidebarCollapsed ? 'Mở rộng menu' : 'Thu nhỏ menu'}
             >
-              🚪 Đăng xuất
+              {sidebarCollapsed ? '>' : '<'}
+            </button>
+          )}
+          {expanded && (
+            <button onClick={signOut} style={{ ...styles.footerBtn, color: '#f87171' }}>
+              Đăng xuất
             </button>
           )}
         </div>
       </aside>
 
-      {/* ── MAIN CONTENT AREA (Light / Dark Adaptive) ────────────────────────── */}
       <div style={styles.mainWrapper}>
-        {/* Top Header Bar */}
         <header style={styles.topBar}>
           <div style={styles.headerLeft}>
             <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              onClick={() => isMobile ? setSidebarOpen(true) : setSidebarCollapsed((v) => !v)}
               style={styles.hamburger}
+              aria-label="Mở menu"
             >
               ☰
             </button>
-
-            {/* Breadcrumbs */}
             <div style={styles.breadcrumbs}>
-              {getBreadcrumbs().map((crumb, idx) => (
-                <React.Fragment key={crumb}>
-                  {idx > 0 && <span style={styles.breadcrumbSeparator}>&gt;</span>}
-                  <span style={{
-                    ...styles.breadcrumbItem,
-                    color: idx === getBreadcrumbs().length - 1 ? 'var(--color-text)' : 'var(--color-text-2)',
-                    fontWeight: idx === getBreadcrumbs().length - 1 ? 600 : 400
-                  }}>
-                    {crumb}
-                  </span>
-                </React.Fragment>
-              ))}
+              <span style={styles.breadcrumbMuted}>TerriMap</span>
+              <span style={styles.breadcrumbSeparator}>&gt;</span>
+              <strong style={styles.breadcrumbActive}>{activeItem.label}</strong>
             </div>
           </div>
 
-          {/* Header Right Actions */}
           <div style={styles.headerRight}>
-            <button style={styles.headerIconBtn} title="Thông báo">
-              🔔 <span style={styles.badge}>3</span>
-            </button>
-            <button style={styles.headerIconBtn} title="Hòm thư">
-              ✉️ <span style={styles.badge}>2</span>
-            </button>
-            <div style={styles.userDropdownTrigger}>
-              <div style={styles.userIndicator}>🟢</div>
-              <span style={styles.userName}>{profile?.email || 'admin@terrimap.vn'}</span>
-            </div>
+            <span style={styles.statusPill}>Dữ liệu mock/offline</span>
+            {!isMobile && (
+              <div style={styles.userPill}>
+                <span style={styles.onlineDot} />
+                <span>{profile?.email || 'admin@terrimap.vn'}</span>
+              </div>
+            )}
           </div>
         </header>
 
-        {/* Dashboard Content Container */}
         <main style={styles.content}>
           {children(activeTab)}
         </main>
       </div>
     </div>
-  );
+  )
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -193,241 +201,230 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100vh',
     width: '100vw',
     overflow: 'hidden',
-    backgroundColor: 'var(--color-bg, #0d1117)',
+    background: 'var(--color-bg)',
+  },
+  backdrop: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 19,
+    border: 0,
+    background: 'rgba(15,23,42,.45)',
   },
   sidebar: {
+    zIndex: 20,
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    backgroundColor: '#161b22', // Sleek dark sidebar surface
-    borderRight: '1px solid #30363d',
-    transition: 'width 200ms ease',
     flexShrink: 0,
-    zIndex: 10,
+    background: '#111827',
+    borderRight: '1px solid #263244',
+    transition: 'width 180ms ease, transform 180ms ease',
   },
   brand: {
-    height: '60px',
+    height: 60,
     display: 'flex',
     alignItems: 'center',
-    padding: '0 20px',
-    gap: '12px',
-    borderBottom: '1px solid #30363d',
+    padding: '0 18px',
+    gap: 12,
+    borderBottom: '1px solid #263244',
   },
-  brandIcon: {
-    fontSize: '24px',
-    color: '#58a6ff',
-    fontWeight: 'bold',
+  brandMark: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    display: 'grid',
+    placeItems: 'center',
+    background: '#2563eb',
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 800,
   },
   brandText: {
-    fontSize: '18px',
-    fontWeight: 'bold',
-    color: '#f0f6fc',
-    letterSpacing: '-0.5px',
+    color: '#f9fafb',
+    fontSize: 18,
+    fontWeight: 800,
   },
   profileSection: {
     display: 'flex',
     alignItems: 'center',
-    padding: '16px 20px',
-    gap: '12px',
-    borderBottom: '1px solid #21262d',
+    gap: 12,
+    padding: 16,
+    borderBottom: '1px solid #1f2937',
   },
   avatar: {
-    width: '38px',
-    height: '38px',
-    borderRadius: '50%',
-    backgroundColor: '#1f6feb',
-    color: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 'bold',
-    fontSize: '16px',
-    boxShadow: '0 0 8px rgba(31, 111, 235, 0.4)',
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    display: 'grid',
+    placeItems: 'center',
+    background: '#1d4ed8',
+    color: '#fff',
+    fontWeight: 800,
   },
   profileInfo: {
+    minWidth: 0,
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
   },
   profileName: {
-    color: '#c9d1d9',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    whiteSpace: 'nowrap',
-    textOverflow: 'ellipsis',
+    color: '#f3f4f6',
+    fontSize: 14,
+    fontWeight: 700,
     overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   profileRole: {
-    color: '#8b949e',
-    fontSize: '11px',
-    marginTop: '2px',
+    color: '#9ca3af',
+    fontSize: 12,
   },
   searchWrapper: {
-    position: 'relative',
-    margin: '14px 16px 8px',
+    padding: '14px 16px 6px',
   },
   searchInput: {
     width: '100%',
-    backgroundColor: '#0d1117',
-    border: '1px solid #30363d',
-    borderRadius: '6px',
-    padding: '8px 12px 8px 30px',
-    color: '#c9d1d9',
-    fontSize: '12px',
+    height: 34,
+    borderRadius: 7,
+    border: '1px solid #374151',
+    background: '#0b1220',
+    color: '#e5e7eb',
+    padding: '0 10px',
     outline: 'none',
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: '8px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    fontSize: '12px',
-    color: '#8b949e',
   },
   menu: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    padding: '12px 10px',
-    gap: '4px',
+    gap: 6,
+    padding: 10,
     overflowY: 'auto',
   },
   menuItem: {
+    minHeight: 42,
+    border: 0,
+    borderRadius: 8,
+    padding: '0 10px',
     display: 'flex',
     alignItems: 'center',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '10px 14px',
     cursor: 'pointer',
-    fontSize: '13px',
+    fontSize: 14,
+    fontWeight: 650,
     textAlign: 'left',
-    transition: 'all 150ms ease',
-    width: '100%',
   },
   menuIcon: {
-    fontSize: '16px',
-    marginRight: '12px',
-    display: 'flex',
-    alignItems: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: 10,
+    fontWeight: 800,
+    letterSpacing: .2,
+    flexShrink: 0,
   },
   menuText: {
     whiteSpace: 'nowrap',
   },
   sidebarFooter: {
-    padding: '12px 16px',
-    borderTop: '1px solid #30363d',
+    minHeight: 56,
+    padding: '10px 16px',
+    borderTop: '1px solid #263244',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '8px',
+    gap: 8,
   },
   footerBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#8b949e',
+    border: 0,
+    background: 'transparent',
+    color: '#9ca3af',
     cursor: 'pointer',
-    fontSize: '13px',
-    padding: '6px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    borderRadius: '4px',
-    transition: 'color 150ms ease',
+    fontWeight: 700,
+    padding: '8px 6px',
   },
   mainWrapper: {
     flex: 1,
+    minWidth: 0,
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
     overflow: 'hidden',
-    backgroundColor: 'var(--color-bg, #0d1117)',
   },
   topBar: {
-    height: '60px',
-    backgroundColor: 'var(--color-surface, #161b22)',
-    borderBottom: '1px solid var(--color-border, #30363d)',
+    height: 60,
+    flexShrink: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 20px',
-    flexShrink: 0,
+    borderBottom: '1px solid var(--color-border)',
+    background: 'var(--color-bg)',
   },
   headerLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: 14,
+    minWidth: 0,
   },
   hamburger: {
-    background: 'none',
-    border: 'none',
+    border: 0,
+    background: 'transparent',
     color: 'var(--color-text)',
-    fontSize: '20px',
+    fontSize: 20,
     cursor: 'pointer',
-    padding: '4px',
-    borderRadius: '4px',
+    width: 32,
+    height: 32,
+    borderRadius: 7,
   },
   breadcrumbs: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    fontSize: '13px',
+    gap: 8,
+    minWidth: 0,
+    fontSize: 13,
+  },
+  breadcrumbMuted: {
+    color: 'var(--color-text-2)',
   },
   breadcrumbSeparator: {
     color: 'var(--color-text-3)',
   },
-  breadcrumbItem: {
-    color: 'var(--color-text-2)',
+  breadcrumbActive: {
+    color: 'var(--color-text)',
+    whiteSpace: 'nowrap',
   },
   headerRight: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: 10,
   },
-  headerIconBtn: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--color-text)',
-    fontSize: '18px',
-    cursor: 'pointer',
-    position: 'relative',
-    padding: '4px',
+  statusPill: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 999,
+    padding: '5px 10px',
+    color: 'var(--color-text-2)',
+    fontSize: 12,
   },
-  badge: {
-    position: 'absolute',
-    top: '-4px',
-    right: '-4px',
-    backgroundColor: 'var(--color-danger, #f06060)',
-    color: '#fff',
-    borderRadius: '50%',
-    width: '14px',
-    height: '14px',
-    fontSize: '9px',
+  userPill: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 'bold',
-  },
-  userDropdownTrigger: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    cursor: 'pointer',
+    gap: 8,
+    border: '1px solid var(--color-border)',
+    borderRadius: 999,
     padding: '6px 12px',
-    borderRadius: '20px',
-    border: '1px solid var(--color-border, #30363d)',
-    backgroundColor: 'var(--color-surface-2, #1f2937)',
+    fontSize: 12,
+    fontWeight: 700,
   },
-  userIndicator: {
-    fontSize: '8px',
-  },
-  userName: {
-    fontSize: '12px',
-    color: 'var(--color-text)',
-    fontWeight: 'bold',
+  onlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 99,
+    background: '#22c55e',
   },
   content: {
     flex: 1,
+    minWidth: 0,
     overflow: 'auto',
     position: 'relative',
   },
-};
+}

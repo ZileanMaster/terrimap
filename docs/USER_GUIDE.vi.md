@@ -23,7 +23,7 @@
 
 TerriMap là ứng dụng web giúp **chia các vùng địa lý (zones) cho đội ngũ bán hàng (sales)** một cách tối ưu. Hệ thống hỗ trợ:
 
-- **3 thuật toán** phân chia tự động (Tham lam, K-Means, Simulated Annealing)
+- **3 thuật toán** phân chia tự động (Tham lam, Tìm kiếm cục bộ, Simulated Annealing)
 - **Bản đồ tương tác** với polygon vùng tô màu theo district
 - **3 vai trò** người dùng với quyền hạn khác nhau
 - **Xuất dữ liệu** ra CSV, GeoJSON, PDF
@@ -117,7 +117,7 @@ Thanh trên cùng chứa:
 | Thuật toán | Đặc điểm | Khi nào dùng |
 |-----------|----------|-------------|
 | ⚡ **Tham lam** (Greedy) | Nhanh nhất, O(n log n) | Cần kết quả nhanh, không cần tối ưu |
-| 🎯 **K-Means** | Tối ưu theo vị trí địa lý | Muốn các vùng gần nhau về mặt địa lý |
+| 🎯 **Tìm kiếm cục bộ** (Local Search) | Cải thiện kết quả tham lam bằng hoán đổi biên an toàn | Muốn kết quả cân bằng, ổn định và giữ liên thông |
 | 🔥 **Simulated Annealing** | Cân bằng tốt nhất | Muốn phân bổ công bằng nhất cho sales |
 
 #### Bước 2: Chọn số districts
@@ -142,7 +142,7 @@ Sau khi chạy xong, mục **"Kết quả"** hiển thị:
 | **Vi phạm** | Số lỗi ràng buộc (vùng cô lập, district tách rời) | 0 là lý tưởng |
 
 > [!TIP]
-> Nếu điểm cân bằng thấp (< 60) và bạn đang dùng Greedy/KMeans, hệ thống sẽ gợi ý **"Chạy SA tự động"**. Nhấn nút này để tối ưu kết quả.
+> Nếu điểm cân bằng thấp (< 60) và bạn đang dùng Greedy hoặc Local Search, hệ thống sẽ gợi ý **"Chạy SA tự động"**. Nhấn nút này để tối ưu kết quả.
 
 ---
 
@@ -384,7 +384,7 @@ Sidebar hiển thị tất cả zones trong district:
 | Thuật toán | Thời gian bình thường | Xử lý |
 |-----------|---------------------|-------|
 | Greedy | < 50ms | Nếu lâu hơn → refresh trang |
-| K-Means | < 200ms | Bình thường |
+| Local Search | < 300ms | Bình thường |
 | SA | < 500ms (Web Worker) | UI vẫn responsive, đợi kết quả |
 
 > SA chạy trong **background worker** — bạn có thể thao tác bản đồ trong lúc đợi.
@@ -422,10 +422,10 @@ Không — dữ liệu hiện được lưu trong bộ nhớ (in-memory). Khi re
 ### ❓ Thuật toán nào tốt nhất?
 
 - **Cần nhanh**: Tham lam (Greedy)
-- **Cần phân bố đều địa lý**: K-Means
+- **Cần kết quả ổn định, giữ liên thông**: Local Search
 - **Cần cân bằng tải tối ưu**: Simulated Annealing (SA)
 
-> Khuyến nghị: Chạy **SA** cho kết quả sản xuất, dùng **Greedy/KMeans** để xem nhanh.
+> Khuyến nghị: Dùng **Local Search** làm mặc định, chạy **SA** khi cần tối ưu sâu hơn, dùng **Greedy** để xem nhanh.
 
 ### ❓ "Vi phạm" nghĩa là gì?
 

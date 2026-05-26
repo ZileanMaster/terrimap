@@ -143,7 +143,7 @@ export class AdminFacade {
       totalSales: salesAgents.length,
       totalCustomers,
       totalOrders,
-      avgBalanceScore: 0, // L5 AI layer sẽ tính chính xác
+      avgBalanceScore: 0, // Computed by the reporting layer when metrics are available.
       snapshotCount: this.versionSvc.listHistory().length,
     };
   }

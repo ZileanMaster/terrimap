@@ -415,7 +415,11 @@ function extractVertices(polygon: Zone['polygon']): Coordinate[] {
 
   for (const ring of rings) {
     for (const pt of ring) {
-      vertices.push({ lng: pt[0], lat: pt[1] });
+      const [lng, lat] = pt;
+      if (lng === undefined || lat === undefined) {
+        throw new Error('Invalid polygon coordinate: expected [lng, lat]');
+      }
+      vertices.push({ lng, lat });
     }
   }
   return vertices;
@@ -513,35 +517,6 @@ function getMinVertexDistance(zoneA: Zone, zoneB: Zone): number {
   return minDistance;
 }
 
-/**
- * Đếm số lượng thành phần liên thông trong ma trận kề hiện tại.
- * @internal
- */
-function countConnectedComponents(zones: Zone[], matrix: AdjacencyMatrix): number {
-  const visited = new Set<string>();
-  let count = 0;
-
-  for (const zone of zones) {
-    if (!visited.has(zone.id)) {
-      count++;
-      const queue = [zone.id];
-      visited.add(zone.id);
-      let head = 0;
-      while (head < queue.length) {
-        const curr = queue[head++]!;
-        const neighbors = matrix[curr] || [];
-        for (const neighbor of neighbors) {
-          if (!visited.has(neighbor)) {
-            visited.add(neighbor);
-            queue.push(neighbor);
-          }
-        }
-      }
-    }
-  }
-  return count;
-}
-
 export function buildAdjacencyMatrix(
   zones: Zone[],
   _thresholdKm?: number
@@ -584,26 +559,6 @@ export function buildAdjacencyMatrix(
       if (dist > 1e-6 && dist <= NEAR_BOUNDARY_KM) {
         matrix[zi.id]!.push(zj.id);
         matrix[zj.id]!.push(zi.id);
-      }
-    }
-  }
-
-  // Tertiary: ONLY if graph is still disconnected after primary + secondary.
-  // Adds edges ≤2km to bridge large gaps (e.g., zones across major rivers/bridges).
-  // 2km is strict enough to prevent false adjacency between different neighborhoods.
-  const TERTIARY_KM = 2.0;
-  const components = countConnectedComponents(zones, matrix);
-  if (components > 1) {
-    for (let i = 0; i < zones.length - 1; i++) {
-      for (let j = i + 1; j < zones.length; j++) {
-        const zi = zones[i]!;
-        const zj = zones[j]!;
-        if (matrix[zi.id]!.includes(zj.id)) continue;
-        const dist = getMinBoundaryDistKm(zi, zj);
-        if (dist > 1e-5 && dist <= TERTIARY_KM) {
-          matrix[zi.id]!.push(zj.id);
-          matrix[zj.id]!.push(zi.id);
-        }
       }
     }
   }
@@ -662,7 +617,7 @@ export function buildDistanceMatrix(zones: Zone[]): DistMatrix {
 /**
  * Tính tọa độ trung bình (arithmetic mean) của một tập tọa độ.
  * `meanCoordinate` khác `polygonCentroid`: không dùng area-weighting.
- * Chỉ dùng nội bộ cho K-Means centroids. Dùng `polygonCentroid` cho centroid polygon thực.
+ * Chỉ dùng nội bộ cho các phép tính trung bình tọa độ. Dùng `polygonCentroid` cho centroid polygon thực.
  *
  * @complexity O(n) — n = số coordinates.
  * @throws {GeometryError} Nếu `coords` rỗng.
@@ -702,6 +657,8 @@ export function pointInPolygon(
   point: [number, number],
   ring: number[][],
 ): boolean {
+  if (pointOnRingBoundary(point, ring)) return false;
+
   const [px, py] = point;
   let inside = false;
 
@@ -770,6 +727,14 @@ export function polygonsOverlap(
     }
   }
 
+  // Identical/coincident polygons overlap by area even though they have no
+  // proper edge crossing and every vertex lies on the boundary.
+  if (a.length > 0 && b.length > 0
+    && a.every((pt) => pointOnRingBoundary(pt, b))
+    && b.every((pt) => pointOnRingBoundary(pt, a))) {
+    return true;
+  }
+
   return false;
 }
 
@@ -793,6 +758,114 @@ function segmentsIntersect(
   }
 
   return false;
+}
+
+function pointOnRingBoundary(point: number[], ring: number[][]): boolean {
+  if (ring.length < 2) return false;
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i]!;
+    const b = ring[(i + 1) % ring.length]!;
+    if (pointOnSegment(point, a, b)) return true;
+  }
+  return false;
+}
+
+function pointOnSegment(point: number[], a: number[], b: number[]): boolean {
+  const cross = crossDirection(a, b, point);
+  if (Math.abs(cross) > COORD_EPS) return false;
+
+  const minX = Math.min(a[0]!, b[0]!) - COORD_EPS;
+  const maxX = Math.max(a[0]!, b[0]!) + COORD_EPS;
+  const minY = Math.min(a[1]!, b[1]!) - COORD_EPS;
+  const maxY = Math.max(a[1]!, b[1]!) + COORD_EPS;
+
+  return point[0]! >= minX && point[0]! <= maxX
+    && point[1]! >= minY && point[1]! <= maxY;
+}
+
+export function polygonSelfIntersects(ring: number[][]): boolean {
+  const points = ring.length > 1
+    && ring[0]![0] === ring[ring.length - 1]![0]
+    && ring[0]![1] === ring[ring.length - 1]![1]
+    ? ring.slice(0, -1)
+    : ring;
+
+  if (points.length < 4) return false;
+
+  for (let i = 0; i < points.length; i++) {
+    const a1 = points[i]!;
+    const a2 = points[(i + 1) % points.length]!;
+
+    for (let j = i + 1; j < points.length; j++) {
+      const isAdjacent = Math.abs(i - j) === 1 || (i === 0 && j === points.length - 1);
+      if (isAdjacent) continue;
+
+      const b1 = points[j]!;
+      const b2 = points[(j + 1) % points.length]!;
+      if (segmentsIntersect(a1, a2, b1, b2)) return true;
+    }
+  }
+
+  return false;
+}
+
+export type PolygonTopologyViolation =
+  | { type: 'SELF_INTERSECTION'; zoneId: string; ringIndex: number }
+  | { type: 'OVERLAP'; zoneAId: string; zoneBId: string };
+
+function getPolygonRings(zone: Zone): number[][][] {
+  if (zone.polygon.type === 'Polygon') {
+    return zone.polygon.coordinates;
+  }
+  return zone.polygon.coordinates.flatMap((poly) => poly);
+}
+
+export function findPolygonTopologyViolations(zones: Zone[]): PolygonTopologyViolation[] {
+  const violations: PolygonTopologyViolation[] = [];
+
+  for (const zone of zones) {
+    const rings = getPolygonRings(zone);
+    for (let ringIndex = 0; ringIndex < rings.length; ringIndex++) {
+      const ring = rings[ringIndex]!;
+      if (polygonSelfIntersects(ring)) {
+        violations.push({ type: 'SELF_INTERSECTION', zoneId: zone.id, ringIndex });
+      }
+    }
+  }
+
+  for (let i = 0; i < zones.length - 1; i++) {
+    const zoneA = zones[i]!;
+    const ringsA = getPolygonRings(zoneA);
+    for (let j = i + 1; j < zones.length; j++) {
+      const zoneB = zones[j]!;
+      const ringsB = getPolygonRings(zoneB);
+      let found = false;
+      for (const ringA of ringsA) {
+        for (const ringB of ringsB) {
+          if (polygonsOverlap(ringA, ringB)) {
+            violations.push({ type: 'OVERLAP', zoneAId: zoneA.id, zoneBId: zoneB.id });
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+    }
+  }
+
+  return violations;
+}
+
+export function assertNoPolygonTopologyViolations(zones: Zone[]): void {
+  const violations = findPolygonTopologyViolations(zones);
+  if (violations.length === 0) return;
+
+  const first = violations[0]!;
+  const detail = first.type === 'SELF_INTERSECTION'
+    ? `zone "${first.zoneId}" has a self-intersecting polygon ring`
+    : `zones "${first.zoneAId}" and "${first.zoneBId}" have overlapping/crossing polygons`;
+
+  throw new GeometryError(`Invalid polygon topology: ${detail}.`);
 }
 
 /** Cross product direction: (pk - pi) × (pj - pi) */

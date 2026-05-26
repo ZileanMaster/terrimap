@@ -9,6 +9,21 @@
  */
 
 import { z } from 'zod';
+import type {
+  Coordinate as DomainCoordinate,
+  GeoJSONPolygon as DomainGeoJSONPolygon,
+  ActivityType as DomainActivityType,
+  Activity as DomainActivity,
+  UnassignedZone as DomainUnassignedZone,
+  AssignedZone as DomainAssignedZone,
+  Zone as DomainZone,
+  SalesAgent as DomainSalesAgent,
+  District as DomainDistrict,
+  AdjacencyMatrix as DomainAdjacencyMatrix,
+  DistanceMatrix as DomainDistanceMatrix,
+  TerritoryVersion as DomainTerritoryVersion,
+  VersionPeriod as DomainVersionPeriod,
+} from './domain.js';
 
 // ==========================================
 // 1. CHUẨN ĐỊA LÝ & DATA CƠ BẢN
@@ -20,7 +35,7 @@ export const CoordinateSchema = z.object({
   /** INVARIANT: lat ∈ [-90, 90] */
   lat: z.number().min(-90).max(90),
 });
-export type Coordinate = z.infer<typeof CoordinateSchema>;
+export type Coordinate = DomainCoordinate;
 
 /**
  * Validate một ring (vòng khép kín) của Polygon:
@@ -52,10 +67,10 @@ export const GeoJSONPolygonSchema = z.discriminatedUnion('type', [
     coordinates: z.array(z.array(PolygonRingSchema).min(1)).min(1),
   }),
 ]);
-export type GeoJSONPolygon = z.infer<typeof GeoJSONPolygonSchema>;
+export type GeoJSONPolygon = DomainGeoJSONPolygon;
 
 export const ActivityTypeSchema = z.enum(['CUSTOMER', 'ORDER', 'REVENUE']);
-export type ActivityType = z.infer<typeof ActivityTypeSchema>;
+export type ActivityType = DomainActivityType;
 
 export const ActivitySchema = z.object({
   id: z.string().min(1, 'Activity ID không được rỗng'),
@@ -64,7 +79,7 @@ export const ActivitySchema = z.object({
   value: z.number().min(0, 'Activity.value phải >= 0'),
   location: CoordinateSchema.optional(),
 });
-export type Activity = z.infer<typeof ActivitySchema>;
+export type Activity = DomainActivity;
 
 // ==========================================
 // 2. ZONE (BASIC UNITS) — DISCRIMINATED UNIONS
@@ -81,21 +96,21 @@ const BaseZoneSchema = z.object({
 export const UnassignedZoneSchema = BaseZoneSchema.extend({
   status: z.literal('unassigned'),
 });
-export type UnassignedZone = z.infer<typeof UnassignedZoneSchema>;
+export type UnassignedZone = DomainUnassignedZone;
 
 export const AssignedZoneSchema = BaseZoneSchema.extend({
   status: z.literal('assigned'),
   /** INVARIANT: districtId phải là một ID hợp lệ của District trong cùng Version. */
   districtId: z.string().min(1, 'districtId không được rỗng khi Zone đã được gán'),
 });
-export type AssignedZone = z.infer<typeof AssignedZoneSchema>;
+export type AssignedZone = DomainAssignedZone;
 
 /** Discriminated Union: TypeScript + Zod sẽ narrow type theo field `status`. */
 export const ZoneSchema = z.discriminatedUnion('status', [
   UnassignedZoneSchema,
   AssignedZoneSchema,
 ]);
-export type Zone = z.infer<typeof ZoneSchema>;
+export type Zone = DomainZone;
 
 // ==========================================
 // 3. SALES & DISTRICTS
@@ -108,7 +123,7 @@ export const SalesAgentSchema = z.object({
   /** INVARIANT: capacity >= 0 */
   capacity: z.number().min(0, 'SalesAgent.capacity phải >= 0'),
 });
-export type SalesAgent = z.infer<typeof SalesAgentSchema>;
+export type SalesAgent = DomainSalesAgent;
 
 export const DistrictSchema = z.object({
   id: z.string().min(1),
@@ -126,7 +141,7 @@ export const DistrictSchema = z.object({
   /** INVARIANT: balanceScore phải finite (loại bỏ ±Infinity và NaN để JSON round-trip an toàn). */
   balanceScore: z.number().finite(),
 });
-export type District = z.infer<typeof DistrictSchema>;
+export type District = DomainDistrict;
 
 // ==========================================
 // 4. MATRICES — MA TRẬN KỀ & KHOẢNG CÁCH
@@ -161,7 +176,7 @@ export const AdjacencyMatrixSchema = z
       }
     }
   });
-export type AdjacencyMatrix = z.infer<typeof AdjacencyMatrixSchema>;
+export type AdjacencyMatrix = DomainAdjacencyMatrix;
 
 /**
  * Validate tính đối xứng và diagonal=0 của DistanceMatrix:
@@ -198,14 +213,14 @@ export const DistanceMatrixSchema = z
       }
     }
   });
-export type DistanceMatrix = z.infer<typeof DistanceMatrixSchema>;
+export type DistanceMatrix = DomainDistanceMatrix;
 
 // ==========================================
 // 5. ROOT STATE — TERRITORY VERSION / SNAPSHOT
 // ==========================================
 
 export const VersionPeriodSchema = z.enum(['WEEKLY', 'MONTHLY', 'CUSTOM']);
-export type VersionPeriod = z.infer<typeof VersionPeriodSchema>;
+export type VersionPeriod = DomainVersionPeriod;
 
 export const TerritoryVersionSchema = z.object({
   id: z.string().min(1),
@@ -230,4 +245,4 @@ export const TerritoryVersionSchema = z.object({
   adjacencyMatrix: AdjacencyMatrixSchema,
   distanceMatrix: DistanceMatrixSchema,
 });
-export type TerritoryVersion = z.infer<typeof TerritoryVersionSchema>;
+export type TerritoryVersion = DomainTerritoryVersion & { version: number };

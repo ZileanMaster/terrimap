@@ -73,10 +73,9 @@ const GEO_ZONES_COORDS: Coordinate[] = [
  * Dùng partitionLocalSearch → validateAll → xây dựng TerritoryVersion hoàn chỉnh.
  * Đây là luồng THỰC TẾ của ứng dụng — L1 tạo ra data, L0 validate nó.
  *
- * NOTE: K-Means có thể tạo ra empty clusters khi zones trùng tọa độ.
  * buildVersionFromPartition bỏ qua districts rỗng (zoneIds.length === 0)
  * vì L0 schema yêu cầu District phải có ít nhất 1 zone.
- * Đây là behavior hợp lệ — ứng dụng thực tế phải handle merge/reassign.
+ * Đây là behavior phòng thủ — ứng dụng thực tế phải handle merge/reassign.
  */
 function buildVersionFromPartition(
   rawZones: Zone[],
@@ -84,7 +83,7 @@ function buildVersionFromPartition(
   iter: number
 ): TerritoryVersion {
   // Bước 1 (L1): Phân vùng
-  const assignment = partitionLocalSearch(rawZones, m, iter);
+  const assignment = partitionLocalSearch(rawZones, m, { maxIter: iter });
   // BUG 1 FIX: groupZonesByCluster nhận (Assignment[], Zone[], number)
   const groups = groupZonesByCluster(assignment, rawZones, m);
 
@@ -98,7 +97,7 @@ function buildVersionFromPartition(
     const zoneGroup = groups.get(k) ?? [];
     const zoneIds = zoneGroup.map((z) => z.id);
 
-    // QUAN TRỌNG: Skip districts rỗng (K-Means empty cluster)
+    // QUAN TRỌNG: Skip districts rỗng
     // L0 schema yêu cầu District.zoneIds.length >= 1
     if (zoneIds.length === 0) continue;
 
@@ -171,7 +170,7 @@ describe('L1 → L0 Integration Round-Trip', () => {
 
     expect(() => TerritoryVersionSchema.parse(version)).not.toThrow();
     const parsed = TerritoryVersionSchema.parse(version);
-    // m=3 nhưng có thể ít hơn nếu K-Means tạo empty cluster
+    // m=3 nhưng có thể ít hơn nếu thuật toán trả district rỗng
     expect(Object.keys(parsed.districts).length).toBeGreaterThanOrEqual(1);
     expect(Object.keys(parsed.districts).length).toBeLessThanOrEqual(3);
   });
@@ -201,8 +200,7 @@ describe('L1 → L0 Integration Round-Trip', () => {
   });
 
   it('[INT-5] Zones trùng tọa độ + iter=0 → diameterScore=0, balanceScore finite → L0 parse OK', () => {
-    // Dùng iter=0 (round-robin) để đảm bảo không có empty cluster
-    // K-Means với iter>0 sẽ gộp tất cả về 1 cluster khi zones trùng tọa độ
+    // Dùng iter=0 để kiểm tra đường chạy ngắn nhất vẫn tạo dữ liệu hợp lệ
     const sameCoord = { lat: 10.762, lng: 106.660 };
     const zones = Array.from({ length: 6 }, (_, i) => makeZone(`z${i}`, sameCoord));
 
@@ -217,9 +215,8 @@ describe('L1 → L0 Integration Round-Trip', () => {
     }
   });
 
-  it('[INT-5b] Zones trùng tọa độ + iter>0 → K-Means gộp clusters → L0 parse OK (số districts có thể < m)', () => {
-    // Khi zones trùng tọa độ + iter>0, K-Means hội tụ tất cả về 1 cluster
-    // districts rỗng bị skip → version cuối hợp lệ với L0
+  it('[INT-5b] Zones trùng tọa độ + iter>0 → L0 parse OK (số districts có thể <= m)', () => {
+    // Districts rỗng bị skip → version cuối hợp lệ với L0
     const sameCoord = { lat: 10.762, lng: 106.660 };
     const zones = Array.from({ length: 6 }, (_, i) => makeZone(`z${i}`, sameCoord));
 
@@ -346,7 +343,7 @@ describe('L1 → L0 Integration Round-Trip', () => {
           const m = Math.min(mRaw, zones.length);
           if (m < 2) return;
 
-          // iter=0: round-robin → không chạy K-Means → không có empty cluster
+          // iter=0: đường chạy ngắn nhất vẫn phải tạo version hợp lệ
           const version = buildVersionFromPartition(zones, m, 0);
 
           expect(() => TerritoryVersionSchema.parse(version)).not.toThrow();

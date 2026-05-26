@@ -211,7 +211,7 @@ describe('TerritoryService.runPartition', () => {
   it('[RP-12] emit partition:complete với same reference của PartitionResult', async () => {
     const svc = new TerritoryService();
     let emitted: PartitionResult | null = null;
-    svc.on('partition:complete', (payload) => { emitted = payload; });
+    svc.on('partition:complete', (payload) => { emitted = payload as PartitionResult; });
     const result = await svc.runPartition(zones4, 2, 'local-search');
     expect(emitted).toBe(result); // same object reference
   });

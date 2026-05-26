@@ -25,6 +25,7 @@ export type PartitionErrorCode =
   | 'NO_ZONES'      // zones array rỗng
   | 'M_TOO_SMALL'   // m < 2
   | 'M_TOO_LARGE'   // m > zones.length
+  | 'DISCONNECTED_GRAPH' // input adjacency graph has multiple components
   | 'INVALID_ITER'  // maxIter < 0 hoặc không nguyên
   | 'INVALID_COOLING' // cooling ngoài (0,1)
   | 'INVALID_TEMP'; // initialTemp <= 0
@@ -103,6 +104,46 @@ export type PartitionFn = (
 // ==========================================
 // INTERNAL HELPERS
 // ==========================================
+
+function getGraphComponents(zones: Zone[], adjMatrix: AdjacencyMatrix): string[][] {
+  const visited = new Set<string>();
+  const components: string[][] = [];
+
+  for (const zone of zones) {
+    if (visited.has(zone.id)) continue;
+
+    const component: string[] = [];
+    const queue = [zone.id];
+    visited.add(zone.id);
+
+    for (let head = 0; head < queue.length; head++) {
+      const current = queue[head]!;
+      component.push(current);
+
+      for (const neighbor of adjMatrix[current] ?? []) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    components.push(component);
+  }
+
+  return components;
+}
+
+function ensureConnectedInputGraph(zones: Zone[], adjMatrix: AdjacencyMatrix): void {
+  const components = getGraphComponents(zones, adjMatrix);
+  if (components.length <= 1) return;
+
+  throw new PartitionError(
+    `zone adjacency graph has ${components.length} disconnected components; ` +
+      'cannot guarantee connected districts without artificial bridge edges',
+    'DISCONNECTED_GRAPH',
+  );
+}
 
 /**
  * Tính tổng customers của một zone.
@@ -387,8 +428,9 @@ export function partitionGreedy(
 
   const { onProgress, adjThresholdKm = 15 } = opts;
 
-  // Build adjacency matrix nếu cần
+  // Build strict adjacency matrix. Artificial bridge edges are intentionally not allowed.
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
+  ensureConnectedInputGraph(zones, adjMatrix);
 
   // Map id → index để tra cứu O(1)
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
@@ -502,38 +544,9 @@ export function partitionGreedy(
           }
           progress = true;
         } else {
-          // Zone genuinely isolated in adjacency graph G — no path exists.
-          // This means the zone's polygon is too far from all other zones
-          // (> 500m boundary distance) to be considered physically adjacent.
-          //
-          // According to Salazar-Aguilar et al. (2011), connectivity requires
-          // that territories form connected subgraphs of G. If a zone has no
-          // edges in G, it CANNOT be contiguous with any territory.
-          //
-          // Strategy: Assign to nearest district by centroid distance so the
-          // algorithm completes. The validator will CORRECTLY detect this as
-          // a DISCONNECTED violation (since adjacency graph has no fake edges).
-          // The user should fix polygon gaps to resolve the violation.
-          let nearestDistrict = 0;
-          let minD = Infinity;
-          for (let d = 0; d < m; d++) {
-            const seedIdx = seedIndices[d]!;
-            const dist = haversineDistance(
-              zones[startIdx]!.centroid,
-              zones[seedIdx]!.centroid,
-            );
-            if (dist < minD) {
-              minD = dist;
-              nearestDistrict = d;
-            }
-          }
-          assignment[startIdx] = nearestDistrict;
-          unassigned--;
-          progress = true;
-          console.warn(
-            `[TerriMap] Zone "${zones[startIdx]!.id}" is isolated in graph G ` +
-            `(no adjacent zones within 500m). Assigned to district ${nearestDistrict} ` +
-            `by centroid distance. This WILL be reported as a CONTIGUITY violation.`,
+          throw new PartitionError(
+            `zone "${zones[startIdx]!.id}" cannot reach any assigned zone in the adjacency graph`,
+            'DISCONNECTED_GRAPH',
           );
         }
       }
@@ -633,6 +646,7 @@ export function partitionLocalSearch(
   const { onProgress, alpha = 0.5, beta = 0.5, adjThresholdKm = 15, maxIter = 500, balanceWeights, objective } = opts;
 
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
+  ensureConnectedInputGraph(zones, adjMatrix);
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
 
   // Khởi tạo từ Greedy solution
@@ -747,9 +761,10 @@ export function partitionSimulatedAnnealing(
     throw new PartitionError(`initialTemp must be > 0, got ${initialTemp}`, 'INVALID_TEMP');
 
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
+  ensureConnectedInputGraph(zones, adjMatrix);
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
 
-  // Khởi tạo từ Greedy solution (thay K-Means)
+  // Khởi tạo từ Greedy solution
   const initialResult = partitionGreedy(zones, m, { adjThresholdKm });
 
   const assignment = new Int32Array(zones.length);

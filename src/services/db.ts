@@ -14,8 +14,9 @@
 import { supabase, isOnline } from '../lib/supabase.js'
 import { MOCK_ZONES, MOCK_ASSIGNMENTS } from '../data/mock-zones.js'
 import { MOCK_AGENTS } from '../data/mock-agents.js'
-import type { Region } from '../data/regions.js'
+import { DEFAULT_REGIONS, type Region } from '../data/regions.js'
 import type { Zone, Assignment, SalesAgent } from '../../facades/viewmodels.js'
+import { assertNoPolygonTopologyViolations } from '../../lib/geometry.js'
 
 
 // ── Project-scoped localStorage key helper ────────────────────────────────────
@@ -117,7 +118,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
     actMap.set(a.zone_id, list)
   }
 
-  return (zones as DbZone[]).map((z) => ({
+  const loadedZones = (zones as DbZone[]).map((z) => ({
     id:       z.id,
     name:     z.name,
     status:   z.status as Zone['status'],
@@ -130,6 +131,15 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
       value: a.value,
     })),
   }))
+
+  try {
+    assertNoPolygonTopologyViolations(loadedZones as any)
+  } catch (e) {
+    console.error('[DB] loadZones topology error, fallback to MOCK:', e)
+    return MOCK_ZONES
+  }
+
+  return loadedZones
 }
 
 /**
@@ -203,6 +213,25 @@ export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
   if (!isOnline()) return
 
   try {
+    let existingZones: Zone[] = []
+    let query = supabase!.from('zones').select('*').neq('id', zone.id)
+    if (projectId) query = query.eq('project_id', projectId)
+    const { data: existing, error: existingErr } = await query
+    if (existingErr) {
+      console.error('[DB] saveZone topology lookup error:', existingErr)
+      return
+    }
+    existingZones = ((existing ?? []) as DbZone[]).map((z) => ({
+      id:         z.id,
+      name:       z.name,
+      status:     z.status as Zone['status'],
+      polygon:    z.polygon as Zone['polygon'],
+      centroid:   z.centroid,
+      regionId:   z.region_id ?? undefined,
+      activities: [],
+    }))
+    assertNoPolygonTopologyViolations([...existingZones, zone] as any)
+
     const row: Record<string, unknown> = {
       id:       zone.id,
       name:     zone.name,
@@ -436,7 +465,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
     local = []
   }
 
-  if (!isOnline()) return local
+  if (!isOnline()) return local.length > 0 ? local : DEFAULT_REGIONS
 
   try {
     let query = supabase!
@@ -452,7 +481,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
 
     const { data, error } = await query
 
-    if (error || !data || data.length === 0) return local
+    if (error || !data || data.length === 0) return local.length > 0 ? local : DEFAULT_REGIONS
 
     return (data as DbRegion[]).map((r) => ({
       id:            r.id,
@@ -462,7 +491,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       zoom:          r.zoom,
     }))
   } catch {
-    return local
+    return local.length > 0 ? local : DEFAULT_REGIONS
   }
 }
 

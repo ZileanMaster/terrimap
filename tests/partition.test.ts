@@ -96,6 +96,31 @@ const zones6WithCustomers: Zone[] = [
   makeZoneWithCustomers('c6', { lat: 20.859, lng: 106.684 }, 99),  // Hai Phong
 ];
 
+function makeBoxZone(id: string, lng: number, lat: number, customers = 10): Zone {
+  const ring: [number, number][] = [
+    [lng, lat],
+    [lng + 0.01, lat],
+    [lng + 0.01, lat + 0.01],
+    [lng, lat + 0.01],
+    [lng, lat],
+  ];
+  return {
+    id,
+    name: id,
+    polygon: { type: 'Polygon', coordinates: [ring] },
+    centroid: { lng: lng + 0.005, lat: lat + 0.005 },
+    activities: [{ id: `act-${id}`, type: 'CUSTOMER', value: customers }],
+    status: 'unassigned',
+  };
+}
+
+const disconnectedComponentZones: Zone[] = [
+  makeBoxZone('a1', 106.0, 10.0, 10),
+  makeBoxZone('a2', 106.01, 10.0, 12),
+  makeBoxZone('b1', 107.0, 11.0, 11),
+  makeBoxZone('b2', 107.01, 11.0, 13),
+];
+
 const validVersionBase: Omit<TerritoryVersion, 'zones' | 'districts' | 'salesAgents'> = {
   id: 'ver-test',
   name: 'Test Version',
@@ -449,6 +474,30 @@ describe('partitionSimulatedAnnealing', () => {
   it('[INV-4] zones rỗng → throw PartitionError', () => {
     expect(() => partitionSimulatedAnnealing([], 2)).toThrow(PartitionError);
   });
+});
+
+describe('Connectivity precondition on disconnected input graph', () => {
+  const algos = [
+    { name: 'greedy', fn: partitionGreedy },
+    { name: 'local-search', fn: partitionLocalSearch },
+    {
+      name: 'sa',
+      fn: (zones: Zone[], m: number) =>
+        partitionSimulatedAnnealing(zones, m, { maxIter: 300, initialTemp: 100, cooling: 0.95 }),
+    },
+  ];
+
+  for (const { name, fn } of algos) {
+    it(`[CONN-GUARD] ${name} rejects disconnected input instead of adding bridge edges`, () => {
+      expect(() => fn(disconnectedComponentZones, 2)).toThrow(PartitionError);
+      try {
+        fn(disconnectedComponentZones, 2);
+      } catch (err) {
+        expect(err).toBeInstanceOf(PartitionError);
+        expect((err as PartitionError).code).toBe('DISCONNECTED_GRAPH');
+      }
+    });
+  }
 });
 
 // ==========================================

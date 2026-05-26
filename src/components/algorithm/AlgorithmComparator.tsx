@@ -1,551 +1,467 @@
 /**
- * AlgorithmComparator.tsx — Side-by-side comparative territory mapping
- * 
- * Flow:
- * 1. User configures parameters for Run A and Run B.
- * 2. User clicks "Chạy song song".
- * 3. Shows Map A (Run A) and Map B (Run B) side-by-side.
- * 4. Comparative metrics card deck is rendered below the maps.
- * 5. Sync Viewport option maintains identical map zoom & center.
+ * AlgorithmComparator - side-by-side scenario runner with explicit data gates.
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useDataStore } from '../../store/dataStore.js';
-import { useFacade } from '../../context/FacadeContext.js';
-import TerritoryMap from '../map/TerritoryMap.js';
-import type { Zone, Assignment } from '../../../facades/viewmodels.js';
+import React, { useEffect, useMemo, useState } from 'react'
+import { useDataStore } from '../../store/dataStore.js'
+import { useFacade } from '../../context/FacadeContext.js'
+import TerritoryMap from '../map/TerritoryMap.js'
+import type { Assignment, Zone } from '../../../facades/viewmodels.js'
+import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
+
+type Algo = 'greedy' | 'local-search' | 'sa'
+
+function componentCount(zones: Zone[]): number {
+  if (zones.length === 0) return 0
+  const adj = buildAdjacencyMatrix(zones, 50)
+  const ids = new Set(zones.map((z) => z.id))
+  const visited = new Set<string>()
+  let count = 0
+
+  for (const zone of zones) {
+    if (visited.has(zone.id)) continue
+    count++
+    const queue = [zone.id]
+    visited.add(zone.id)
+    for (let head = 0; head < queue.length; head++) {
+      const current = queue[head]!
+      for (const next of adj[current] ?? []) {
+        if (ids.has(next) && !visited.has(next)) {
+          visited.add(next)
+          queue.push(next)
+        }
+      }
+    }
+  }
+
+  return count
+}
 
 export default function AlgorithmComparator() {
-  const zones = useDataStore((s) => s.zones);
-  const assignments = useDataStore((s) => s.assignments);
-  const regions = useDataStore((s) => s.regions);
-  const agents = useDataStore((s) => s.agents);
-  const currentRegionId = useDataStore((s) => s.currentRegionId);
-  const ctx = useFacade();
+  const zones = useDataStore((s) => s.zones)
+  const regions = useDataStore((s) => s.regions)
+  const agents = useDataStore((s) => s.agents)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
+  const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
+  const persistAssignments = useDataStore((s) => s.persistAssignments)
+  const ctx = useFacade()
 
-  // States
-  const [selectedRegionId, setSelectedRegionId] = useState<string>(currentRegionId || '');
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [hasRun, setHasRun] = useState<boolean>(false);
-  const [syncViewport, setSyncViewport] = useState<boolean>(true);
+  const [selectedRegionId, setSelectedRegionId] = useState(currentRegionId || regions[0]?.id || '')
+  const [isRunning, setIsRunning] = useState(false)
+  const [hasRun, setHasRun] = useState(false)
+  const [syncViewport, setSyncViewport] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Real algorithm result states
-  const [realAssignmentsA, setRealAssignmentsA] = useState<Assignment[]>([]);
-  const [realAssignmentsB, setRealAssignmentsB] = useState<Assignment[]>([]);
-  const [metricsA, setMetricsA] = useState<any>(null);
-  const [metricsB, setMetricsB] = useState<any>(null);
+  const [algoA, setAlgoA] = useState<Algo>('greedy')
+  const [algoB, setAlgoB] = useState<Algo>('sa')
+  const [numDistrictsA, setNumDistrictsA] = useState(4)
+  const [numDistrictsB, setNumDistrictsB] = useState(4)
 
-  // Run A Configuration
-  const [algoA, setAlgoA] = useState<string>('greedy');
-  const [numDistrictsA, setNumDistrictsA] = useState<number>(4);
+  const [assignmentsA, setAssignmentsA] = useState<Assignment[]>([])
+  const [assignmentsB, setAssignmentsB] = useState<Assignment[]>([])
+  const [metricsA, setMetricsA] = useState<any>(null)
+  const [metricsB, setMetricsB] = useState<any>(null)
 
-  // Run B Configuration
-  const [algoB, setAlgoB] = useState<string>('sa');
-  const [numDistrictsB, setNumDistrictsB] = useState<number>(4);
+  useEffect(() => {
+    if (selectedRegionId) setCurrentRegion(selectedRegionId)
+  }, [selectedRegionId, setCurrentRegion])
 
-  // Map viewport center and zoom states to keep them synced when active
-  const selectedRegion = useMemo(() => {
-    return regions.find((r) => r.id === selectedRegionId);
-  }, [regions, selectedRegionId]);
+  const selectedRegion = regions.find((r) => r.id === selectedRegionId)
+  const displayZones = useMemo(
+    () => selectedRegionId ? zones.filter((z) => (z as any).regionId === selectedRegionId) : [],
+    [zones, selectedRegionId],
+  )
+  const displayAgents = useMemo(
+    () => selectedRegionId
+      ? agents.filter((a) =>
+        a.activeRegion === selectedRegionId
+        || a.activeRegion === selectedRegion?.name
+        || (a as any).regionId === selectedRegionId
+        || (a as any).region_id === selectedRegionId,
+      )
+      : [],
+    [agents, selectedRegionId, selectedRegion?.name],
+  )
 
-  const defaultCenter: [number, number] = selectedRegion
+  const topologyViolations = useMemo(() => findPolygonTopologyViolations(displayZones), [displayZones])
+  const components = useMemo(() => componentCount(displayZones), [displayZones])
+  const blockers = [
+    !selectedRegionId ? 'Chưa chọn khu vực.' : null,
+    displayZones.length < 2 ? 'Khu vực cần ít nhất 2 zones.' : null,
+    displayAgents.length < 2 ? 'Khu vực cần ít nhất 2 sales đang hoạt động.' : null,
+    topologyViolations.length > 0 ? `Có ${topologyViolations.length} lỗi topology polygon.` : null,
+    components > 1 ? `Đồ thị zone có ${components} cụm rời, không thể đảm bảo liên thông.` : null,
+  ].filter((x): x is string => Boolean(x))
+
+  const canRun = blockers.length === 0 && !isRunning
+  const center: [number, number] = selectedRegion
     ? [selectedRegion.center.lat, selectedRegion.center.lng]
-    : [21.03, 105.83];
-  const defaultZoom = selectedRegion?.zoom ?? 12;
+    : [21.03, 105.83]
+  const zoom = selectedRegion?.zoom ?? 12
 
-  const [mapCenter, setMapCenter] = useState<[number, number]>(defaultCenter);
-  const [mapZoom, setMapZoom] = useState<number>(defaultZoom);
+  const runScenario = async (algo: Algo, m: number) =>
+    ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
 
-  // Update map viewport when region selection changes
-  useEffect(() => {
-    if (selectedRegion) {
-      setMapCenter([selectedRegion.center.lat, selectedRegion.center.lng]);
-      setMapZoom(selectedRegion.zoom);
-    }
-  }, [selectedRegion]);
-
-  // Sync selectedRegionId with global store when component mounts or changes
-  useEffect(() => {
-    if (selectedRegionId) {
-      useDataStore.getState().setCurrentRegion(selectedRegionId);
-    }
-  }, [selectedRegionId]);
-
-  // Filter zones by region
-  const displayZones = useMemo(() => {
-    if (!selectedRegionId) return zones;
-    return zones.filter((z) => (z as any).regionId === selectedRegionId);
-  }, [zones, selectedRegionId]);
-
-  // Filter agents by region
-  const displayAgents = useMemo(() => {
-    if (!selectedRegionId) return agents;
-    return agents.filter((a) => (a as any).region_id === selectedRegionId || (a as any).regionId === selectedRegionId);
-  }, [agents, selectedRegionId]);
-
-  const handleRunAlgorithms = async () => {
-    if (!selectedRegionId) {
-      alert('Vui lòng chọn khu vực trước khi chạy thuật toán.');
-      return;
-    }
-    if (displayZones.length < 2) {
-      alert('Khu vực này chưa có đủ zones (cần ít nhất 2 zones) để chạy thuật toán.');
-      return;
-    }
-
-    setIsRunning(true);
-    setHasRun(false);
-
+  const handleRun = async () => {
+    if (!canRun) return
+    setError(null)
+    setIsRunning(true)
+    setHasRun(false)
     try {
-      // Execute Scenario A
-      const resA = await ctx.facade.runAlgorithm(
-        algoA as any,
-        displayZones,
-        numDistrictsA,
-        displayAgents
-      );
-
-      // Execute Scenario B
-      const resB = await ctx.facade.runAlgorithm(
-        algoB as any,
-        displayZones,
-        numDistrictsB,
-        displayAgents
-      );
-
-      setRealAssignmentsA(resA.assignments);
-      setRealAssignmentsB(resB.assignments);
-      setMetricsA(resA);
-      setMetricsB(resB);
-      setHasRun(true);
-    } catch (e: any) {
-      console.error('[AlgorithmComparator] run error:', e);
-      alert(`❌ Lỗi khi chạy thuật toán: ${e.message}`);
+      const [resultA, resultB] = await Promise.all([
+        runScenario(algoA, numDistrictsA),
+        runScenario(algoB, numDistrictsB),
+      ])
+      setAssignmentsA(resultA.assignments)
+      setAssignmentsB(resultB.assignments)
+      setMetricsA(resultA)
+      setMetricsB(resultB)
+      setHasRun(true)
+    } catch (err: any) {
+      setError(err?.message ?? String(err))
     } finally {
-      setIsRunning(false);
+      setIsRunning(false)
     }
-  };
+  }
 
-  const handleApplyResult = async (side: 'A' | 'B') => {
-    const chosenAssignments = side === 'A' ? realAssignmentsA : realAssignmentsB;
-    const chosenAlgoName = side === 'A' ? algoA : algoB;
-    try {
-      await useDataStore.getState().persistAssignments(chosenAssignments);
-      alert(`✅ Đã chọn và áp dụng phương án phân vùng của Thuật toán ${chosenAlgoName.toUpperCase()}!`);
-    } catch (e: any) {
-      alert(`❌ Lỗi áp dụng phân vùng: ${e.message}`);
-    }
-  };
+  const handleApply = async (side: 'A' | 'B') => {
+    const chosen = side === 'A' ? assignmentsA : assignmentsB
+    await persistAssignments(chosen)
+    alert(`Đã áp dụng kịch bản ${side}.`)
+  }
 
-  // Dynamic evaluation helper variables
-  const balanceScoreA = metricsA?.balanceScore ?? 0;
-  const balanceScoreB = metricsB?.balanceScore ?? 0;
-  const balanceEval = balanceScoreA > balanceScoreB
-    ? '🟢 Kịch bản A tốt hơn (Cân bằng hơn)'
-    : balanceScoreB > balanceScoreA
-      ? '🟢 Kịch bản B tốt hơn (Cân bằng hơn)'
-      : '🤝 Ngang bằng nhau';
-
-  const diamA = metricsA?.maxDiameter ?? 0;
-  const diamB = metricsB?.maxDiameter ?? 0;
-  const diamEval = diamA < diamB
-    ? '🟢 Kịch bản A tốt hơn (Gom gọn hơn)'
-    : diamB < diamA
-      ? '🟢 Kịch bản B tốt hơn (Gom gọn hơn)'
-      : '🤝 Ngang bằng nhau';
-
-  const violationsA = metricsA?.violations?.filter((v: any) => v.type === 'CONTIGUITY').length ?? 0;
-  const violationsB = metricsB?.violations?.filter((v: any) => v.type === 'CONTIGUITY').length ?? 0;
-  const contigEval = violationsA < violationsB
-    ? '🟢 Kịch bản A tốt hơn (Ít vi phạm liên thông hơn)'
-    : violationsB < violationsA
-      ? '🟢 Kịch bản B tốt hơn (Ít vi phạm liên thông hơn)'
-      : '🤝 Ngang bằng nhau';
-
-  const durationA = metricsA?.durationMs ?? 0;
-  const durationB = metricsB?.durationMs ?? 0;
-  const durationEval = durationA < durationB
-    ? '🟢 Kịch bản A nhanh hơn'
-    : durationB < durationA
-      ? '🟢 Kịch bản B nhanh hơn'
-      : '🤝 Ngang bằng nhau';
+  const recommendation = useMemo(() => {
+    if (!metricsA || !metricsB) return null
+    const scoreA = (metricsA.balanceScore ?? 0) - (metricsA.violationCount ?? 0) * 20
+    const scoreB = (metricsB.balanceScore ?? 0) - (metricsB.violationCount ?? 0) * 20
+    if (scoreA === scoreB) return 'Hai kịch bản tương đương theo balance và violation.'
+    return scoreA > scoreB
+      ? 'Ưu tiên kịch bản A: điểm cân bằng/violation tốt hơn.'
+      : 'Ưu tiên kịch bản B: điểm cân bằng/violation tốt hơn.'
+  }, [metricsA, metricsB])
 
   return (
     <div style={styles.container}>
-      {/* ── Top Header and Configuration ───────────────────────────────────── */}
-      <div style={styles.configHeader}>
-        <div style={styles.regionSelectWrapper}>
-          <label style={styles.label}>📍 Chọn khu vực phân chia:</label>
-          <select
-            value={selectedRegionId}
-            onChange={(e) => setSelectedRegionId(e.target.value)}
-            style={styles.select}
-          >
-            <option value="" disabled>-- Chọn khu vực --</option>
-            {regions.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
+      <section style={styles.header}>
+        <div>
+          <span style={styles.kicker}>Bước 5</span>
+          <h1 style={styles.title}>So sánh thuật toán phân chia</h1>
+          <p style={styles.subtitle}>
+            Chọn một khu vực hợp lệ, cấu hình hai kịch bản, chạy song song và chỉ áp dụng sau khi xem metrics.
+          </p>
+        </div>
+        <button style={{ ...styles.primaryBtn, opacity: canRun ? 1 : .55 }} disabled={!canRun} onClick={handleRun}>
+          {isRunning ? 'Đang chạy...' : 'Chạy so sánh'}
+        </button>
+      </section>
+
+      <section style={styles.gate}>
+        <label style={styles.field}>
+          <span>Khu vực</span>
+          <select value={selectedRegionId} onChange={(e) => setSelectedRegionId(e.target.value)} style={styles.input}>
+            <option value="">Chọn khu vực</option>
+            {regions.map((region) => <option key={region.id} value={region.id}>{region.name}</option>)}
           </select>
-        </div>
+        </label>
+        <DataChip label="Zones" value={displayZones.length} ok={displayZones.length >= 2} />
+        <DataChip label="Sales" value={displayAgents.length} ok={displayAgents.length >= 2} />
+        <DataChip label="Topology" value={topologyViolations.length} ok={topologyViolations.length === 0} />
+        <DataChip label="Components" value={components} ok={components <= 1 && components > 0} />
+        <label style={styles.checkbox}>
+          <input type="checkbox" checked={syncViewport} onChange={(e) => setSyncViewport(e.target.checked)} />
+          Đồng bộ góc nhìn bản đồ
+        </label>
+      </section>
 
-        <div style={styles.actions}>
-          <label style={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={syncViewport}
-              onChange={(e) => setSyncViewport(e.target.checked)}
-            />
-             Đồng bộ góc nhìn bản đồ (Sync Pan/Zoom)
-          </label>
-          <button
-            onClick={handleRunAlgorithms}
-            disabled={isRunning || !selectedRegionId}
-            style={{
-              ...styles.runButton,
-              opacity: isRunning || !selectedRegionId ? 0.6 : 1,
-            }}
-          >
-            {isRunning ? '⏳ Đang phân tích...' : '⚡ Chạy so sánh song song'}
-          </button>
-        </div>
-      </div>
+      {blockers.length > 0 && (
+        <section style={styles.blocker}>
+          <strong>Chưa thể chạy thuật toán</strong>
+          <ul style={styles.blockerList}>
+            {blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}
+          </ul>
+        </section>
+      )}
 
-      {/* ── Parameters Form ────────────────────────────────────────────────── */}
-      <div style={styles.formsContainer}>
-        {/* Config A */}
-        <div style={styles.formCard}>
-          <h4 style={{ ...styles.cardTitle, color: 'var(--c-primary-400, #60a5fa)' }}>Kịch bản A (Bản đồ trái)</h4>
-          <div style={styles.formRow}>
-            <div style={styles.formField}>
-              <label style={styles.fieldLabel}>Thuật toán:</label>
-              <select value={algoA} onChange={(e) => setAlgoA(e.target.value)} style={styles.fieldSelect}>
-                <option value="greedy">Greedy Seed Expansion</option>
-                <option value="local-search">Local Search Refinement</option>
-                <option value="sa">Simulated Annealing (SA)</option>
-              </select>
-            </div>
-            <div style={styles.formField}>
-              <label style={styles.fieldLabel}>Số cụm (m):</label>
-              <input
-                type="number"
-                min={2}
-                max={10}
-                value={numDistrictsA}
-                onChange={(e) => setNumDistrictsA(Number(e.target.value))}
-                style={styles.fieldInput}
-              />
-            </div>
-          </div>
-        </div>
+      {error && <section style={styles.errorBox}>{error}</section>}
 
-        {/* Config B */}
-        <div style={styles.formCard}>
-          <h4 style={{ ...styles.cardTitle, color: 'var(--color-success, #2dd4a0)' }}>Kịch bản B (Bản đồ phải)</h4>
-          <div style={styles.formRow}>
-            <div style={styles.formField}>
-              <label style={styles.fieldLabel}>Thuật toán:</label>
-              <select value={algoB} onChange={(e) => setAlgoB(e.target.value)} style={styles.fieldSelect}>
-                <option value="greedy">Greedy Seed Expansion</option>
-                <option value="local-search">Local Search Refinement</option>
-                <option value="sa">Simulated Annealing (SA)</option>
-              </select>
-            </div>
-            <div style={styles.formField}>
-              <label style={styles.fieldLabel}>Số cụm (m):</label>
-              <input
-                type="number"
-                min={2}
-                max={10}
-                value={numDistrictsB}
-                onChange={(e) => setNumDistrictsB(Number(e.target.value))}
-                style={styles.fieldInput}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <section style={styles.configGrid}>
+        <ScenarioCard title="Kịch bản A" algo={algoA} setAlgo={setAlgoA} m={numDistrictsA} setM={setNumDistrictsA} accent="#2563eb" />
+        <ScenarioCard title="Kịch bản B" algo={algoB} setAlgo={setAlgoB} m={numDistrictsB} setM={setNumDistrictsB} accent="#059669" />
+      </section>
 
-      {/* ── Side-by-Side Map Canvas ────────────────────────────────────────── */}
-      <div style={styles.mapsContainer}>
-        {/* Left Map View */}
-        <div style={styles.mapColumn}>
-          <div style={styles.mapLabelBar}>
-            <span>🗺️ Kết quả Kịch bản A ({algoA.toUpperCase()})</span>
-            {hasRun && (
-              <button onClick={() => handleApplyResult('A')} style={styles.applyBtn}>
-                ✓ Áp dụng phương án A
-              </button>
-            )}
-          </div>
-          <div style={styles.mapBox}>
-            <TerritoryMap
-              zones={displayZones}
-              assignments={hasRun ? realAssignmentsA : []}
-              center={mapCenter}
-              zoom={mapZoom}
-            />
-          </div>
-        </div>
-
-        {/* Right Map View */}
-        <div style={styles.mapColumn}>
-          <div style={styles.mapLabelBar}>
-            <span>🗺️ Kết quả Kịch bản B ({algoB.toUpperCase()})</span>
-            {hasRun && (
-              <button onClick={() => handleApplyResult('B')} style={{ ...styles.applyBtn, backgroundColor: 'var(--color-success, #16a34a)' }}>
-                ✓ Áp dụng phương án B
-              </button>
-            )}
-          </div>
-          <div style={styles.mapBox}>
-            <TerritoryMap
-              zones={displayZones}
-              assignments={hasRun ? realAssignmentsB : []}
-              center={mapCenter}
-              zoom={mapZoom}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Comparison Metrics Deck ───────────────────────────────────────── */}
-      {hasRun && (
-        <div style={styles.metricsCompareDeck}>
-          <h4 style={styles.compareTitle}>📊 Bảng So Sánh Chỉ Số Kỹ Thuật</h4>
-          <table style={styles.compareTable}>
-            <thead>
-              <tr style={styles.tableHeaderRow}>
-                <th style={styles.tableTh}>Chỉ số so sánh</th>
-                <th style={styles.tableTh}>Kịch bản A ({algoA.toUpperCase()})</th>
-                <th style={styles.tableTh}>Kịch bản B ({algoB.toUpperCase()})</th>
-                <th style={styles.tableTh}>Đánh giá phương án tốt hơn</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={styles.tableTd}><strong>Chỉ số cân bằng tải (Workload Balance Score)</strong></td>
-                <td style={styles.tableTd}>{balanceScoreA.toFixed(1)} / 100</td>
-                <td style={styles.tableTd}>{balanceScoreB.toFixed(1)} / 100</td>
-                <td style={{ ...styles.tableTd, color: balanceEval.includes('ngang bằng') ? 'inherit' : 'var(--color-success, #2dd4a0)', fontWeight: 'bold' }}>
-                  {balanceEval}
-                </td>
-              </tr>
-              <tr>
-                <td style={styles.tableTd}><strong>Đường kính cụm tối đa (Max Diameter / Compactness)</strong></td>
-                <td style={styles.tableTd}>{diamA.toFixed(1)} km</td>
-                <td style={styles.tableTd}>{diamB.toFixed(1)} km</td>
-                <td style={{ ...styles.tableTd, color: diamEval.includes('ngang bằng') ? 'inherit' : 'var(--color-success, #2dd4a0)', fontWeight: 'bold' }}>
-                  {diamEval}
-                </td>
-              </tr>
-              <tr>
-                <td style={styles.tableTd}><strong>Vi phạm liên thông (Contiguity Violations)</strong></td>
-                <td style={styles.tableTd}>{violationsA} vi phạm</td>
-                <td style={styles.tableTd}>{violationsB} vi phạm</td>
-                <td style={{ ...styles.tableTd, color: contigEval.includes('ngang bằng') ? 'inherit' : 'var(--color-success, #2dd4a0)', fontWeight: 'bold' }}>
-                  {contigEval}
-                </td>
-              </tr>
-              <tr>
-                <td style={styles.tableTd}><strong>Thời gian chạy thuật toán (Execution Time)</strong></td>
-                <td style={styles.tableTd}>{durationA.toFixed(1)} ms</td>
-                <td style={styles.tableTd}>{durationB.toFixed(1)} ms</td>
-                <td style={{ ...styles.tableTd, color: durationEval.includes('ngang bằng') ? 'inherit' : 'var(--color-success, #2dd4a0)', fontWeight: 'bold' }}>
-                  {durationEval}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      {!hasRun ? (
+        <section style={styles.emptyState}>
+          <h2>Chưa có kết quả so sánh</h2>
+          <p>Map và metrics chỉ xuất hiện sau khi dữ liệu khu vực đạt điều kiện và bạn bấm chạy.</p>
+        </section>
+      ) : (
+        <>
+          <section style={styles.resultGrid}>
+            <ResultPanel title="Kết quả A" algo={algoA} zones={displayZones} assignments={assignmentsA} center={center} zoom={zoom} metrics={metricsA} onApply={() => handleApply('A')} />
+            <ResultPanel title="Kết quả B" algo={algoB} zones={displayZones} assignments={assignmentsB} center={center} zoom={zoom} metrics={metricsB} onApply={() => handleApply('B')} />
+          </section>
+          <section style={styles.recommendation}>
+            <strong>Khuyến nghị:</strong> {recommendation}
+          </section>
+        </>
       )}
     </div>
-  );
+  )
+}
+
+function DataChip({ label, value, ok }: { label: string; value: number; ok: boolean }) {
+  return (
+    <div style={{ ...styles.chip, borderColor: ok ? '#bbf7d0' : '#fecaca', background: ok ? '#f0fdf4' : '#fef2f2' }}>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function ScenarioCard({
+  title, algo, setAlgo, m, setM, accent,
+}: {
+  title: string; algo: Algo; setAlgo: (v: Algo) => void; m: number; setM: (v: number) => void; accent: string;
+}) {
+  return (
+    <div style={styles.scenarioCard}>
+      <h2 style={{ ...styles.scenarioTitle, color: accent }}>{title}</h2>
+      <div style={styles.formRow}>
+        <label style={styles.field}>
+          <span>Thuật toán</span>
+          <select value={algo} onChange={(e) => setAlgo(e.target.value as Algo)} style={styles.input}>
+            <option value="greedy">Greedy Seed Expansion</option>
+            <option value="local-search">Local Search Refinement</option>
+            <option value="sa">Simulated Annealing</option>
+          </select>
+        </label>
+        <label style={styles.field}>
+          <span>Số district</span>
+          <input type="number" min={2} max={30} value={m} onChange={(e) => setM(Number(e.target.value))} style={styles.input} />
+        </label>
+      </div>
+    </div>
+  )
+}
+
+function ResultPanel({
+  title, algo, zones, assignments, center, zoom, metrics, onApply,
+}: {
+  title: string; algo: Algo; zones: Zone[]; assignments: Assignment[]; center: [number, number]; zoom: number; metrics: any; onApply: () => void;
+}) {
+  return (
+    <div style={styles.resultPanel}>
+      <div style={styles.resultHeader}>
+        <div>
+          <h2 style={styles.resultTitle}>{title}</h2>
+          <span style={styles.kicker}>{algo}</span>
+        </div>
+        <button style={styles.applyBtn} onClick={onApply}>Áp dụng</button>
+      </div>
+      <div style={styles.mapShell}>
+        <TerritoryMap zones={zones} assignments={assignments} center={center} zoom={zoom} />
+      </div>
+      <div style={styles.metricGrid}>
+        <Metric label="Balance" value={Math.round(metrics?.balanceScore ?? 0)} />
+        <Metric label="Violations" value={metrics?.violationCount ?? 0} />
+        <Metric label="Max diameter" value={Math.round(metrics?.maxDiameter ?? 0)} />
+        <Metric label="Runtime ms" value={Math.round(metrics?.durationMs ?? 0)} />
+      </div>
+    </div>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div style={styles.metric}>
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  )
 }
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: '20px',
+    padding: 20,
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
-    height: '100%',
-    overflowY: 'auto',
+    gap: 18,
   },
-  configHeader: {
+  header: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '16px',
-    backgroundColor: 'var(--color-surface, #161b22)',
-    border: '1px solid var(--color-border, #30363d)',
-    borderRadius: '10px',
+    gap: 16,
+    alignItems: 'flex-start',
     flexWrap: 'wrap',
-    gap: '12px',
   },
-  regionSelectWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  label: {
-    fontSize: '13px',
-    fontWeight: 'bold',
-    color: 'var(--color-text)',
-  },
-  select: {
-    padding: '6px 12px',
-    borderRadius: '6px',
-    backgroundColor: 'var(--color-surface-2, #1f2937)',
-    border: '1px solid var(--color-border, #30363d)',
-    color: 'var(--color-text)',
-    fontSize: '13px',
-    outline: 'none',
-  },
-  actions: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-  },
-  checkboxLabel: {
-    fontSize: '13px',
+  kicker: {
     color: 'var(--color-text-2)',
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+  },
+  title: {
+    fontSize: 28,
+    margin: '4px 0 6px',
+  },
+  subtitle: {
+    color: 'var(--color-text-2)',
+    maxWidth: 720,
+  },
+  primaryBtn: {
+    border: 0,
+    borderRadius: 8,
+    background: '#2563eb',
+    color: '#fff',
+    padding: '11px 16px',
+    fontWeight: 850,
+    cursor: 'pointer',
+  },
+  gate: {
+    display: 'flex',
+    gap: 10,
+    alignItems: 'end',
+    flexWrap: 'wrap',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    borderRadius: 8,
+    padding: 14,
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
+  },
+  input: {
+    height: 38,
+    width: '100%',
+    minWidth: 0,
+    border: '1px solid var(--color-border)',
+    borderRadius: 7,
+    background: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    padding: '0 10px',
+  },
+  checkbox: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    cursor: 'pointer',
+    gap: 8,
+    height: 38,
+    color: 'var(--color-text-2)',
+    fontWeight: 700,
   },
-  runButton: {
-    padding: '8px 18px',
-    backgroundColor: 'var(--color-accent, #1f6feb)',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: 'bold',
-    fontSize: '13px',
-    cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(31, 111, 235, 0.3)',
-  },
-  formsContainer: {
+  chip: {
+    minWidth: 92,
+    height: 54,
+    border: '1px solid',
+    borderRadius: 8,
+    padding: '8px 10px',
     display: 'flex',
-    gap: '20px',
+    flexDirection: 'column',
+    color: '#0f172a',
   },
-  formCard: {
-    flex: 1,
-    padding: '16px',
-    backgroundColor: 'var(--color-surface, #161b22)',
-    border: '1px solid var(--color-border, #30363d)',
-    borderRadius: '10px',
+  blocker: {
+    border: '1px solid #fecaca',
+    background: '#fef2f2',
+    color: '#7f1d1d',
+    borderRadius: 8,
+    padding: 14,
   },
-  cardTitle: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    marginBottom: '12px',
+  blockerList: {
+    margin: '8px 0 0 18px',
+  },
+  errorBox: {
+    border: '1px solid #fecaca',
+    color: '#991b1b',
+    background: '#fff1f2',
+    borderRadius: 8,
+    padding: 14,
+    fontWeight: 700,
+  },
+  configGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: 14,
+  },
+  scenarioCard: {
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-bg)',
+    borderRadius: 8,
+    padding: 16,
+  },
+  scenarioTitle: {
+    fontSize: 18,
+    marginBottom: 12,
   },
   formRow: {
-    display: 'flex',
-    gap: '16px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+    gap: 12,
   },
-  formField: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-  },
-  fieldLabel: {
-    fontSize: '12px',
+  emptyState: {
+    minHeight: 260,
+    border: '1px dashed var(--color-border)',
+    borderRadius: 8,
+    display: 'grid',
+    placeItems: 'center',
+    textAlign: 'center',
     color: 'var(--color-text-2)',
+    padding: 30,
   },
-  fieldSelect: {
-    padding: '6px 10px',
-    borderRadius: '6px',
-    backgroundColor: 'var(--color-surface-2, #1f2937)',
-    border: '1px solid var(--color-border, #30363d)',
-    color: 'var(--color-text)',
-    fontSize: '12px',
-    outline: 'none',
+  resultGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+    gap: 18,
   },
-  fieldInput: {
-    padding: '6px 10px',
-    borderRadius: '6px',
-    backgroundColor: 'var(--color-surface-2, #1f2937)',
-    border: '1px solid var(--color-border, #30363d)',
-    color: 'var(--color-text)',
-    fontSize: '12px',
-    outline: 'none',
-  },
-  mapsContainer: {
-    display: 'flex',
-    gap: '20px',
-    height: '450px',
-    minHeight: '400px',
-  },
-  mapColumn: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    border: '1px solid var(--color-border, #30363d)',
-    borderRadius: '10px',
+  resultPanel: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 8,
+    background: 'var(--color-bg)',
     overflow: 'hidden',
-    backgroundColor: 'var(--color-surface, #161b22)',
   },
-  mapLabelBar: {
-    height: '40px',
-    backgroundColor: 'var(--color-surface-2, #1f2937)',
-    borderBottom: '1px solid var(--color-border, #30363d)',
+  resultHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 12px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    color: 'var(--color-text)',
+    padding: 14,
+    borderBottom: '1px solid var(--color-border)',
+  },
+  resultTitle: {
+    fontSize: 18,
   },
   applyBtn: {
-    padding: '4px 10px',
-    backgroundColor: 'var(--color-accent, #1f6feb)',
+    border: 0,
+    borderRadius: 7,
+    background: '#111827',
     color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: 'bold',
+    padding: '8px 11px',
+    fontWeight: 800,
     cursor: 'pointer',
   },
-  mapBox: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
+  mapShell: {
+    height: 380,
   },
-  metricsCompareDeck: {
-    padding: '16px',
-    backgroundColor: 'var(--color-surface, #161b22)',
-    border: '1px solid var(--color-border, #30363d)',
-    borderRadius: '10px',
+  metricGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 1,
+    background: 'var(--color-border)',
+  },
+  metric: {
+    background: 'var(--color-surface)',
+    padding: 12,
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: 2,
   },
-  compareTitle: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: 'var(--color-text)',
+  recommendation: {
+    border: '1px solid #bfdbfe',
+    background: '#eff6ff',
+    color: '#1e3a8a',
+    borderRadius: 8,
+    padding: 14,
   },
-  compareTable: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: '13px',
-    textAlign: 'left',
-  },
-  tableHeaderRow: {
-    borderBottom: '2px solid var(--color-border, #30363d)',
-  },
-  tableTh: {
-    padding: '10px',
-    fontWeight: 'bold',
-    color: 'var(--color-text-2)',
-  },
-  tableTd: {
-    padding: '12px 10px',
-    borderBottom: '1px solid var(--color-border, #30363d)',
-    color: 'var(--color-text)',
-  },
-};
+}

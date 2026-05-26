@@ -22,6 +22,7 @@ import {
 import { MOCK_ZONES, MOCK_ASSIGNMENTS } from '../data/mock-zones.js'
 import { MOCK_AGENTS } from '../data/mock-agents.js'
 import type { Region } from '../data/regions.js'
+import { assertNoPolygonTopologyViolations } from '../../lib/geometry.js'
 
 interface DataStore {
   // ── State ──────────────────────────────────────────────────────────────────────
@@ -141,6 +142,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   addZone: async (zone) => {
+    assertNoPolygonTopologyViolations([...get().zones, zone] as any)
     // Optimistic update first so map renders immediately
     set((s) => ({ zones: [...s.zones, zone], saving: true }))
     await saveZone(zone, get().currentProjectId)  // await — ensures DB write before tab switch
@@ -158,6 +160,9 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   updateZone: async (zone) => {
+    assertNoPolygonTopologyViolations(
+      get().zones.map((z) => z.id === zone.id ? zone : z) as any,
+    )
     // State is source of truth — update immediately, DB syncs async
     set((s) => ({
       zones: s.zones.map((z) => z.id === zone.id ? zone : z),

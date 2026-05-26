@@ -82,8 +82,8 @@ Ghi lại để audit trail — không cần xử lý thêm.
 ### OPEN-5 — Golden regression files chưa được generate
 
 - **File**: `tests/fixtures/golden/` (chưa tồn tại)
-- **Vấn đề**: `tests/partition.test.ts` có `[REG-1]` và `[REG-2]` regression tests
-  kiểm tra Greedy và KMeans output không đổi so với golden file.
+- **Vấn đề**: `tests/partition.test.ts` có regression tests
+  kiểm tra Greedy và Local Search output không đổi so với golden file.
   Hiện tại các tests này **skip** với warning `⚠️ Golden file not found`.
 - **Impact**: Regression tests không hoạt động → nếu L1 partition algorithm vô tình
   thay đổi output, không có safety net.
@@ -118,9 +118,9 @@ require fix trước khi build L4.
   `salesAgentId`). L4 map renderer dùng `assignments[]` để tô màu zones theo `districtId`.
   `ResultMetrics.tsx` dùng flat fields — không cần access `PartitionMetrics` từ L1c.
 
-- **KMeans balance thường > 0.4**: Khi user chọn KMeans, UI nên hiển thị warning
-  nếu `metrics.balanceScore < 60`. Suggest chuyển sang SA nếu balance quan trọng.
-  Threshold đã được benchmark — xem `docs/partition-notes.md`.
+- **Algorithm set hiện tại**: UI chỉ nên expose `greedy`, `local-search`, và `sa`.
+  Nếu `metrics.balanceScore < 60` và algorithm chưa phải `sa`, suggest chuyển sang SA.
+  Xem `docs/partition-notes.md`.
 
 - **`ActivityService` và `MapService` chưa có UI consumer**: Hai services này được
   smoke-tested nhưng chưa có integration test thực sự. Khi L4 wire, viết ít nhất

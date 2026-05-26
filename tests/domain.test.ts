@@ -154,7 +154,9 @@ const activityArb: fc.Arbitrary<Activity> = fc.record({
   type: fc.constantFrom('CUSTOMER' as const, 'ORDER' as const, 'REVENUE' as const),
   value: fc.double({ min: 0, max: 1_000_000, noNaN: true }),
   location: fc.option(coordArb, { nil: undefined }),
-});
+}).map(({ location, ...activity }) =>
+  location === undefined ? activity : { ...activity, location },
+);
 
 const baseZoneArb = fc.record({
   id: fc.uuid(),
