@@ -326,7 +326,7 @@ export function checkBalance(
 /**
  * Kiểm tra connectivity và diameter từng district.
  *
- * @param opts.adjThresholdKm  Threshold km adjacency (default 50km).
+ * @param opts.adjThresholdKm  Gap threshold km cho near-boundary adjacency (default 0.12km).
  * @param opts.maxDiameterKm   Nếu set, flag district có diameter > giá trị này.
  *
  * @complexity O(n² + m×V).
@@ -339,7 +339,7 @@ export function validateGeometry(
 ): GeometryValidationResult {
   _guardInputs(zones, assignments);
 
-  const adjKm = opts.adjThresholdKm ?? 50;
+  const adjKm = opts.adjThresholdKm ?? 0.12;
   const maxDiamKm = opts.maxDiameterKm;
   const m = _numDistricts(assignments);
   const adj = buildAdjacencyMatrix(zones, adjKm);
@@ -376,7 +376,7 @@ export function validateGeometry(
  * Connectivity guard (BFS): swap nào làm district nguồn disconnected bị loại bỏ.
  *
  * @complexity O(n² × m) worst-case. Với n=20, m=4: ~1600 BFS checks.
- * @param opts.adjThresholdKm  Threshold km (default 50km).
+ * @param opts.adjThresholdKm  Gap threshold km (default 0.12km).
  * @param opts.maxSuggestions  Số tối đa (default 5).
  * @returns SwapSuggestion[] đã sắp xếp theo deltaBalance tăng dần.
  * @throws {ValidatorError} EMPTY_INPUT | M_MISMATCH
@@ -389,7 +389,7 @@ export function suggestFix(
   _guardInputs(zones, assignments);
 
   const mode: BalanceMode = opts.mode ?? 'ratio';
-  const adjKm = opts.adjThresholdKm ?? 50;
+  const adjKm = opts.adjThresholdKm ?? 0.12;
   const maxSugg = opts.maxSuggestions ?? 5;
   const m = _numDistricts(assignments);
 
@@ -442,7 +442,7 @@ export function suggestFix(
  *
  * @param opts.balanceMode       Mode balance. Default: 'ratio'.
  * @param opts.balanceThreshold  Threshold balance. Default: 1.5 (ratio) | 0.5 (stddev).
- * @param opts.adjThresholdKm    Threshold km adjacency. Default: 50km.
+ * @param opts.adjThresholdKm    Gap threshold km cho near-boundary adjacency. Default: 0.12km.
  * @param opts.maxDiameterKm     Nếu set, check diameter violations.
  * @returns ValidationResult { valid, violations, metrics }
  * @throws {ValidatorError} EMPTY_INPUT | M_MISMATCH
