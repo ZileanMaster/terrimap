@@ -40,6 +40,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const currentRegionId    = useDataStore((s) => s.currentRegionId)
   const addZone            = useDataStore((s) => s.addZone)
   const removeZone         = useDataStore((s) => s.removeZone)
+  const updateZone         = useDataStore((s) => s.updateZone)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
 
   // Filter zones/agents/assignments by currentRegionId — MANDATORY:
