@@ -123,6 +123,10 @@ export default function TerritoryMap({
   islandZoneIds,
   disconnectedDistrictIds,
 }: TerritoryMapProps) {
+  // Note: uiStore is mocked in some unit tests with partial state, so keep defaults here.
+  const selectedDistrictId = useUIStore((s: any) => (s?.selectedDistrictId ?? null) as number | null)
+  const showPolygons = useUIStore((s: any) => (s?.showPolygons ?? true) as boolean)
+
   // Build colorMap: zoneId → districtId
   const colorMap = useMemo(
     () => new Map(assignments.map((a) => [a.zoneId, a.districtId])),
@@ -165,7 +169,7 @@ export default function TerritoryMap({
           className="map-tiles"
         />
 
-        {zones.map((zone) => {
+        {showPolygons && zones.map((zone) => {
           const districtId  = colorMap.get(zone.id)   // undefined if unassigned
           const salesId     = salesMap.get(zone.id)
           const isAssigned  = districtId !== undefined
@@ -178,6 +182,11 @@ export default function TerritoryMap({
           // L4b-2: Edge case flags
           const isIsland       = islandZoneIds?.has(zone.id) ?? false
           const isDisconnected = isAssigned && (disconnectedDistrictIds?.has(districtId!) ?? false)
+
+          // Legend focus: dim everything except the selected district
+          const isLegendFocused = selectedDistrictId != null
+          const isFocusedDistrict = isLegendFocused && districtId === selectedDistrictId
+          const shouldDimForLegend = isLegendFocused && !isFocusedDistrict
 
           // L4b-1: Sales highlight logic
           const isHighlightedSales = highlightedSalesId != null
@@ -196,6 +205,12 @@ export default function TerritoryMap({
             fillOpacity = DISTRICT_FILL_OPACITY_SELECTED
           } else {
             fillOpacity = DISTRICT_FILL_OPACITY
+          }
+
+          if (shouldDimForLegend) {
+            fillOpacity = Math.min(fillOpacity, 0.06)
+          } else if (isFocusedDistrict) {
+            fillOpacity = Math.max(fillOpacity, 0.28)
           }
 
           // Weight: thicker for selected or highlighted-agent zones
@@ -256,6 +271,7 @@ export default function TerritoryMap({
                 fillOpacity: !isAssigned ? 0.12 : fillOpacity,
                 weight:      borderWeight,
                 dashArray,
+                className: isFocusedDistrict ? 'tm-focused-district' : undefined,
                 opacity: isTransitioning ? 0.1
                   : !isAssigned ? 0.6
                   : (isSelected || isHighlightedSales === true ? 1 : 0.8),
@@ -301,6 +317,14 @@ export default function TerritoryMap({
       <style>{`
         .dark .map-tiles {
           filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
+        }
+        @keyframes tmPulseStroke {
+          0%   { stroke-opacity: 1; stroke-width: 2.5; }
+          50%  { stroke-opacity: 0.35; stroke-width: 4.0; }
+          100% { stroke-opacity: 1; stroke-width: 2.5; }
+        }
+        .tm-focused-district {
+          animation: tmPulseStroke 1.1s ease-in-out infinite;
         }
       `}</style>
 
