@@ -16,6 +16,7 @@ build/
 # Coverage reports
 coverage/
 playwright-report/
+test-results/
 
 # OS files
 .DS_Store
