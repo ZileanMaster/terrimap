@@ -5,18 +5,97 @@ import { fileURLToPath } from 'url'
 const COLS = 25
 const ROWS = 20
 
-const lngMin = 105.810
-const lngMax = 105.860
-const latMin = 21.000
+// Hanoi bounds (tight bounding box, enough for algorithm testing)
+const lngMin = 105.81
+const lngMax = 105.86
+const latMin = 21.0
 const latMax = 21.048
 
-const colWidth = (lngMax - lngMin) / COLS // 0.002
-const rowHeight = (latMax - latMin) / ROWS // 0.0024
+type Pt = [number, number] // [lng, lat]
 
-function centroidOf(left: number, bottom: number, right: number, top: number) {
-  const lat = (bottom + top) / 2
-  const lng = (left + right) / 2
+function centroidOfRing(ring: number[][]) {
+  const pts = ring.slice(0, -1)
+  const lat = pts.reduce((s, p) => s + (p[1] ?? 0), 0) / pts.length
+  const lng = pts.reduce((s, p) => s + (p[0] ?? 0), 0) / pts.length
   return { lat: Math.round(lat * 100000) / 100000, lng: Math.round(lng * 100000) / 100000 }
+}
+
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5)
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v))
+}
+
+// Variable-width cuts, deterministic, to avoid a perfect grid look.
+function buildCuts(min: number, max: number, n: number, rand: () => number): number[] {
+  const total = max - min
+  const raw = Array.from({ length: n }, () => 0.5 + rand()) // [0.5, 1.5]
+  const sum = raw.reduce((s, x) => s + x, 0)
+  const cuts: number[] = [min]
+  let acc = min
+  for (let i = 0; i < n; i++) {
+    acc += (raw[i]! / sum) * total
+    cuts.push(acc)
+  }
+  cuts[cuts.length - 1] = max
+  return cuts
+}
+
+function makeVerticalSegment(x: number, y0: number, y1: number, maxDx: number, rand: () => number): Pt[] {
+  // Multi-point polyline so boundaries are not straight edges.
+  const t1 = 0.22 + rand() * 0.18
+  const t2 = 0.5 + rand() * 0.1
+  const t3 = 0.78 + rand() * 0.18
+  const dx1 = (rand() * 2 - 1) * maxDx
+  const dx2 = (rand() * 2 - 1) * maxDx
+  const dx3 = (rand() * 2 - 1) * maxDx
+  return [
+    [x, y0],
+    [x + dx1, y0 + (y1 - y0) * t1],
+    [x + dx2, y0 + (y1 - y0) * t2],
+    [x + dx3, y0 + (y1 - y0) * t3],
+    [x, y1],
+  ]
+}
+
+function makeHorizontalSegment(y: number, x0: number, x1: number, maxDy: number, rand: () => number): Pt[] {
+  const t1 = 0.22 + rand() * 0.18
+  const t2 = 0.5 + rand() * 0.1
+  const t3 = 0.78 + rand() * 0.18
+  const dy1 = (rand() * 2 - 1) * maxDy
+  const dy2 = (rand() * 2 - 1) * maxDy
+  const dy3 = (rand() * 2 - 1) * maxDy
+  return [
+    [x0, y],
+    [x0 + (x1 - x0) * t1, y + dy1],
+    [x0 + (x1 - x0) * t2, y + dy2],
+    [x0 + (x1 - x0) * t3, y + dy3],
+    [x1, y],
+  ]
+}
+
+function stitch(edges: Pt[][]): number[][] {
+  const ring: Pt[] = []
+  for (const e of edges) {
+    for (const p of e) {
+      if (ring.length > 0) {
+        const last = ring[ring.length - 1]!
+        if (last[0] === p[0] && last[1] === p[1]) continue
+      }
+      ring.push(p)
+    }
+  }
+  const first = ring[0]!
+  const last = ring[ring.length - 1]!
+  if (first[0] !== last[0] || first[1] !== last[1]) ring.push([first[0], first[1]])
+  return ring as unknown as number[][]
 }
 
 const sqlLines: string[] = [
@@ -43,13 +122,17 @@ sqlLines.push(
   "  -- Get the test project ID specifically",
   "  SELECT id INTO v_project_id FROM public.projects WHERE id = 'test-project-terrimap' OR owner_id = (SELECT id FROM auth.users WHERE email = 'admin.test@terrimap.vn' LIMIT 1) LIMIT 1;",
   "  IF v_project_id IS NULL THEN",
-  "    RAISE EXCEPTION 'Không tìm thấy project test nào (ID: test-project-terrimap hoặc do admin.test@terrimap.vn sở hữu) trong database. Vui lòng đăng ký/đăng nhập tài khoản test và tạo project trước!';",
+  "    RAISE EXCEPTION 'Could not find a test project (id=test-project-terrimap, or owned by admin.test@terrimap.vn). Please create/login the test project first.';",
   "  END IF;",
   '',
   '  -- Get the Hanoi region ID dynamically based on name and project_id',
-  "  SELECT id INTO v_region_hn FROM public.regions WHERE name = 'Hà Nội' AND project_id = v_project_id LIMIT 1;",
+  "  -- Prefer stable test region id if it exists, otherwise fallback to name match.",
+  "  SELECT id INTO v_region_hn FROM public.regions WHERE id = 'test-region-hn' AND project_id = v_project_id LIMIT 1;",
+  "  IF v_region_hn IS NULL THEN",
+  "    SELECT id INTO v_region_hn FROM public.regions WHERE project_id = v_project_id AND name IN ('Hà Nội','Ha Noi','Hanoi') LIMIT 1;",
+  "  END IF;",
   '  IF v_region_hn IS NULL THEN',
-  "    RAISE EXCEPTION 'Không tìm thấy khu vực Hà Nội cho project hiện tại!';",
+  "    RAISE EXCEPTION 'Could not find Hanoi region for the current project.';",
   '  END IF;',
   '',
   "  -- Get the default sales test user ID if exists",
@@ -102,9 +185,9 @@ sqlLines.push('')
 sqlLines.push('  -- Insert profiles')
 sqlLines.push('  INSERT INTO public.profiles (id, email, full_name) VALUES')
 const profileLines: string[] = []
-profileLines.push(`    (v_sales_id, 'sales.test@terrimap.vn', 'Nhân Viên Test (Admin/Sales)')`)
+profileLines.push(`    (v_sales_id, 'sales.test@terrimap.vn', 'Nhan Vien Test (Admin/Sales)')`)
 for (let i = 1; i <= 19; i++) {
-  profileLines.push(`    (v_sales_hn_${i}_id, 'sales_hn_${i}@terrimap.vn', 'Nhân Viên HN-${i}')`)
+  profileLines.push(`    (v_sales_hn_${i}_id, 'sales_hn_${i}@terrimap.vn', 'Nhan Vien HN-${i}')`)
 }
 sqlLines.push(profileLines.join(',\n') + '\n  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, full_name = EXCLUDED.full_name;')
 sqlLines.push('')
@@ -124,10 +207,10 @@ sqlLines.push('')
 sqlLines.push('  -- Insert sales_agents')
 sqlLines.push('  INSERT INTO public.sales_agents (id, name, active_region, capacity, region_id, project_id) VALUES')
 const salesAgentLines: string[] = []
-salesAgentLines.push(`    (v_sales_id::text, 'Nhân Viên Test (Admin/Sales)', 'Hà Nội', 450, v_region_hn, v_project_id)`)
+salesAgentLines.push(`    (v_sales_id::text, 'Nhan Vien Test (Admin/Sales)', 'Ha Noi', 450, v_region_hn, v_project_id)`)
 for (let i = 1; i <= 19; i++) {
   const capacity = 350 + (i * 15) % 300
-  salesAgentLines.push(`    (v_sales_hn_${i}_id::text, 'Nhân Viên HN-${i}', 'Hà Nội', ${capacity}, v_region_hn, v_project_id)`)
+  salesAgentLines.push(`    (v_sales_hn_${i}_id::text, 'Nhan Vien HN-${i}', 'Ha Noi', ${capacity}, v_region_hn, v_project_id)`)
 }
 sqlLines.push(salesAgentLines.join(',\n') + '\n  ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, active_region = EXCLUDED.active_region, capacity = EXCLUDED.capacity, region_id = EXCLUDED.region_id, project_id = EXCLUDED.project_id;')
 sqlLines.push('')
@@ -143,28 +226,62 @@ const actLines: string[] = []
 // 8. Generate Assignments
 const assLines: string[] = []
 
+// -----------------------------------------------------------------------------
+// Build an irregular tessellation (no gaps/overlaps) with shared boundaries.
+// This replaces the old uniform-rectangle dataset.
+// -----------------------------------------------------------------------------
+const rand = mulberry32(20260527)
+const xCuts = buildCuts(lngMin, lngMax, COLS, rand)
+const yCuts = buildCuts(latMin, latMax, ROWS, rand)
+
+// Shared boundary segments (internal lines only). Outer borders stay straight.
+const vSeg: Pt[][][] = Array.from({ length: COLS + 1 }, () => Array.from({ length: ROWS }, () => []))
+const hSeg: Pt[][][] = Array.from({ length: COLS }, () => Array.from({ length: ROWS + 1 }, () => []))
+
+for (let c = 1; c < COLS; c++) {
+  for (let r = 0; r < ROWS; r++) {
+    const x = xCuts[c]!
+    const y0 = yCuts[r]!
+    const y1 = yCuts[r + 1]!
+    const wLeft = x - xCuts[c - 1]!
+    const wRight = xCuts[c + 1]! - x
+    const amp = clamp(Math.min(wLeft, wRight) * 0.22, 0, 0.00035)
+    vSeg[c]![r] = makeVerticalSegment(x, y0, y1, amp, rand)
+  }
+}
+
+for (let c = 0; c < COLS; c++) {
+  for (let r = 1; r < ROWS; r++) {
+    const y = yCuts[r]!
+    const x0 = xCuts[c]!
+    const x1 = xCuts[c + 1]!
+    const hBot = y - yCuts[r - 1]!
+    const hTop = yCuts[r + 1]! - y
+    const amp = clamp(Math.min(hBot, hTop) * 0.22, 0, 0.00035)
+    hSeg[c]![r] = makeHorizontalSegment(y, x0, x1, amp, rand)
+  }
+}
+
 for (let col = 0; col < COLS; col++) {
   for (let row = 0; row < ROWS; row++) {
     const id = `hn_${col.toString().padStart(2, '0')}_${row.toString().padStart(2, '0')}`
-    const name = `Vùng HN-${col + 1}-${row + 1}`
-    
-    const left = lngMin + col * colWidth
-    const right = left + colWidth
-    const bottom = latMin + row * rowHeight
-    const top = bottom + rowHeight
-    
-    const polygon = {
-      type: 'Polygon',
-      coordinates: [[
-        [left, bottom],
-        [right, bottom],
-        [right, top],
-        [left, top],
-        [left, bottom]
-      ]]
-    }
-    const c = centroidOf(left, bottom, right, top)
-    
+    const name = `Vung HN-${col + 1}-${row + 1}`
+
+    const x0 = xCuts[col]!
+    const x1 = xCuts[col + 1]!
+    const y0 = yCuts[row]!
+    const y1 = yCuts[row + 1]!
+
+    const bottom = row === 0 ? ([[x0, y0], [x1, y0]] as Pt[]) : hSeg[col]![row]!
+    const right = col === COLS - 1 ? ([[x1, y0], [x1, y1]] as Pt[]) : vSeg[col + 1]![row]!
+    const top = row === ROWS - 1 ? ([[x1, y1], [x0, y1]] as Pt[]) : [...hSeg[col]![row + 1]!].reverse()
+    const left = col === 0 ? ([[x0, y1], [x0, y0]] as Pt[]) : [...vSeg[col]![row]!].reverse()
+
+    const ring = stitch([bottom, right, top, left])
+
+    const polygon = { type: 'Polygon', coordinates: [ring] }
+    const c = centroidOfRing(ring)
+
     zoneLines.push(`    ('${id}', '${name}', 'unassigned', '${JSON.stringify(polygon)}'::jsonb, '${JSON.stringify(c)}'::jsonb, v_region_hn, v_project_id)`)
 
     const customers = Math.floor((Math.sin(col / 2.0) + Math.cos(row / 2.0) + 2) * 50) + 20
@@ -173,7 +290,7 @@ for (let col = 0; col < COLS; col++) {
     actLines.push(`    ('${id}-c', '${id}', 'CUSTOMER', ${customers})`)
     actLines.push(`    ('${id}-o', '${id}', 'ORDER', ${orders})`)
 
-    const districtId = (col % 5) + (row % 4) * 5
+    const districtId = Math.floor(col / 5) + Math.floor(row / 5) * 5
     const salesAgentIdVar = districtId === 0 ? 'v_sales_id::text' : `v_sales_hn_${districtId}_id::text`
     assLines.push(`    ('${id}', ${districtId}, ${salesAgentIdVar})`)
   }
