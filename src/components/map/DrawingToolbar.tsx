@@ -9,8 +9,6 @@
 import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import L from 'leaflet'
-import 'leaflet-draw'
-import 'leaflet-draw/dist/leaflet.draw.css'
 import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
@@ -59,116 +57,126 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
   }
 
   useEffect(() => {
-    // Feature group to hold drawn items
-    const drawnItems = new L.FeatureGroup()
-    map.addLayer(drawnItems)
-    drawnItemsRef.current = drawnItems
+    let cancelled = false
+    let drawnItems: L.FeatureGroup | null = null
+    let drawControl: any | null = null
 
-    // Draw control — polygon only
-    const drawControl = new (L.Control as any).Draw({
-      position: 'topright',
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          shapeOptions: {
-            color: '#2563eb',
-            weight: 2,
-            fillOpacity: 0.15,
+    // leaflet-draw is loaded dynamically to avoid crashing routes/pages
+    // that import this component but don't render it.
+    const boot = async () => {
+      if (typeof window === 'undefined') return
+      await import('leaflet-draw')
+      await import('leaflet-draw/dist/leaflet.draw.css')
+      if (cancelled) return
+
+      drawnItems = new L.FeatureGroup()
+      map.addLayer(drawnItems)
+      drawnItemsRef.current = drawnItems
+
+      drawControl = new (L.Control as any).Draw({
+        position: 'topright',
+        draw: {
+          polygon: {
+            allowIntersection: false,
+            shapeOptions: {
+              color: '#2563eb',
+              weight: 2,
+              fillOpacity: 0.15,
+            },
           },
+          polyline: false,
+          rectangle: false,
+          circle: false,
+          circlemarker: false,
+          marker: false,
         },
-        polyline: false,
-        rectangle: false,
-        circle: false,
-        circlemarker: false,
-        marker: false,
-      },
-      edit: {
-        featureGroup: drawnItems,
-        remove: false,
-        edit: true,
-      },
-    })
+        edit: {
+          featureGroup: drawnItems,
+          remove: false,
+          edit: true,
+        },
+      })
 
-    map.addControl(drawControl)
+      map.addControl(drawControl)
 
-    // Listen for polygon creation
-    const onCreated = (e: any) => {
-      const layer = e.layer
-      const latlngs = layer.getLatLngs()[0] as L.LatLng[]
-      const ring = layerToRing(layer)
-
-      // ── OVERLAP VALIDATION ────────────────────────────────────
-      const zonesNow = existingZonesRef.current
-      if (zonesNow && zonesNow.length > 0) {
-        for (const zone of zonesNow) {
-          const existingRing = zone.polygon.type === 'Polygon'
-            ? zone.polygon.coordinates[0]
-            : zone.polygon.coordinates[0]?.[0]
-
-          if (existingRing && polygonsOverlap(ring, existingRing)) {
-            // Reject: remove drawn layer & alert user
-            drawnItems.removeLayer(layer)
-            alert(`⚠️ Polygon mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
-            return
-          }
-        }
-      }
-      // ──────────────────────────────────────────────────────
-
-      drawnItems.addLayer(layer)
-
-      const centroid = layerCentroid(layer)
-
-      const polygon: GeoJSONPolygon = {
-        type: 'Polygon',
-        coordinates: [ring],
-      }
-
-      onZoneCreated(polygon, centroid)
-    }
-
-    const onEdited = (e: any) => {
-      e.layers.eachLayer((layer: any) => {
-        const zoneId = layer.__zoneId as string | undefined
-        if (!zoneId) return
-
+      const onCreated = (e: any) => {
+        const layer = e.layer
         const ring = layerToRing(layer)
 
-        // Overlap validation (exclude self)
         const zonesNow = existingZonesRef.current
         if (zonesNow && zonesNow.length > 0) {
-          for (const z of zonesNow) {
-            if (z.id === zoneId) continue
-            const existingRing = z.polygon.type === 'Polygon'
-              ? z.polygon.coordinates[0]
-              : z.polygon.coordinates[0]?.[0]
+          for (const zone of zonesNow) {
+            const existingRing = zone.polygon.type === 'Polygon'
+              ? zone.polygon.coordinates[0]
+              : zone.polygon.coordinates[0]?.[0]
             if (existingRing && polygonsOverlap(ring, existingRing)) {
-              if (selectedOriginalRingRef.current) {
-                const latlngs = selectedOriginalRingRef.current.map(([lng, lat]) => [lat, lng] as [number, number])
-                layer.setLatLngs([latlngs])
-              }
-              alert('⚠️ Polygon sửa bị chồng lắp vùng khác. Đã hoàn tác.')
+              drawnItems?.removeLayer(layer)
+              alert(`⚠️ Polygon mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
               return
             }
           }
         }
 
+        drawnItems?.addLayer(layer)
         const centroid = layerCentroid(layer)
         const polygon: GeoJSONPolygon = { type: 'Polygon', coordinates: [ring] }
-        onZoneEdited(zoneId, polygon, centroid)
-        selectedOriginalRingRef.current = ring
-      })
+        onZoneCreated(polygon, centroid)
+      }
+
+      const onEdited = (e: any) => {
+        e.layers.eachLayer((layer: any) => {
+          const zoneId = layer.__zoneId as string | undefined
+          if (!zoneId) return
+
+          const ring = layerToRing(layer)
+
+          const zonesNow = existingZonesRef.current
+          if (zonesNow && zonesNow.length > 0) {
+            for (const z of zonesNow) {
+              if (z.id === zoneId) continue
+              const existingRing = z.polygon.type === 'Polygon'
+                ? z.polygon.coordinates[0]
+                : z.polygon.coordinates[0]?.[0]
+              if (existingRing && polygonsOverlap(ring, existingRing)) {
+                if (selectedOriginalRingRef.current) {
+                  const latlngs = selectedOriginalRingRef.current.map(([lng, lat]) => [lat, lng] as [number, number])
+                  layer.setLatLngs([latlngs])
+                }
+                alert('⚠️ Polygon sửa bị chồng lắp vùng khác. Đã hoàn tác.')
+                return
+              }
+            }
+          }
+
+          const centroid = layerCentroid(layer)
+          const polygon: GeoJSONPolygon = { type: 'Polygon', coordinates: [ring] }
+          onZoneEdited(zoneId, polygon, centroid)
+          selectedOriginalRingRef.current = ring
+        })
+      }
+
+      map.on(L.Draw.Event.CREATED, onCreated)
+      map.on(L.Draw.Event.EDITED, onEdited)
+
+      // Stash handlers on the control for cleanup (avoid extra refs)
+      ;(drawControl as any).__tm_handlers = { onCreated, onEdited }
     }
 
-    map.on(L.Draw.Event.CREATED, onCreated)
-    map.on(L.Draw.Event.EDITED, onEdited)
+    void boot()
 
-    // Cleanup on unmount
     return () => {
-      map.off(L.Draw.Event.CREATED, onCreated)
-      map.off(L.Draw.Event.EDITED, onEdited)
-      map.removeControl(drawControl)
-      map.removeLayer(drawnItems)
+      cancelled = true
+      if (drawControl && (drawControl as any).__tm_handlers) {
+        const { onCreated, onEdited } = (drawControl as any).__tm_handlers
+        map.off(L.Draw.Event.CREATED, onCreated)
+        map.off(L.Draw.Event.EDITED, onEdited)
+      }
+      if (drawControl) {
+        try { map.removeControl(drawControl) } catch { /* ignore */ }
+      }
+      if (drawnItems) {
+        try { map.removeLayer(drawnItems) } catch { /* ignore */ }
+      }
       drawnItemsRef.current = null
       selectedLayerRef.current = null
       selectedOriginalRingRef.current = null
