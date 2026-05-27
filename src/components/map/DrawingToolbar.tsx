@@ -17,11 +17,15 @@ import { polygonsOverlap } from '../../../lib/geometry.js'
 interface DrawingToolbarProps {
   /** Callback when user finishes drawing a polygon. */
   onZoneCreated: (polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
+  /** Callback when user edits an existing zone polygon. */
+  onZoneEdited: (zoneId: string, polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
   /** Existing zones for overlap validation. */
   existingZones?: Zone[]
+  /** Selected zone to edit (only one at a time for performance). */
+  selectedZone?: Zone | null
 }
 
-export default function DrawingToolbar({ onZoneCreated, existingZones }: DrawingToolbarProps) {
+export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZones, selectedZone }: DrawingToolbarProps) {
   const map = useMap()
 
   useEffect(() => {
@@ -50,28 +54,57 @@ export default function DrawingToolbar({ onZoneCreated, existingZones }: Drawing
       edit: {
         featureGroup: drawnItems,
         remove: false,
-        edit: false,
+        edit: true,
       },
     })
 
     map.addControl(drawControl)
 
+    const layerToRing = (layer: any): [number, number][] => {
+      const latlngs = (layer.getLatLngs()[0] ?? []) as L.LatLng[]
+      const ring: [number, number][] = latlngs.map((ll) => [ll.lng, ll.lat])
+      if (ring.length > 0) {
+        const first = ring[0]
+        const last = ring[ring.length - 1]
+        if (first[0] !== last[0] || first[1] !== last[1]) ring.push([first[0], first[1]])
+      }
+      return ring
+    }
+
+    const layerCentroid = (layer: any) => {
+      const latlngs = (layer.getLatLngs()[0] ?? []) as L.LatLng[]
+      const lats = latlngs.map((ll) => ll.lat)
+      const lngs = latlngs.map((ll) => ll.lng)
+      return {
+        lat: lats.reduce((a, b) => a + b, 0) / Math.max(1, lats.length),
+        lng: lngs.reduce((a, b) => a + b, 0) / Math.max(1, lngs.length),
+      }
+    }
+
+    // Add selected zone layer into editable featureGroup
+    let selectedLayer: any = null
+    let selectedOriginalRing: [number, number][] | null = null
+    if (selectedZone) {
+      const ring = selectedZone.polygon.type === 'Polygon'
+        ? (selectedZone.polygon.coordinates[0] ?? [])
+        : (selectedZone.polygon.coordinates[0]?.[0] ?? [])
+      const latlngs = (ring as [number, number][]).map(([lng, lat]) => [lat, lng] as [number, number])
+      selectedLayer = L.polygon(latlngs, {
+        color: '#2563eb',
+        weight: 2,
+        fillOpacity: 0.05,
+        interactive: false,
+      })
+      ;(selectedLayer as any).__zoneId = selectedZone.id
+      selectedOriginalRing = layerToRing(selectedLayer)
+      drawnItems.addLayer(selectedLayer)
+    }
+
     // Listen for polygon creation
     const onCreated = (e: any) => {
       const layer = e.layer
       const latlngs = layer.getLatLngs()[0] as L.LatLng[]
-
-      // Convert Leaflet LatLng[] → GeoJSON coordinates [lng, lat][]
-      const ring: [number, number][] = latlngs.map((ll) => [ll.lng, ll.lat])
-
-      // Close polygon (GeoJSON spec: first === last point)
-      if (ring.length > 0) {
-        const first = ring[0]
-        const last = ring[ring.length - 1]
-        if (first[0] !== last[0] || first[1] !== last[1]) {
-          ring.push([first[0], first[1]])
-        }
-      }
+      const ring = layerToRing(layer)
 
       // ── OVERLAP VALIDATION ────────────────────────────────────
       if (existingZones && existingZones.length > 0) {
@@ -92,13 +125,7 @@ export default function DrawingToolbar({ onZoneCreated, existingZones }: Drawing
 
       drawnItems.addLayer(layer)
 
-      // Compute centroid (arithmetic mean)
-      const lats = latlngs.map((ll) => ll.lat)
-      const lngs = latlngs.map((ll) => ll.lng)
-      const centroid = {
-        lat: lats.reduce((a, b) => a + b, 0) / lats.length,
-        lng: lngs.reduce((a, b) => a + b, 0) / lngs.length,
-      }
+      const centroid = layerCentroid(layer)
 
       const polygon: GeoJSONPolygon = {
         type: 'Polygon',
@@ -108,15 +135,49 @@ export default function DrawingToolbar({ onZoneCreated, existingZones }: Drawing
       onZoneCreated(polygon, centroid)
     }
 
+    const onEdited = (e: any) => {
+      e.layers.eachLayer((layer: any) => {
+        const zoneId = layer.__zoneId as string | undefined
+        if (!zoneId) return
+
+        const ring = layerToRing(layer)
+
+        // Overlap validation (exclude self)
+        if (existingZones && existingZones.length > 0) {
+          for (const z of existingZones) {
+            if (z.id === zoneId) continue
+            const existingRing = z.polygon.type === 'Polygon'
+              ? z.polygon.coordinates[0]
+              : z.polygon.coordinates[0]?.[0]
+            if (existingRing && polygonsOverlap(ring, existingRing)) {
+              if (selectedOriginalRing) {
+                const latlngs = selectedOriginalRing.map(([lng, lat]) => [lat, lng] as [number, number])
+                layer.setLatLngs([latlngs])
+              }
+              alert('⚠️ Polygon sửa bị chồng lắp vùng khác. Đã hoàn tác.')
+              return
+            }
+          }
+        }
+
+        const centroid = layerCentroid(layer)
+        const polygon: GeoJSONPolygon = { type: 'Polygon', coordinates: [ring] }
+        onZoneEdited(zoneId, polygon, centroid)
+        selectedOriginalRing = ring
+      })
+    }
+
     map.on(L.Draw.Event.CREATED, onCreated)
+    map.on(L.Draw.Event.EDITED, onEdited)
 
     // Cleanup on unmount
     return () => {
       map.off(L.Draw.Event.CREATED, onCreated)
+      map.off(L.Draw.Event.EDITED, onEdited)
       map.removeControl(drawControl)
       map.removeLayer(drawnItems)
     }
-  }, [map, onZoneCreated, existingZones])
+  }, [map, onZoneCreated, onZoneEdited, existingZones, selectedZone])
 
   // This is a hook-only component — no JSX output needed
   return null
