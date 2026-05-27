@@ -30,6 +30,12 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null)
   const selectedLayerRef = useRef<any>(null)
   const selectedOriginalRingRef = useRef<[number, number][] | null>(null)
+  const existingZonesRef = useRef<Zone[] | undefined>(existingZones)
+
+  // Keep latest zones for overlap validation without re-initializing Leaflet.Draw
+  useEffect(() => {
+    existingZonesRef.current = existingZones
+  }, [existingZones])
 
   const layerToRing = (layer: any): [number, number][] => {
     const latlngs = (layer.getLatLngs()[0] ?? []) as L.LatLng[]
@@ -92,8 +98,9 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       const ring = layerToRing(layer)
 
       // ── OVERLAP VALIDATION ────────────────────────────────────
-      if (existingZones && existingZones.length > 0) {
-        for (const zone of existingZones) {
+      const zonesNow = existingZonesRef.current
+      if (zonesNow && zonesNow.length > 0) {
+        for (const zone of zonesNow) {
           const existingRing = zone.polygon.type === 'Polygon'
             ? zone.polygon.coordinates[0]
             : zone.polygon.coordinates[0]?.[0]
@@ -128,8 +135,9 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         const ring = layerToRing(layer)
 
         // Overlap validation (exclude self)
-        if (existingZones && existingZones.length > 0) {
-          for (const z of existingZones) {
+        const zonesNow = existingZonesRef.current
+        if (zonesNow && zonesNow.length > 0) {
+          for (const z of zonesNow) {
             if (z.id === zoneId) continue
             const existingRing = z.polygon.type === 'Polygon'
               ? z.polygon.coordinates[0]
@@ -165,7 +173,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       selectedLayerRef.current = null
       selectedOriginalRingRef.current = null
     }
-  }, [map, onZoneCreated, onZoneEdited, existingZones])
+  }, [map, onZoneCreated, onZoneEdited])
 
   // Keep selected-zone edit layer in sync without recreating the whole draw control.
   useEffect(() => {
