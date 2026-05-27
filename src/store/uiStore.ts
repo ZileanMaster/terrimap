@@ -12,6 +12,8 @@ interface UIStore {
   locale:              Locale
   highlightedSalesId:  string | null      // L4b-1: click agent card → highlight district
   isMapTransitioning:  boolean            // L4b-1: flash effect after algorithm run
+  selectedDistrictId:  number | null      // Map legend: focus a cluster/district
+  showPolygons:        boolean            // Map layer toggle
   // Actions
   setRole:                (role: Role) => void
   selectZone:             (id: string | null) => void
@@ -20,6 +22,8 @@ interface UIStore {
   toggleLocale:           () => void
   setHighlightedSalesId:  (id: string | null) => void
   setMapTransitioning:    (v: boolean) => void
+  setSelectedDistrictId:  (id: number | null) => void
+  togglePolygons:         () => void
 }
 
 function applyTheme(theme: Theme) {
@@ -42,8 +46,16 @@ export const useUIStore = create<UIStore>((set) => ({
   locale:             'vi',
   highlightedSalesId: null,
   isMapTransitioning: false,
+  selectedDistrictId: null,
+  showPolygons:       true,
 
-  setRole: (role) => set({ role, selectedZoneId: null, highlightedSalesId: null }),
+  setRole: (role) =>
+    set({
+      role,
+      selectedZoneId: null,
+      highlightedSalesId: null,
+      selectedDistrictId: null,
+    }),
 
   selectZone: (id) => set({ selectedZoneId: id }),
 
@@ -63,7 +75,18 @@ export const useUIStore = create<UIStore>((set) => ({
     set((s) => ({
       highlightedSalesId: s.highlightedSalesId === id ? null : id,
       selectedZoneId: null,
+      selectedDistrictId: null,
     })),
 
   setMapTransitioning: (v) => set({ isMapTransitioning: v }),
+
+  // Toggle: click same district -> clear focus
+  setSelectedDistrictId: (id) =>
+    set((s) => ({
+      selectedDistrictId: s.selectedDistrictId === id ? null : id,
+      highlightedSalesId: null,
+      selectedZoneId: null,
+    })),
+
+  togglePolygons: () => set((s) => ({ showPolygons: !s.showPolygons })),
 }))
