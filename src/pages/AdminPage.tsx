@@ -297,6 +297,16 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     await addZone(newZone as Zone)  // await — ensures DB write before tab switch
   }, [addZone, currentRegionId])
 
+  const handleZoneEdited = useCallback(async (
+    zoneId: string,
+    polygon: GeoJSONPolygon,
+    centroid: { lat: number; lng: number },
+  ) => {
+    const zone = zones.find((z) => z.id === zoneId)
+    if (!zone) return
+    await updateZone({ ...zone, polygon, centroid } as Zone)
+  }, [zones, updateZone])
+
   // ── Delete zone ────────────────────────────────────────────────────────────
   const handleDeleteZone = useCallback(async (zoneId: string) => {
     selectZone(null)
@@ -348,7 +358,12 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
           disconnectedDistrictIds={disconnectedDistrictIds}
         >
           {mode === 'regions' && (
-            <DrawingToolbar onZoneCreated={handleZoneCreated} existingZones={zones} />
+            <DrawingToolbar
+              onZoneCreated={handleZoneCreated}
+              onZoneEdited={handleZoneEdited}
+              existingZones={displayZones}
+              selectedZone={displayZones.find((z) => z.id === selectedZoneId) ?? null}
+            />
           )}
         </TerritoryMap>
 
