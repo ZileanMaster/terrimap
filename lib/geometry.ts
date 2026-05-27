@@ -542,14 +542,17 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Secondary (always-on): near-BOUNDARY adjacency for zones with drawing gaps ≤1km
+  // Secondary (gap-bridging): near-BOUNDARY adjacency for zones with small drawing gaps.
   // Uses segment-to-segment min distance (not vertex-to-vertex) so irregular polygons
   // (triangles, V-shapes) are correctly detected as adjacent even when edges are close
   // at non-vertex points.
   // - Lower bound dist > 1e-6: excludes corner-only diagonal touch.
-  // - Upper bound 1km: covers realistic hand-drawn zone gaps including
-  //   streets (~30m), small rivers (~200m), vacant lots (~500m).
-  const NEAR_BOUNDARY_KM = 1.0;
+  // - Upper bound default: 0.12km (~120m), covers roads / small gaps without
+  //   accidentally connecting non-neighboring zones across other zones.
+  // Note: `_thresholdKm` is kept for backward compatibility and now controls this gap threshold.
+  const NEAR_BOUNDARY_KM = Number.isFinite(_thresholdKm as number) && (_thresholdKm as number) > 0
+    ? (_thresholdKm as number)
+    : 0.12;
   for (let i = 0; i < zones.length - 1; i++) {
     for (let j = i + 1; j < zones.length; j++) {
       const zi = zones[i]!;

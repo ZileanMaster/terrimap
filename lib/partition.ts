@@ -80,7 +80,10 @@ export interface PartitionOpts {
   alpha?: number;
   /** Trọng số cho thành phần imbalance trong objective. Default: 0.5. */
   beta?: number;
-  /** Threshold km để xây dựng adjacency matrix. Default: 15 km. */
+  /**
+   * Gap threshold (km) để bổ sung adjacency khi polygon có khe hở nhỏ.
+   * Default: 0.12 km (~120m). Giá trị lớn dễ "nối tắt" qua vùng khác → làm sai liên thông.
+   */
   adjThresholdKm?: number;
   /** Balance weights — default: { customers: 1.0, orders: 0.0 } */
   balanceWeights?: { customers: number; orders: number };
@@ -426,7 +429,7 @@ export function partitionGreedy(
       `m (${m}) must be <= zones.length (${zones.length})`, 'M_TOO_LARGE',
     );
 
-  const { onProgress, adjThresholdKm = 15 } = opts;
+  const { onProgress, adjThresholdKm = 0.12 } = opts;
 
   // Build strict adjacency matrix. Artificial bridge edges are intentionally not allowed.
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
@@ -643,7 +646,7 @@ export function partitionLocalSearch(
   if (m > zones.length)
     throw new PartitionError(`m (${m}) must be <= zones.length (${zones.length})`, 'M_TOO_LARGE');
 
-  const { onProgress, alpha = 0.5, beta = 0.5, adjThresholdKm = 15, maxIter = 500, balanceWeights, objective } = opts;
+  const { onProgress, alpha = 0.5, beta = 0.5, adjThresholdKm = 0.12, maxIter = 500, balanceWeights, objective } = opts;
 
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
   ensureConnectedInputGraph(zones, adjMatrix);
@@ -749,7 +752,7 @@ export function partitionSimulatedAnnealing(
     cooling = 0.997,
     alpha = 0.5,
     beta = 0.5,
-    adjThresholdKm = 15,
+    adjThresholdKm = 0.12,
     maxIter = 10000,
     balanceWeights,
     objective,
