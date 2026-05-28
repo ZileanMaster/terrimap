@@ -460,6 +460,14 @@ export function UsersView() {
   const [members, setMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const formatDob = (dob?: string | null) => {
+    if (!dob) return '—';
+    const s = String(dob).slice(0, 10); // YYYY-MM-DD
+    const [y, m, d] = s.split('-');
+    if (!y || !m || !d) return s;
+    return `${d}/${m}/${y}`;
+  };
+
   // Inline editing states
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<string>('sales');
@@ -489,11 +497,11 @@ export function UsersView() {
         return;
       }
 
-      const userIds = rawMembers.map((m: any) => m.user_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, email, full_name')
-        .in('id', userIds);
+        const userIds = rawMembers.map((m: any) => m.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, date_of_birth, phone')
+          .in('id', userIds);
 
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
@@ -650,14 +658,16 @@ export function UsersView() {
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
-              <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Email Tài khoản</th>
-                <th style={styles.th}>Họ và Tên</th>
-                <th style={styles.th}>Vai trò (Role)</th>
-                <th style={styles.th}>Khu vực phụ trách</th>
-                <th style={styles.th}>Sức chứa (Capacity)</th>
-                <th style={styles.th} style={{ textAlign: 'right', paddingRight: '20px' }}>Thao tác</th>
-              </tr>
+                <tr style={styles.tableHeaderRow}>
+                  <th style={styles.th}>Email Tài khoản</th>
+                  <th style={styles.th}>Họ và Tên</th>
+                  <th style={styles.th}>Ngày sinh</th>
+                  <th style={styles.th}>SĐT</th>
+                  <th style={styles.th}>Vai trò (Role)</th>
+                  <th style={styles.th}>Khu vực phụ trách</th>
+                  <th style={styles.th}>Sức chứa (Capacity)</th>
+                  <th style={{ ...styles.th, textAlign: 'right', paddingRight: '20px' }}>Thao tác</th>
+                </tr>
             </thead>
             <tbody>
               {members.map((m) => {
@@ -666,13 +676,15 @@ export function UsersView() {
 
                 return (
                   <tr key={m.id} style={styles.tr}>
-                    <td style={styles.td}>
-                      <strong>{m.profile?.email || m.user_id}</strong>
-                    </td>
-                    <td style={styles.td}>{m.profile?.full_name}</td>
-                    <td style={styles.td}>
-                      {isEditing ? (
-                        <select
+                      <td style={styles.td}>
+                        <strong>{m.profile?.email || m.user_id}</strong>
+                      </td>
+                      <td style={styles.td}>{m.profile?.full_name}</td>
+                      <td style={styles.td}>{formatDob(m.profile?.date_of_birth)}</td>
+                      <td style={styles.td}>{m.profile?.phone || '—'}</td>
+                      <td style={styles.td}>
+                        {isEditing ? (
+                          <select
                           value={editRole}
                           onChange={(e) => setEditRole(e.target.value)}
                           style={styles.inlineSelect}
@@ -747,13 +759,13 @@ export function UsersView() {
                   </tr>
                 );
               })}
-              {members.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={styles.tableEmpty}>
-                    {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên nào.'}
-                  </td>
-                </tr>
-              )}
+                {members.length === 0 && (
+                  <tr>
+                    <td colSpan={8} style={styles.tableEmpty}>
+                      {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên nào.'}
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         </div>
@@ -773,13 +785,15 @@ export function SettingsView() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
 
   const [fullName, setFullName] = useState('');
+  const [dob, setDob] = useState(''); // YYYY-MM-DD
+  const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    if (profile?.full_name) {
-      setFullName(profile.full_name);
-    }
+    setFullName(profile?.full_name ?? '');
+    setDob(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '');
+    setPhone(profile?.phone ?? '');
   }, [profile]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -787,9 +801,9 @@ export function SettingsView() {
     setSaving(true);
     setMsg('');
     try {
-      const ok = await updateProfile(fullName);
+      const ok = await updateProfile({ full_name: fullName, date_of_birth: dob ? dob : null, phone: phone ? phone : null });
       if (ok) {
-        setMsg('✅ Đã cập nhật họ tên thành công!');
+        setMsg('✅ Đã cập nhật thông tin cá nhân!');
         // Update dataStore user names if online
         const currentProjectId = useAuthStore.getState().currentProjectId;
         if (supabase && currentProjectId) {
@@ -809,23 +823,50 @@ export function SettingsView() {
     <div style={styles.viewContainer}>
       <h3 style={styles.viewHeader}>⚙️ Cài đặt hệ thống</h3>
 
-      <div style={styles.cardContainer}>
-        <h4 style={styles.sectionTitle}>👤 Thông tin cá nhân</h4>
-        <form onSubmit={handleSaveProfile} style={styles.form}>
-          <div style={styles.formGroup}>
-            <label style={styles.formLabel}>Họ và tên của bạn:</label>
-            <input
-              type="text"
-              placeholder="Nhập họ và tên..."
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              style={styles.formInput}
-              required
-            />
-          </div>
-          <button type="submit" style={styles.submitBtn} disabled={saving}>
-            {saving ? '⏳ Đang lưu...' : '💾 Lưu thông tin cá nhân'}
-          </button>
+        <div style={styles.cardContainer}>
+          <h4 style={styles.sectionTitle}>👤 Thông tin cá nhân</h4>
+          <form onSubmit={handleSaveProfile} style={styles.form}>
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>Email tài khoản:</label>
+              <input
+                type="email"
+                value={profile?.email ?? ''}
+                disabled
+                style={{ ...styles.formInput, opacity: 0.85, cursor: 'not-allowed' }}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>Họ và tên của bạn:</label>
+              <input
+                type="text"
+                placeholder="Nhập họ và tên..."
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                style={styles.formInput}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>Ngày sinh:</label>
+              <input
+                type="date"
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                style={styles.formInput}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.formLabel}>SĐT:</label>
+              <input
+                type="tel"
+                placeholder="Nhập số điện thoại..."
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                style={styles.formInput}
+              />
+            </div>
+            <button type="submit" style={styles.submitBtn} disabled={saving}>
+              {saving ? '⏳ Đang lưu...' : '💾 Lưu thông tin cá nhân'}
+            </button>
           {msg && <div style={{ fontSize: '13px', marginTop: '8px', color: msg.startsWith('✅') ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>{msg}</div>}
         </form>
       </div>

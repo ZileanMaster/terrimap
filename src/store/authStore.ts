@@ -22,6 +22,8 @@ export interface Profile {
   id: string
   email: string
   full_name: string
+  date_of_birth?: string | null
+  phone?: string | null
   avatar_url: string | null
   created_at: string
 }
@@ -72,7 +74,7 @@ interface AuthStore {
   updateMemberRole: (memberId: string, newRole: string) => Promise<boolean>
   removeMember: (memberId: string) => Promise<boolean>
   loadMembers: () => Promise<ProjectMember[]>
-  updateProfile: (fullName: string) => Promise<boolean>
+  updateProfile: (data: string | { full_name: string; date_of_birth?: string | null; phone?: string | null }) => Promise<boolean>
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -238,7 +240,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id,email,full_name,avatar_url,created_at,date_of_birth,phone')
       .eq('id', user.id)
       .single()
 
@@ -528,14 +530,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   // ── Update Profile ───────────────────────────────────────────────────────
-  updateProfile: async (fullName) => {
+  updateProfile: async (data) => {
+    const payload = typeof data === 'string'
+      ? { full_name: data }
+      : {
+          full_name: data.full_name,
+          date_of_birth: data.date_of_birth ?? null,
+          phone: data.phone ?? null,
+        }
     if (!supabase) {
       // Offline mode: update mock profile in store
       const currentProfile = get().profile
       if (currentProfile) {
-        set({ profile: { ...currentProfile, full_name: fullName } })
+        set({ profile: { ...currentProfile, ...payload } })
       } else {
-        set({ profile: { id: 'mock-user', email: 'admin.test@terrimap.vn', full_name: fullName, avatar_url: null, created_at: new Date().toISOString() } })
+        set({
+          profile: {
+            id: 'mock-user',
+            email: 'admin.test@terrimap.vn',
+            full_name: payload.full_name,
+            date_of_birth: (payload as any).date_of_birth ?? null,
+            phone: (payload as any).phone ?? null,
+            avatar_url: null,
+            created_at: new Date().toISOString(),
+          },
+        })
       }
       return true
     }
@@ -545,7 +564,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName })
+        .update(payload)
         .eq('id', user.id)
       if (error) {
         set({ authError: error.message, loading: false })
@@ -553,7 +572,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
       const currentProfile = get().profile
       if (currentProfile) {
-        set({ profile: { ...currentProfile, full_name: fullName } })
+        set({ profile: { ...currentProfile, ...payload } })
       }
       set({ loading: false })
       return true
