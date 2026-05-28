@@ -11,7 +11,6 @@
 import React, { useMemo } from 'react'
 import { MapContainer, TileLayer, Polygon, Tooltip, useMap } from 'react-leaflet'
 import type { Zone, Assignment } from '../../../facades/viewmodels.js'
-import ClusterLayer from './ClusterLayer.js'
 
 import {
   getDistrictFillColor,
@@ -307,11 +306,8 @@ export default function TerritoryMap({
           )
         })}
 
-        {children}
-
-        {/* PERF-1: Marker clustering for large zone sets */}
-        <ClusterLayer zones={zones} onZoneClick={onZoneClick} />
-      </MapContainer>
+          {children}
+        </MapContainer>
 
       {/* Dark tile filter injection */}
       <style>{`
