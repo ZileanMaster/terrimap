@@ -238,38 +238,29 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
     )
   }
 
-  return (
-    <div style={styles.content}>
-      <h2 style={styles.sectionTitle}>📊 Tổng quan hệ thống</h2>
-      <div style={styles.statsGrid}>
-        <StatCard label="Vùng" value={zones.length} />
-        <StatCard label="Cụm" value={districtCount} />
-        <StatCard label="Sales" value={mgmt.sales.length} />
-      </div>
-
-      <div style={styles.divider} />
-
+    return (
+      <div style={styles.content}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={styles.sectionTitle}>👥 Đội ngũ Sales</h2>
           <button
             onClick={() => setAgentModalOpen(true)}
             style={{
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            fontSize: 14,
-            padding: '2px 6px',
-            borderRadius: 4,
-          }}
-          title="Quản lý nhân viên"
-        >
-          ⚙️
-        </button>
-      </div>
-      <div style={styles.agentList}>
-        {mgmt.sales.map((agent) => {
-          const assignedCount = assignments.filter(
-            (a) => a.salesAgentId === agent.id,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: 14,
+              padding: '2px 6px',
+              borderRadius: 4,
+            }}
+            title="Quản lý nhân viên"
+          >
+            ⚙️
+          </button>
+        </div>
+        <div style={styles.agentList}>
+          {mgmt.sales.map((agent) => {
+            const assignedCount = assignments.filter(
+              (a) => a.salesAgentId === agent.id,
           ).length
           const isActive = highlightedSalesId === agent.id
           // L4b-2 EC-2: Check if agent's district is disconnected
