@@ -472,7 +472,6 @@ export function UsersView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<string>('sales');
   const [editRegionId, setEditRegionId] = useState<string>('');
-  const [editCapacity, setEditCapacity] = useState<number>(500);
 
   const reloadMembers = async () => {
     if (!supabase || !currentProjectId) {
@@ -505,19 +504,12 @@ export function UsersView() {
 
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
-      // Query capacity
-      const { data: agentsData } = await supabase
-        .from('sales_agents')
-        .select('id, capacity')
-        .eq('project_id', currentProjectId);
-
-      const agentMap = new Map((agentsData ?? []).map((a: any) => [a.id, a.capacity]));
-
-      const merged = rawMembers.map((m: any) => ({
-        ...m,
-        profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
-        capacity: agentMap.get(m.user_id) || 500,
-      }));
+        const merged = rawMembers.map((m: any) => ({
+          ...m,
+          profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
+          // Keep capacity in memory for existing flows (algorithms), but don't show/edit it here.
+          capacity: m.capacity ?? 500,
+        }));
 
       setMembers(merged);
     } catch (e) {
@@ -535,7 +527,6 @@ export function UsersView() {
     setEditingId(member.id);
     setEditRole(member.role);
     setEditRegionId(member.region_id || '');
-    setEditCapacity(member.capacity || 500);
   };
 
   const handleSaveEdit = async (member: any) => {
@@ -547,7 +538,6 @@ export function UsersView() {
             ...m,
             role: editRole,
             region_id: editRegionId || null,
-            capacity: editCapacity,
           };
         }
         return m;
@@ -573,21 +563,22 @@ export function UsersView() {
       }
 
       // 2. If role is sales, upsert sales_agents
-      if (editRole === 'sales') {
-        const region = regions.find((r) => r.id === editRegionId);
-        const activeRegionName = region ? region.name : '';
-        const { error: saError } = await supabase
-          .from('sales_agents')
-          .upsert({
-            id: member.user_id,
-            name: member.profile?.full_name || member.profile?.email?.split('@')[0] || 'Sales Agent',
-            active_region: activeRegionName,
-            capacity: editCapacity,
-            region_id: editRegionId || null,
-            project_id: currentProjectId,
-          });
-        if (saError) console.error('[UsersView] upsert agent error:', saError);
-      } else {
+        if (editRole === 'sales') {
+          const region = regions.find((r) => r.id === editRegionId);
+          const activeRegionName = region ? region.name : '';
+          const capacity = Number(member.capacity) || 500;
+          const { error: saError } = await supabase
+            .from('sales_agents')
+            .upsert({
+              id: member.user_id,
+              name: member.profile?.full_name || member.profile?.email?.split('@')[0] || 'Sales Agent',
+              active_region: activeRegionName,
+              capacity,
+              region_id: editRegionId || null,
+              project_id: currentProjectId,
+            });
+          if (saError) console.error('[UsersView] upsert agent error:', saError);
+        } else {
         // If changing FROM sales agent, delete agent profile and assignments
         if (member.role === 'sales') {
           await supabase.from('assignments').delete().eq('sales_agent_id', member.user_id);
@@ -665,7 +656,6 @@ export function UsersView() {
                   <th style={styles.th}>SĐT</th>
                   <th style={styles.th}>Vai trò (Role)</th>
                   <th style={styles.th}>Khu vực phụ trách</th>
-                  <th style={styles.th}>Sức chứa (Capacity)</th>
                   <th style={{ ...styles.th, textAlign: 'right', paddingRight: '20px' }}>Thao tác</th>
                 </tr>
             </thead>
@@ -721,23 +711,9 @@ export function UsersView() {
                         m.role === 'admin' ? 'Tất cả' : regionName
                       )}
                     </td>
-                    <td style={styles.td}>
-                      {isEditing ? (
-                        editRole === 'sales' ? (
-                          <input
-                            type="number"
-                            value={editCapacity}
-                            onChange={(e) => setEditCapacity(Number(e.target.value))}
-                            style={styles.inlineInput}
-                          />
-                        ) : '—'
-                      ) : (
-                        m.role === 'sales' ? `${m.capacity} KH` : '—'
-                      )}
-                    </td>
-                    <td style={{ ...styles.td, textAlign: 'right', paddingRight: '20px' }}>
-                      {isEditing ? (
-                        <div style={styles.btnGroup}>
+                      <td style={{ ...styles.td, textAlign: 'right', paddingRight: '20px' }}>
+                        {isEditing ? (
+                          <div style={styles.btnGroup}>
                           <button onClick={() => handleSaveEdit(m)} style={styles.inlineSaveBtn}>
                             ✓ Lưu
                           </button>
@@ -761,9 +737,9 @@ export function UsersView() {
               })}
                 {members.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={styles.tableEmpty}>
-                      {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên nào.'}
-                    </td>
+                      <td colSpan={7} style={styles.tableEmpty}>
+                        {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên nào.'}
+                      </td>
                   </tr>
                 )}
             </tbody>
