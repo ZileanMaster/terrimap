@@ -69,7 +69,12 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedZoneId:     null,
   isAlgorithmRunning: false,
   theme:              'system',
-  locale:             getInitialLocale(),
+  // Keep i18n initial language in sync with the store (important on first load).
+  locale:             (() => {
+    const initial = getInitialLocale()
+    applyLocale(initial)
+    return initial
+  })(),
   highlightedSalesId: null,
   isMapTransitioning: false,
   selectedDistrictId: null,
