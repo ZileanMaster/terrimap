@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next'
 import { useUIStore, type Role, type Theme } from '../../store/uiStore.js'
 import { useAuthStore } from '../../store/authStore.js'
 import { isOnline } from '../../lib/supabase.js'
-import i18n from '../../i18n/index.js'
 
 const ROLES: { id: Role; icon: string }[] = [
   { id: 'admin',       icon: '🛡️' },
@@ -58,8 +57,6 @@ export default function TopBar() {
 
   function handleLocaleToggle() {
     toggleLocale()
-    const next = locale === 'vi' ? 'en' : 'vi'
-    i18n.changeLanguage(next)
   }
 
   function handleBackToProjects() {

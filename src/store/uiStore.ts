@@ -1,8 +1,34 @@
 import { create } from 'zustand'
+import i18n from '../i18n/index.js'
 
 export type Role   = 'admin' | 'coordinator' | 'sales'
 export type Theme  = 'light' | 'dark' | 'system'
 export type Locale = 'vi' | 'en'
+
+const LOCALE_KEY = 'terrimap_locale'
+
+function getInitialLocale(): Locale {
+  try {
+    const v = localStorage.getItem(LOCALE_KEY)
+    return v === 'en' || v === 'vi' ? v : 'vi'
+  } catch {
+    return 'vi'
+  }
+}
+
+function applyLocale(locale: Locale) {
+  try {
+    localStorage.setItem(LOCALE_KEY, locale)
+  } catch {
+    // ignore storage errors
+  }
+  // Keep i18next in sync so UI updates immediately.
+  try {
+    i18n.changeLanguage(locale)
+  } catch {
+    // ignore i18n errors
+  }
+}
 
 interface UIStore {
   role:                Role
@@ -43,7 +69,7 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedZoneId:     null,
   isAlgorithmRunning: false,
   theme:              'system',
-  locale:             'vi',
+  locale:             getInitialLocale(),
   highlightedSalesId: null,
   isMapTransitioning: false,
   selectedDistrictId: null,
@@ -67,7 +93,11 @@ export const useUIStore = create<UIStore>((set) => ({
   },
 
   toggleLocale: () =>
-    set((s) => ({ locale: s.locale === 'vi' ? 'en' : 'vi' })),
+    set((s) => {
+      const next: Locale = s.locale === 'vi' ? 'en' : 'vi'
+      applyLocale(next)
+      return { locale: next }
+    }),
 
   // Toggle: click same agent → deselect; click different → select new
   // Also clear selectedZoneId to avoid conflicting highlights
