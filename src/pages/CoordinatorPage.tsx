@@ -154,6 +154,8 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   }, [currentPeriod])
 
   const districtCount = districtIds.length
+  const showPolygons = useUIStore((s) => s.showPolygons)
+  const togglePolygons = useUIStore((s) => s.togglePolygons)
 
   if (loading) {
     return (
@@ -206,44 +208,55 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
         <Sidebar zones={displayZones} assignments={displayAssignments} mode={mode} />
       </div>
 
-      <div style={styles.mapArea}>
-        <TerritoryMap
-          zones={displayZones}
-          assignments={displayAssignments}
-          onZoneClick={selectZone}
-          selectedZoneId={selectedZoneId}
-          highlightedSalesId={highlightedSalesId}
-          center={mapCenter}
-          zoom={mapZoom}
-        />
-        {currentUserKey && (
-          <MyClusterReports
-            currentUserKey={currentUserKey}
-            currentProjectId={currentProjectId}
-            currentRegionId={currentRegionId}
-            zones={zones}
-            assignments={assignments}
+        <div style={styles.mapArea}>
+          <TerritoryMap
+            zones={displayZones}
+            assignments={displayAssignments}
+            onZoneClick={selectZone}
+            selectedZoneId={selectedZoneId}
+            highlightedSalesId={highlightedSalesId}
+            center={mapCenter}
+            zoom={mapZoom}
           />
-        )}
+          {mode === 'assignments' && currentUserKey && (
+            <MyClusterReports
+              currentUserKey={currentUserKey}
+              currentProjectId={currentProjectId}
+              currentRegionId={currentRegionId}
+              zones={zones}
+              assignments={assignments}
+            />
+          )}
 
-        {/* Floating Region Header */}
-        <div style={styles.floatingRegionHeader}>
-          <span style={styles.floatingRegionLabel}>
-            📍 Khu vực: <strong>{selectedRegion?.name || 'Chưa chọn'}</strong>
-          </span>
-          <button
-            style={styles.changeRegionBtn}
-            onClick={() => setCurrentRegion(null)}
-          >
-            Đổi khu vực
-          </button>
-        </div>
+          <div style={styles.mapHud}>
+            <div style={styles.mapHudRow}>
+              <span style={styles.mapHudTitle}>
+                📍 Khu vực: <strong>{selectedRegion?.name || 'Chưa chọn'}</strong>
+              </span>
+              <button style={styles.mapHudBtn} onClick={() => setCurrentRegion(null)}>
+                Đổi khu vực
+              </button>
+            </div>
+            {mode === 'regions' ? (
+              <div style={styles.mapHudRow}>
+                <span style={styles.modeBadgeEdit}>Chế độ: Khu vực & bản đồ</span>
+                <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
+                  {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
+                </button>
+              </div>
+            ) : (
+              <div style={styles.mapHudRow}>
+                <span style={styles.modeBadgeAssign}>Chế độ: Phân chia lãnh thổ</span>
+                <span style={styles.modeNote}>{districtCount} cụm</span>
+              </div>
+            )}
+          </div>
 
-        <MapLegend assignments={displayAssignments} />
-        <ZoneInfoPanel
-          zones={displayZones}
-          assignments={displayAssignments}
-          onAssign={handleAssign}
+          {mode === 'assignments' && <MapLegend assignments={displayAssignments} />}
+          <ZoneInfoPanel
+            zones={displayZones}
+            assignments={displayAssignments}
+            onAssign={handleAssign}
           districtCount={districtCount}
           districtIds={districtIds}
         />
@@ -261,6 +274,79 @@ const styles: Record<string, React.CSSProperties> = {
     overflow:      'hidden',
     borderRight:   '1px solid var(--color-border)',
     flexShrink:    0,
+  },
+  mapHud: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    zIndex: 1100,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    padding: 10,
+    background: 'rgba(255,255,255,0.92)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 12,
+    boxShadow: '0 8px 18px rgba(0,0,0,.10)',
+    backdropFilter: 'blur(6px)',
+    maxWidth: 520,
+  },
+  mapHudRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  mapHudTitle: {
+    fontSize: 13,
+    fontWeight: 800,
+    color: '#0f172a',
+  },
+  mapHudBtn: {
+    border: 'none',
+    background: 'var(--color-accent)',
+    color: '#fff',
+    padding: '6px 10px',
+    borderRadius: 10,
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontSize: 12,
+    flex: '0 0 auto',
+  },
+  mapHudBtnGhost: {
+    border: '1px solid var(--color-border)',
+    background: '#fff',
+    color: '#0f172a',
+    padding: '6px 10px',
+    borderRadius: 10,
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontSize: 12,
+    flex: '0 0 auto',
+  },
+  modeBadgeEdit: {
+    border: '1px solid rgba(37,99,235,0.25)',
+    background: 'rgba(37,99,235,0.10)',
+    color: '#1d4ed8',
+    padding: '5px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+  },
+  modeBadgeAssign: {
+    border: '1px solid rgba(5,150,105,0.25)',
+    background: 'rgba(5,150,105,0.10)',
+    color: '#047857',
+    padding: '5px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 900,
+  },
+  modeNote: {
+    fontSize: 12,
+    fontWeight: 900,
+    color: '#0f172a',
   },
 
   regionBar: {
@@ -339,33 +425,5 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'spin 0.8s linear infinite',
   },
   loadingText: { color: 'var(--color-text-muted)', fontSize: 14, margin: 0 },
-  floatingRegionHeader: {
-    position: 'absolute',
-    top: 16,
-    left: 60,
-    zIndex: 1000,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
-    padding: '8px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    boxShadow: 'var(--shadow-md)',
-    backdropFilter: 'blur(8px)',
-  },
-  floatingRegionLabel: {
-    fontSize: 13,
-    color: 'var(--color-text)',
-  },
-  changeRegionBtn: {
-    padding: '4px 10px',
-    borderRadius: 'var(--radius-sm)',
-    border: 'none',
-    background: 'var(--color-accent-light)',
-    color: 'var(--color-accent)',
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
+  // (Deprecated) floatingRegionHeader removed in favor of mapHud
 }
