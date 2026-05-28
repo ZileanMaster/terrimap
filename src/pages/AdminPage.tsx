@@ -321,8 +321,10 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     await removeZone(zoneId)  // awaits DB delete
   }, [selectZone, removeZone])
 
-  const districtCount = districtIds.length
-  const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
+    const districtCount = districtIds.length
+    const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
+    const showPolygons = useUIStore((s) => s.showPolygons)
+    const togglePolygons = useUIStore((s) => s.togglePolygons)
 
   // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -374,35 +376,60 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
             />
           )}
         </TerritoryMap>
-        {currentUserKey && (
-          <MyClusterReports
-            currentUserKey={currentUserKey}
-            currentProjectId={currentProjectId}
-            currentRegionId={currentRegionId}
-            zones={zones}
-            assignments={assignments}
-          />
-        )}
+          {mode === 'assignments' && currentUserKey && (
+            <MyClusterReports
+              currentUserKey={currentUserKey}
+              currentProjectId={currentProjectId}
+              currentRegionId={currentRegionId}
+              zones={zones}
+              assignments={assignments}
+            />
+          )}
+  
+          {/* Map HUD (mode-specific) */}
+          <div style={styles.mapHud}>
+            <div style={styles.mapHudRow}>
+              <span style={styles.mapHudTitle}>
+                📍 Khu vực: <strong>{selectedRegion?.name || 'Chưa chọn'}</strong>
+              </span>
+              <button style={styles.mapHudBtn} onClick={() => setCurrentRegion(null)}>
+                Đổi khu vực
+              </button>
+            </div>
 
-        {/* Floating Region Header */}
-        <div style={styles.floatingRegionHeader}>
-          <span style={styles.floatingRegionLabel}>
-            📍 Khu vực: <strong>{selectedRegion?.name || 'Chưa chọn'}</strong>
-          </span>
-          <button
-            style={styles.changeRegionBtn}
-            onClick={() => setCurrentRegion(null)}
-          >
-            Đổi khu vực
-          </button>
-        </div>
-
-        <SnapshotManager />
-        <MapLegend assignments={displayAssignments} disconnectedDistrictIds={disconnectedDistrictIds} />
-        <ZoneInfoPanel
-          zones={displayZones}
-          assignments={displayAssignments}
-          districtCount={districtCount}
+            {mode === 'regions' ? (
+              <div style={styles.mapHudRow}>
+                <span style={styles.modeBadgeEdit}>Chế độ: Khu vực & bản đồ</span>
+                <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
+                  {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
+                </button>
+              </div>
+            ) : (
+              <div style={styles.mapHudRow}>
+                <span style={styles.modeBadgeAssign}>Chế độ: Phân chia lãnh thổ</span>
+                <div style={styles.qualityRow}>
+                  <span style={{ ...styles.qualityPill, borderColor: '#bbf7d0', background: '#f0fdf4', color: '#047857' }}>
+                    {districtCount} cụm
+                  </span>
+                  <span style={{ ...styles.qualityPill, borderColor: disconnectedDistrictIds.size > 0 ? '#fecaca' : '#e5e7eb', background: disconnectedDistrictIds.size > 0 ? '#fef2f2' : '#f8fafc', color: disconnectedDistrictIds.size > 0 ? '#b91c1c' : '#64748b' }}>
+                    {disconnectedDistrictIds.size} tách rời
+                  </span>
+                  <span style={{ ...styles.qualityPill, borderColor: islandZoneIds.size > 0 ? '#fed7aa' : '#e5e7eb', background: islandZoneIds.size > 0 ? '#fff7ed' : '#f8fafc', color: islandZoneIds.size > 0 ? '#c2410c' : '#64748b' }}>
+                    {islandZoneIds.size} cô lập
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+  
+          {mode === 'assignments' && <SnapshotManager />}
+          {mode === 'assignments' && (
+            <MapLegend assignments={displayAssignments} disconnectedDistrictIds={disconnectedDistrictIds} />
+          )}
+          <ZoneInfoPanel
+            zones={displayZones}
+            assignments={displayAssignments}
+            districtCount={districtCount}
           districtIds={districtIds}
           onAssign={handleAssign}
           onUpdateActivity={handleUpdateActivity}
@@ -453,33 +480,88 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     margin: 0,
   },
-  floatingRegionHeader: {
-    position: 'absolute',
-    top: 16,
-    left: 60,
-    zIndex: 1000,
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
-    padding: '8px 16px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    boxShadow: 'var(--shadow-md)',
-    backdropFilter: 'blur(8px)',
-  },
-  floatingRegionLabel: {
-    fontSize: 13,
-    color: 'var(--color-text)',
-  },
-  changeRegionBtn: {
-    padding: '4px 10px',
-    borderRadius: 'var(--radius-sm)',
-    border: 'none',
-    background: 'var(--color-accent-light)',
-    color: 'var(--color-accent)',
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-}
+    mapHud: {
+      position: 'absolute',
+      top: 14,
+      left: 14,
+      zIndex: 1100,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+      padding: 10,
+      background: 'rgba(255,255,255,0.92)',
+      border: '1px solid var(--color-border)',
+      borderRadius: 12,
+      boxShadow: '0 8px 18px rgba(0,0,0,.10)',
+      backdropFilter: 'blur(6px)',
+      maxWidth: 520,
+    },
+    mapHudRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      flexWrap: 'wrap',
+    },
+    mapHudTitle: {
+      fontSize: 13,
+      fontWeight: 800,
+      color: '#0f172a',
+    },
+    mapHudBtn: {
+      border: 'none',
+      background: 'var(--color-accent)',
+      color: '#fff',
+      padding: '6px 10px',
+      borderRadius: 10,
+      fontWeight: 800,
+      cursor: 'pointer',
+      fontSize: 12,
+      flex: '0 0 auto',
+    },
+    mapHudBtnGhost: {
+      border: '1px solid var(--color-border)',
+      background: '#fff',
+      color: '#0f172a',
+      padding: '6px 10px',
+      borderRadius: 10,
+      fontWeight: 800,
+      cursor: 'pointer',
+      fontSize: 12,
+      flex: '0 0 auto',
+    },
+    modeBadgeEdit: {
+      border: '1px solid rgba(37,99,235,0.25)',
+      background: 'rgba(37,99,235,0.10)',
+      color: '#1d4ed8',
+      padding: '5px 10px',
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 900,
+    },
+    modeBadgeAssign: {
+      border: '1px solid rgba(5,150,105,0.25)',
+      background: 'rgba(5,150,105,0.10)',
+      color: '#047857',
+      padding: '5px 10px',
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 900,
+    },
+    qualityRow: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+    },
+    qualityPill: {
+      border: '1px solid',
+      padding: '4px 9px',
+      borderRadius: 999,
+      fontSize: 12,
+      fontWeight: 900,
+      lineHeight: 1.2,
+      whiteSpace: 'nowrap',
+    },
+  }
