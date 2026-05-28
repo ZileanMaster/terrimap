@@ -2,7 +2,7 @@
  * DashboardViews.tsx — View components for the main Dashboard panels
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDataStore } from '../store/dataStore.js';
 import { useUIStore } from '../store/uiStore.js';
 import { useAuthStore } from '../store/authStore.js';
