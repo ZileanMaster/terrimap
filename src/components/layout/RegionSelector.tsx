@@ -93,7 +93,6 @@ export default function RegionSelector() {
     <div style={styles.container}>
       <section style={styles.hero}>
         <div>
-          <div style={styles.kicker}>Bước 1</div>
           <h1 style={styles.title}>Chọn khu vực vận hành</h1>
           <p style={styles.subtitle}>
             Mọi thao tác vẽ zone, kiểm tra liên thông và chạy thuật toán đều nên bắt đầu từ một khu vực cụ thể.

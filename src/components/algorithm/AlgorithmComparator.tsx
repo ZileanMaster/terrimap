@@ -2,7 +2,7 @@
  * AlgorithmComparator - side-by-side scenario runner with explicit data gates.
  */
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
 import TerritoryMap from '../map/TerritoryMap.js'
@@ -125,6 +125,36 @@ function componentCount(zones: Zone[]): number {
       }
     }
 
+  // Auto-run comparison when scenario config changes (debounced).
+  const lastRunKeyRef = useRef<string>('')
+  useEffect(() => {
+    if (!showScenarioB) return
+    if (!canRun) return
+
+    const key = `${selectedRegionId}|${algoA}|${numDistrictsA}|${algoB}|${numDistrictsB}`
+    if (key === lastRunKeyRef.current && hasRun) return
+
+    const t = window.setTimeout(() => {
+      if (!showScenarioB) return
+      if (blockers.length > 0) return
+      if (isRunning) return
+      void handleRun().then(() => { lastRunKeyRef.current = key })
+    }, 350)
+
+    return () => window.clearTimeout(t)
+  }, [
+    selectedRegionId,
+    algoA,
+    numDistrictsA,
+    algoB,
+    numDistrictsB,
+    showScenarioB,
+    canRun,
+    blockers.length,
+    isRunning,
+    hasRun,
+  ])
+
   const handleApply = async (side: 'A' | 'B') => {
     const chosen = side === 'A' ? assignmentsA : assignmentsB
     await persistAssignments(chosen)
@@ -145,7 +175,6 @@ function componentCount(zones: Zone[]): number {
     <div style={styles.container}>
         <section style={styles.header}>
           <div>
-            <span style={styles.kicker}>Bước 5</span>
             <h1 style={styles.title}>So sánh thuật toán phân chia</h1>
             <p style={styles.subtitle}>
               Chọn một khu vực hợp lệ, cấu hình hai kịch bản, chạy song song và chỉ áp dụng sau khi xem metrics.
