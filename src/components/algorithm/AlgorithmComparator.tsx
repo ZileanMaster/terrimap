@@ -37,7 +37,7 @@ function componentCount(zones: Zone[]): number {
   return count
 }
 
-export default function AlgorithmComparator() {
+  export default function AlgorithmComparator() {
   const zones = useDataStore((s) => s.zones)
   const regions = useDataStore((s) => s.regions)
   const agents = useDataStore((s) => s.agents)
@@ -52,10 +52,11 @@ export default function AlgorithmComparator() {
   const [syncViewport, setSyncViewport] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [algoA, setAlgoA] = useState<Algo>('greedy')
-  const [algoB, setAlgoB] = useState<Algo>('sa')
-  const [numDistrictsA, setNumDistrictsA] = useState(4)
-  const [numDistrictsB, setNumDistrictsB] = useState(4)
+    const [algoA, setAlgoA] = useState<Algo>('greedy')
+    const [algoB, setAlgoB] = useState<Algo>('sa')
+    const [numDistrictsA, setNumDistrictsA] = useState(4)
+    const [numDistrictsB, setNumDistrictsB] = useState(4)
+    const [showScenarioB, setShowScenarioB] = useState(false)
 
   const [assignmentsA, setAssignmentsA] = useState<Assignment[]>([])
   const [assignmentsB, setAssignmentsB] = useState<Assignment[]>([])
@@ -93,7 +94,7 @@ export default function AlgorithmComparator() {
     components > 1 ? `Đồ thị zone có ${components} cụm rời, không thể đảm bảo liên thông.` : null,
   ].filter((x): x is string => Boolean(x))
 
-  const canRun = blockers.length === 0 && !isRunning
+    const canRun = blockers.length === 0 && !isRunning && showScenarioB
   const center: [number, number] = selectedRegion
     ? [selectedRegion.center.lat, selectedRegion.center.lng]
     : [21.03, 105.83]
@@ -102,16 +103,16 @@ export default function AlgorithmComparator() {
   const runScenario = async (algo: Algo, m: number) =>
     ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
 
-  const handleRun = async () => {
-    if (!canRun) return
-    setError(null)
-    setIsRunning(true)
-    setHasRun(false)
-    try {
-      const [resultA, resultB] = await Promise.all([
-        runScenario(algoA, numDistrictsA),
-        runScenario(algoB, numDistrictsB),
-      ])
+    const handleRun = async () => {
+      if (!canRun) return
+      setError(null)
+      setIsRunning(true)
+      setHasRun(false)
+      try {
+        const [resultA, resultB] = await Promise.all([
+          runScenario(algoA, numDistrictsA),
+          runScenario(algoB, numDistrictsB),
+        ])
       setAssignmentsA(resultA.assignments)
       setAssignmentsB(resultB.assignments)
       setMetricsA(resultA)
@@ -121,8 +122,8 @@ export default function AlgorithmComparator() {
       setError(err?.message ?? String(err))
     } finally {
       setIsRunning(false)
+      }
     }
-  }
 
   const handleApply = async (side: 'A' | 'B') => {
     const chosen = side === 'A' ? assignmentsA : assignmentsB
@@ -142,18 +143,18 @@ export default function AlgorithmComparator() {
 
   return (
     <div style={styles.container}>
-      <section style={styles.header}>
-        <div>
-          <span style={styles.kicker}>Bước 5</span>
-          <h1 style={styles.title}>So sánh thuật toán phân chia</h1>
-          <p style={styles.subtitle}>
-            Chọn một khu vực hợp lệ, cấu hình hai kịch bản, chạy song song và chỉ áp dụng sau khi xem metrics.
-          </p>
-        </div>
-        <button style={{ ...styles.primaryBtn, opacity: canRun ? 1 : .55 }} disabled={!canRun} onClick={handleRun}>
-          {isRunning ? 'Đang chạy...' : 'Chạy so sánh'}
-        </button>
-      </section>
+        <section style={styles.header}>
+          <div>
+            <span style={styles.kicker}>Bước 5</span>
+            <h1 style={styles.title}>So sánh thuật toán phân chia</h1>
+            <p style={styles.subtitle}>
+              Chọn một khu vực hợp lệ, cấu hình hai kịch bản, chạy song song và chỉ áp dụng sau khi xem metrics.
+            </p>
+          </div>
+          <button style={{ ...styles.primaryBtn, opacity: canRun ? 1 : .55 }} disabled={!canRun} onClick={handleRun}>
+            {isRunning ? 'Đang chạy...' : 'Chạy so sánh'}
+          </button>
+        </section>
 
       <section style={styles.gate}>
         <label style={styles.field}>
@@ -182,32 +183,78 @@ export default function AlgorithmComparator() {
         </section>
       )}
 
-      {error && <section style={styles.errorBox}>{error}</section>}
+        {error && <section style={styles.errorBox}>{error}</section>}
 
-      <section style={styles.configGrid}>
-        <ScenarioCard title="Kịch bản A" algo={algoA} setAlgo={setAlgoA} m={numDistrictsA} setM={setNumDistrictsA} accent="#2563eb" />
-        <ScenarioCard title="Kịch bản B" algo={algoB} setAlgo={setAlgoB} m={numDistrictsB} setM={setNumDistrictsB} accent="#059669" />
-      </section>
-
-      {!hasRun ? (
-        <section style={styles.emptyState}>
-          <h2>Chưa có kết quả so sánh</h2>
-          <p>Map và metrics chỉ xuất hiện sau khi dữ liệu khu vực đạt điều kiện và bạn bấm chạy.</p>
+        <section style={styles.configGrid}>
+          <ScenarioCard
+            title="Kịch bản A"
+            algo={algoA}
+            setAlgo={setAlgoA}
+            m={numDistrictsA}
+            setM={setNumDistrictsA}
+            accent="#2563eb"
+            rightAction={
+              showScenarioB
+                ? null
+                : (
+                  <button
+                    type="button"
+                    onClick={() => { setShowScenarioB(true); setHasRun(false) }}
+                    style={styles.addScenarioBtn}
+                    title="Thêm thuật toán để so sánh"
+                  >
+                    +
+                  </button>
+                )
+            }
+          />
+          {showScenarioB && (
+            <ScenarioCard
+              title="Kịch bản B"
+              algo={algoB}
+              setAlgo={setAlgoB}
+              m={numDistrictsB}
+              setM={setNumDistrictsB}
+              accent="#059669"
+              rightAction={
+                <button
+                  type="button"
+                  onClick={() => { setShowScenarioB(false); setHasRun(false); setError(null) }}
+                  style={styles.removeScenarioBtn}
+                  title="Bỏ thuật toán B"
+                >
+                  ×
+                </button>
+              }
+            />
+          )}
         </section>
-      ) : (
-        <>
-          <section style={styles.resultGrid}>
-            <ResultPanel title="Kết quả A" algo={algoA} zones={displayZones} assignments={assignmentsA} center={center} zoom={zoom} metrics={metricsA} onApply={() => handleApply('A')} />
-            <ResultPanel title="Kết quả B" algo={algoB} zones={displayZones} assignments={assignmentsB} center={center} zoom={zoom} metrics={metricsB} onApply={() => handleApply('B')} />
+
+        {!hasRun ? (
+          <section style={styles.emptyState}>
+            <h2>Chưa có kết quả so sánh</h2>
+            {!showScenarioB ? (
+              <p>Hãy chọn 1 thuật toán trước, sau đó bấm dấu + để thêm thuật toán thứ hai để so sánh.</p>
+            ) : (
+              <p>Map và metrics chỉ xuất hiện sau khi dữ liệu khu vực đạt điều kiện và bạn bấm chạy.</p>
+            )}
           </section>
-          <section style={styles.recommendation}>
-            <strong>Khuyến nghị:</strong> {recommendation}
-          </section>
-        </>
-      )}
-    </div>
-  )
-}
+        ) : (
+          <>
+            <section style={styles.resultGrid}>
+              <ResultPanel title="Kết quả A" algo={algoA} zones={displayZones} assignments={assignmentsA} center={center} zoom={zoom} metrics={metricsA} onApply={() => handleApply('A')} />
+              {showScenarioB && (
+                <ResultPanel title="Kết quả B" algo={algoB} zones={displayZones} assignments={assignmentsB} center={center} zoom={zoom} metrics={metricsB} onApply={() => handleApply('B')} />
+              )}
+            </section>
+            <section style={styles.recommendation}>
+              <strong>Khuyến nghị:</strong> {recommendation}
+            </section>
+          </>
+        )}
+      </div>
+    )
+  }
 
 function DataChip({ label, value, ok }: { label: string; value: number; ok: boolean }) {
   return (
@@ -218,31 +265,40 @@ function DataChip({ label, value, ok }: { label: string; value: number; ok: bool
   )
 }
 
-function ScenarioCard({
-  title, algo, setAlgo, m, setM, accent,
-}: {
-  title: string; algo: Algo; setAlgo: (v: Algo) => void; m: number; setM: (v: number) => void; accent: string;
-}) {
-  return (
-    <div style={styles.scenarioCard}>
-      <h2 style={{ ...styles.scenarioTitle, color: accent }}>{title}</h2>
-      <div style={styles.formRow}>
-        <label style={styles.field}>
-          <span>Thuật toán</span>
-          <select value={algo} onChange={(e) => setAlgo(e.target.value as Algo)} style={styles.input}>
-            <option value="greedy">Greedy Seed Expansion</option>
-            <option value="local-search">Local Search Refinement</option>
-            <option value="sa">Simulated Annealing</option>
-          </select>
-        </label>
-        <label style={styles.field}>
-          <span>Số cụm</span>
-          <input type="number" min={2} max={30} value={m} onChange={(e) => setM(Number(e.target.value))} style={styles.input} />
-        </label>
+  function ScenarioCard({
+    title, algo, setAlgo, m, setM, accent, rightAction,
+  }: {
+    title: string;
+    algo: Algo;
+    setAlgo: (v: Algo) => void;
+    m: number;
+    setM: (v: number) => void;
+    accent: string;
+    rightAction?: React.ReactNode;
+  }) {
+    return (
+      <div style={styles.scenarioCard}>
+        <div style={styles.scenarioHeaderRow}>
+          <h2 style={{ ...styles.scenarioTitle, color: accent }}>{title}</h2>
+          {rightAction}
+        </div>
+        <div style={styles.formRow}>
+          <label style={styles.field}>
+            <span>Thuật toán</span>
+            <select value={algo} onChange={(e) => setAlgo(e.target.value as Algo)} style={styles.input}>
+              <option value="greedy">Greedy Seed Expansion</option>
+              <option value="local-search">Local Search Refinement</option>
+              <option value="sa">Simulated Annealing</option>
+            </select>
+          </label>
+          <label style={styles.field}>
+            <span>Số cụm</span>
+            <input type="number" min={2} max={30} value={m} onChange={(e) => setM(Number(e.target.value))} style={styles.input} />
+          </label>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
 function ResultPanel({
   title, algo, zones, assignments, center, zoom, metrics, onApply,
@@ -280,7 +336,7 @@ function Metric({ label, value }: { label: string; value: number }) {
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
+  const styles: Record<string, React.CSSProperties> = {
   container: {
     padding: 20,
     display: 'flex',
@@ -386,16 +442,49 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: 14,
   },
-  scenarioCard: {
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-bg)',
-    borderRadius: 8,
-    padding: 16,
-  },
-  scenarioTitle: {
-    fontSize: 18,
-    marginBottom: 12,
-  },
+    scenarioCard: {
+      border: '1px solid var(--color-border)',
+      background: 'var(--color-bg)',
+      borderRadius: 8,
+      padding: 16,
+    },
+    scenarioHeaderRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginBottom: 12,
+    },
+    scenarioTitle: {
+      fontSize: 18,
+      marginBottom: 0,
+    },
+    addScenarioBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 8,
+      border: '1px solid rgba(37,99,235,0.35)',
+      background: 'rgba(37,99,235,0.10)',
+      color: '#2563eb',
+      fontWeight: 900,
+      cursor: 'pointer',
+      lineHeight: '32px',
+      textAlign: 'center',
+      flex: '0 0 auto',
+    },
+    removeScenarioBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 8,
+      border: '1px solid rgba(239,68,68,0.35)',
+      background: 'rgba(239,68,68,0.10)',
+      color: '#ef4444',
+      fontWeight: 900,
+      cursor: 'pointer',
+      lineHeight: '32px',
+      textAlign: 'center',
+      flex: '0 0 auto',
+    },
   formRow: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
