@@ -14,7 +14,6 @@ import { useFacade } from '../../context/FacadeContext.js'
 import { useDataStore } from '../../store/dataStore.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
 import AgentManager from '../agent/AgentManager.js'
-import MemberManager from '../admin/MemberManager.js'
 import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
 import type { Assignment, HistoryEntry, Zone } from '../../../facades/viewmodels.js'
@@ -223,8 +222,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   const agents = currentRegionId
     ? allAgents.filter((a) => (a as any).region_id === currentRegionId || (a as any).regionId === currentRegionId)
     : allAgents
-  const [agentModalOpen, setAgentModalOpen] = useState(false)
-  const [memberModalOpen, setMemberModalOpen] = useState(false)
+    const [agentModalOpen, setAgentModalOpen] = useState(false)
 
   if (ctx.role !== 'admin') return null
   const mgmt = ctx.facade.getSalesManagement(zones, assignments, agents)
@@ -251,28 +249,11 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 
       <div style={styles.divider} />
 
-      {/* Member Management */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={styles.sectionTitle}>👥 Thành viên dự án</h2>
-        <button
-          onClick={() => setMemberModalOpen(true)}
-          style={{
-            padding: '4px 10px', borderRadius: 6,
-            border: '1.5px solid var(--color-accent)',
-            background: 'transparent', color: 'var(--color-accent)',
-            fontSize: 11, fontWeight: 600, cursor: 'pointer',
-          }}
-        >
-          Quản lý
-        </button>
-      </div>
-
-      <div style={styles.divider} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={styles.sectionTitle}>👥 Đội ngũ Sales</h2>
-        <button
-          onClick={() => setAgentModalOpen(true)}
-          style={{
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 style={styles.sectionTitle}>👥 Đội ngũ Sales</h2>
+          <button
+            onClick={() => setAgentModalOpen(true)}
+            style={{
             border: 'none',
             background: 'transparent',
             cursor: 'pointer',
@@ -337,11 +318,10 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
         📸 {t('sidebar.create_snapshot')}
       </button>
 
-      <AgentManager open={agentModalOpen} onClose={() => setAgentModalOpen(false)} />
-      <MemberManager open={memberModalOpen} onClose={() => setMemberModalOpen(false)} />
-    </div>
-  )
-}
+        <AgentManager open={agentModalOpen} onClose={() => setAgentModalOpen(false)} />
+      </div>
+    )
+  }
 
 function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assignments: Assignment[]; mode?: 'regions' | 'assignments' }) {
   const { t } = useTranslation()
