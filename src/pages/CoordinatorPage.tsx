@@ -19,6 +19,8 @@ import TerritoryMap from '../components/map/TerritoryMap.js'
 import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
 import MapLegend from '../components/map/MapLegend.js'
 import MetricsInput from '../components/coordinator/MetricsInput.js'
+import MyClusterReports from '../components/reports/MyClusterReports.js'
+import { useAuthStore } from '../store/authStore.js'
 import { buildAdjacencyMatrix } from '../../lib/geometry.js'
 import { isDistrictConnected } from '../../lib/partition.js'
 import { validatePartition } from '../../lib/validator.js'
@@ -42,6 +44,11 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const persistAssignments = useDataStore((s) => s.persistAssignments)
   const currentRegionId    = useDataStore((s) => s.currentRegionId)
   const setCurrentRegion   = useDataStore((s) => s.setCurrentRegion)
+
+  const authUser = useAuthStore((s) => s.user)
+  const profile  = useAuthStore((s) => s.profile)
+  const currentProjectId = useAuthStore((s) => s.currentProjectId)
+  const currentUserKey = authUser?.id ?? profile?.id ?? profile?.email ?? ''
 
   const selectedZoneId     = useUIStore((s) => s.selectedZoneId)
   const selectZone         = useUIStore((s) => s.selectZone)
@@ -209,6 +216,15 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
           center={mapCenter}
           zoom={mapZoom}
         />
+        {currentUserKey && (
+          <MyClusterReports
+            currentUserKey={currentUserKey}
+            currentProjectId={currentProjectId}
+            currentRegionId={currentRegionId}
+            zones={zones}
+            assignments={assignments}
+          />
+        )}
 
         {/* Floating Region Header */}
         <div style={styles.floatingRegionHeader}>

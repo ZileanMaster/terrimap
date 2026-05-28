@@ -15,12 +15,20 @@ import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
 import PartitionFeedback from '../components/feedback/PartitionFeedback.js'
 import { loadSnapshots } from '../services/db.js'
 import type { Zone, Assignment } from '../../facades/viewmodels.js'
+import MyClusterReports from '../components/reports/MyClusterReports.js'
+import { useAuthStore } from '../store/authStore.js'
 
 export default function SalesPage() {
   // ── Global store ───────────────────────────────────────────────────────────
   const zones      = useDataStore((s) => s.zones)
   const assignments = useDataStore((s) => s.assignments)
   const loading    = useDataStore((s) => s.loading)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
+
+  const authUser = useAuthStore((s) => s.user)
+  const profile  = useAuthStore((s) => s.profile)
+  const currentProjectId = useAuthStore((s) => s.currentProjectId)
+  const currentUserKey = authUser?.id ?? profile?.id ?? profile?.email ?? ''
 
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
   const selectZone     = useUIStore((s) => s.selectZone)
@@ -81,6 +89,15 @@ export default function SalesPage() {
           onZoneClick={selectZone}
           selectedZoneId={selectedZoneId}
         />
+        {currentUserKey && (
+          <MyClusterReports
+            currentUserKey={currentUserKey}
+            currentProjectId={currentProjectId}
+            currentRegionId={currentRegionId}
+            zones={zones}
+            assignments={assignments}
+          />
+        )}
         <ZoneInfoPanel
           zones={zones}
           assignments={assignments}
