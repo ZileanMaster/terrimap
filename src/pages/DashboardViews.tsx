@@ -286,7 +286,7 @@ export function OverviewView() {
 
       {/* District Reports Summary */}
       <div style={styles.section}>
-        <h4 style={styles.sectionTitle}>ðŸ“ˆ Báo cáo cụm (tháng {reportPeriod})</h4>
+        <h4 style={styles.sectionTitle}>Báo cáo cụm (tháng {reportPeriod})</h4>
         <div style={styles.cardGrid}>
           <div style={styles.card}>
             <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>C</div>
