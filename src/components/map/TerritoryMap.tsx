@@ -125,6 +125,7 @@ export default function TerritoryMap({
   // Note: uiStore is mocked in some unit tests with partial state, so keep defaults here.
   const selectedDistrictId = useUIStore((s: any) => (s?.selectedDistrictId ?? null) as number | null)
   const showPolygons = useUIStore((s: any) => (s?.showPolygons ?? true) as boolean)
+  const hiddenZoneIds = useUIStore((s: any) => (s?.hiddenZoneIds ?? {}) as Record<string, true>)
 
   // Build colorMap: zoneId → districtId
   const colorMap = useMemo(
@@ -168,7 +169,9 @@ export default function TerritoryMap({
           className="map-tiles"
         />
 
-        {showPolygons && zones.map((zone) => {
+        {showPolygons && zones
+          .filter((z) => !hiddenZoneIds[z.id])
+          .map((zone) => {
           const districtId  = colorMap.get(zone.id)   // undefined if unassigned
           const salesId     = salesMap.get(zone.id)
           const isAssigned  = districtId !== undefined

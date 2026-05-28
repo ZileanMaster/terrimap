@@ -101,6 +101,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
   const isMapTransitioning    = useUIStore((s) => s.isMapTransitioning)
   const setMapTransitioning   = useUIStore((s) => s.setMapTransitioning)
+  const polygonEditEnabled    = useUIStore((s: any) => (s?.polygonEditEnabled ?? false) as boolean)
   const ctx                   = useFacade()
 
   // Load version history once (local facade — not DB)
@@ -367,7 +368,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
         >
-          {mode === 'regions' && (
+          {polygonEditEnabled && (
             <DrawingToolbar
               onZoneCreated={handleZoneCreated}
               onZoneEdited={handleZoneEdited}
