@@ -560,24 +560,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
     const user = get().user
     if (!user) return false
-    set({ loading: true, authError: null })
+    // Do not toggle global `loading` for profile edits.
+    // `loading` drives the full-page splash in App.tsx and must be reserved for
+    // auth/session flows (initialize/signIn/signUp), not ordinary profile updates.
+    set({ authError: null })
     try {
-      const { error } = await supabase
+      // Hard timeout to avoid locking the UI if Supabase stalls.
+      const updatePromise = supabase
         .from('profiles')
         .update(payload)
         .eq('id', user.id)
+      const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) => {
+        setTimeout(() => resolve({ error: { message: 'Cập nhật quá lâu. Vui lòng thử lại.' } }), 10_000)
+      })
+
+      const { error } = await Promise.race([updatePromise as any, timeoutPromise])
       if (error) {
-        set({ authError: error.message, loading: false })
+        set({ authError: error.message })
         return false
       }
       const currentProfile = get().profile
       if (currentProfile) {
         set({ profile: { ...currentProfile, ...payload } })
       }
-      set({ loading: false })
       return true
     } catch (e: any) {
-      set({ authError: e?.message || 'Lỗi cập nhật thông tin', loading: false })
+      set({ authError: e?.message || 'Lỗi cập nhật thông tin' })
       return false
     }
   },
