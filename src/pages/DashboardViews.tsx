@@ -752,6 +752,225 @@ export function UsersView() {
 }
 
 // ── 3. CÀI ĐẶT HỆ THỐNG (SettingsView) ─────────────────────────────────────────
+// ── 3. VẬN HÀNH (OperationsView) ────────────────────────────────────────────────
+// Focus: reporting workflow + completeness + exports.
+export function OperationsView() {
+  const regions = useDataStore((s) => s.regions);
+  const zones = useDataStore((s) => s.zones);
+  const assignments = useDataStore((s) => s.assignments);
+  const currentProjectId = useAuthStore((s) => s.currentProjectId);
+  const currentRegionId = useDataStore((s) => s.currentRegionId);
+
+  const [period, setPeriod] = useState(currentReportPeriod());
+  const [loading, setLoading] = useState(false);
+  const [districtReports, setDistrictReports] = useState<any[]>([]);
+  const [regionFilter, setRegionFilter] = useState<string>('__all__');
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    loadDistrictReports(period, currentProjectId ?? undefined)
+      .then((rs) => { if (mounted) setDistrictReports(rs as any); })
+      .catch(() => { if (mounted) setDistrictReports([]); })
+      .finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, [period, currentProjectId]);
+
+  const expectedDistrictsByRegion = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    const zoneRegion = new Map<string, string | null>();
+    for (const z of zones) zoneRegion.set(z.id, (z as any).regionId ?? (z as any).region_id ?? null);
+    for (const a of assignments) {
+      const rid = zoneRegion.get(a.zoneId) ?? currentRegionId ?? null;
+      if (!rid) continue;
+      if (!m.has(rid)) m.set(rid, new Set());
+      m.get(rid)!.add(a.districtId);
+    }
+    return m;
+  }, [zones, assignments, currentRegionId]);
+
+  const regionOptions = useMemo(() => {
+    const ids = Array.from(expectedDistrictsByRegion.keys());
+    const list = ids.map((id) => ({ id, name: regions.find((r) => r.id === id)?.name ?? id }));
+    list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    return list;
+  }, [expectedDistrictsByRegion, regions]);
+
+  const rows = useMemo(() => {
+    const norm = (r: any) => ({
+      id: String(r.id),
+      regionId: String(r.regionId ?? r.region_id ?? ''),
+      districtId: Number(r.districtId ?? r.district_id ?? -1),
+      userId: String(r.userId ?? r.user_id ?? ''),
+      customers: Number(r.customers ?? 0),
+      orders: Number(r.orders ?? 0),
+      note: r.note ?? '',
+      updatedAt: String(r.updatedAt ?? r.updated_at ?? ''),
+    });
+
+    let list = (districtReports ?? []).map(norm);
+    if (regionFilter !== '__all__') list = list.filter((r) => r.regionId === regionFilter);
+
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((r) =>
+        String(r.regionId).toLowerCase().includes(q)
+        || `c${r.districtId}`.includes(q)
+        || String(r.userId).toLowerCase().includes(q)
+        || String(r.note ?? '').toLowerCase().includes(q),
+      );
+    }
+
+    list.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+    return list;
+  }, [districtReports, regionFilter, query]);
+
+  const completion = useMemo(() => {
+    const districtKey = (rid: string, did: number) => `${rid}|${did}`;
+    const byRegion = new Map<string, { expected: number; submitted: number; missing: number }>();
+    const submitted = new Set(rows.map((r) => districtKey(r.regionId, r.districtId)));
+
+    for (const [rid, set] of expectedDistrictsByRegion.entries()) {
+      const expected = set.size;
+      let submittedCount = 0;
+      for (const did of set) if (submitted.has(districtKey(rid, did))) submittedCount += 1;
+      byRegion.set(rid, { expected, submitted: submittedCount, missing: Math.max(0, expected - submittedCount) });
+    }
+
+    const total = Array.from(byRegion.values()).reduce((acc, r) => ({
+      expected: acc.expected + r.expected,
+      submitted: acc.submitted + r.submitted,
+      missing: acc.missing + r.missing,
+    }), { expected: 0, submitted: 0, missing: 0 });
+
+    return { byRegion, total };
+  }, [rows, expectedDistrictsByRegion]);
+
+  const downloadCsv = () => {
+    const escape = (v: any) => {
+      const s = String(v ?? '');
+      if (/[\",\\n]/.test(s)) return `\"${s.replace(/\"/g, '\"\"')}\"`;
+      return s;
+    };
+    const header = ['period', 'region_id', 'district_id', 'user_id', 'customers', 'orders', 'note', 'updated_at'];
+    const lines = [header.join(',')];
+    for (const r of rows) {
+      lines.push([period, r.regionId, r.districtId, r.userId, r.customers, r.orders, r.note, r.updatedAt].map(escape).join(','));
+    }
+    const blob = new Blob([lines.join('\\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `terrimap_district_reports_${period}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div style={styles.viewContainer}>
+      <h3 style={styles.viewHeader}>🧭 Vận hành</h3>
+
+      <div style={{ ...styles.section, padding: 12 }}>
+        <div style={styles.opsTopRow}>
+          <div style={styles.opsFilters}>
+            <label style={styles.opsLabel}>
+              <span style={styles.opsLabelTxt}>Tháng</span>
+              <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} style={styles.opsInput} />
+            </label>
+            <label style={styles.opsLabel}>
+              <span style={styles.opsLabelTxt}>Khu vực</span>
+              <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} style={styles.opsInput}>
+                <option value="__all__">Tất cả</option>
+                {regionOptions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </label>
+            <label style={{ ...styles.opsLabel, flex: 1, minWidth: 180 }}>
+              <span style={styles.opsLabelTxt}>Tìm</span>
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cụm / user / ghi chú..." style={styles.opsInput} />
+            </label>
+          </div>
+          <div style={styles.opsActions}>
+            <button style={styles.opsBtn} onClick={downloadCsv} disabled={rows.length === 0}>Tải CSV</button>
+          </div>
+        </div>
+
+        <div style={styles.opsKpis}>
+          <div style={styles.opsKpiCard}>
+            <div style={styles.opsKpiValue}>{completion.total.submitted}/{completion.total.expected}</div>
+            <div style={styles.opsKpiLabel}>Cụm đã có báo cáo</div>
+          </div>
+          <div style={styles.opsKpiCard}>
+            <div style={styles.opsKpiValue}>{completion.total.missing}</div>
+            <div style={styles.opsKpiLabel}>Cụm thiếu báo cáo</div>
+          </div>
+          <div style={styles.opsKpiCard}>
+            <div style={styles.opsKpiValue}>{rows.reduce((s, r) => s + (Number(r.customers) || 0), 0)}</div>
+            <div style={styles.opsKpiLabel}>Tổng khách hàng</div>
+          </div>
+          <div style={styles.opsKpiCard}>
+            <div style={styles.opsKpiValue}>{rows.reduce((s, r) => s + (Number(r.orders) || 0), 0)}</div>
+            <div style={styles.opsKpiLabel}>Tổng đơn hàng</div>
+          </div>
+        </div>
+
+        <div style={styles.tableWrapper}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeaderRow}>
+                <th style={styles.th}>Khu vực</th>
+                <th style={styles.th}>Cụm</th>
+                <th style={styles.th}>User</th>
+                <th style={styles.th}>Khách hàng</th>
+                <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Ghi chú</th>
+                <th style={styles.th}>Cập nhật</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang tải...</td></tr>)}
+              {!loading && rows.slice(0, 200).map((r) => {
+                const regionName = regions.find((rr) => rr.id === r.regionId)?.name ?? r.regionId
+                return (
+                  <tr key={r.id} style={styles.tr}>
+                    <td style={styles.td}><strong>{regionName || '-'}</strong></td>
+                    <td style={styles.td}>C{r.districtId}</td>
+                    <td style={styles.td}>{r.userId}</td>
+                    <td style={styles.td}>{r.customers}</td>
+                    <td style={styles.td}>{r.orders}</td>
+                    <td style={styles.td}>{String(r.note || '—')}</td>
+                    <td style={styles.td}>{r.updatedAt ? new Date(r.updatedAt).toLocaleString('vi-VN') : '—'}</td>
+                  </tr>
+                )
+              })}
+              {!loading && rows.length === 0 && (<tr><td colSpan={7} style={styles.tableEmpty}>Chưa có báo cáo trong kỳ này.</td></tr>)}
+              {!loading && rows.length > 200 && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang hiển thị 200 dòng đầu tiên (lọc thêm để xem chi tiết).</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <h4 style={{ ...styles.sectionTitle, marginBottom: 8 }}>✅ Tỷ lệ hoàn thành theo khu vực</h4>
+          <div style={styles.opsRegionGrid}>
+            {regionOptions.map((r) => {
+              const stat = completion.byRegion.get(r.id) ?? { expected: 0, submitted: 0, missing: 0 }
+              const pct = stat.expected > 0 ? Math.round((stat.submitted / stat.expected) * 100) : 0
+              return (
+                <div key={r.id} style={styles.opsRegionCard}>
+                  <div style={styles.opsRegionName}>{r.name}</div>
+                  <div style={styles.opsRegionMeta}>{stat.submitted}/{stat.expected} ({pct}%) · thiếu {stat.missing}</div>
+                  <div style={styles.opsBar}><div style={{ ...styles.opsBarFill, width: `${pct}%` }} /></div>
+                </div>
+              )
+            })}
+            {regionOptions.length === 0 && (<div style={styles.tableEmpty}>Chưa có khu vực hoặc chưa có cụm kỳ vọng để thống kê.</div>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsView() {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
@@ -1285,5 +1504,119 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontWeight: 'bold',
     fontSize: '13px',
+  },
+
+  // Operations view
+  opsTopRow: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  opsFilters: {
+    display: 'flex',
+    alignItems: 'flex-end',
+    gap: 10,
+    flexWrap: 'wrap',
+    flex: 1,
+    minWidth: 280,
+  },
+  opsActions: {
+    display: 'flex',
+    gap: 10,
+    alignItems: 'center',
+  },
+  opsLabel: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    minWidth: 140,
+  },
+  opsLabelTxt: {
+    fontSize: 12,
+    color: 'var(--color-text-2)',
+    fontWeight: 800,
+  },
+  opsInput: {
+    padding: '8px 10px',
+    borderRadius: 8,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text)',
+    fontSize: 13,
+    fontWeight: 700,
+    height: 36,
+  },
+  opsBtn: {
+    padding: '9px 12px',
+    borderRadius: 10,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-accent)',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 900,
+    cursor: 'pointer',
+    height: 36,
+  },
+  opsKpis: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: 10,
+    margin: '14px 0 14px',
+  },
+  opsKpiCard: {
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    borderRadius: 10,
+    padding: '12px 12px',
+    minWidth: 0,
+  },
+  opsKpiValue: {
+    fontSize: 18,
+    fontWeight: 900,
+    color: 'var(--color-text)',
+    lineHeight: 1.1,
+  },
+  opsKpiLabel: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
+  },
+  opsRegionGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: 10,
+  },
+  opsRegionCard: {
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    borderRadius: 10,
+    padding: '10px 12px',
+    minWidth: 0,
+  },
+  opsRegionName: {
+    fontSize: 13,
+    fontWeight: 900,
+    color: 'var(--color-text)',
+  },
+  opsRegionMeta: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
+  },
+  opsBar: {
+    marginTop: 8,
+    height: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+    background: 'rgba(148,163,184,0.35)',
+  },
+  opsBarFill: {
+    height: '100%',
+    background: '#22c55e',
+    borderRadius: 999,
   },
 };

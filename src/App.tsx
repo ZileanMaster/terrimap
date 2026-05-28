@@ -18,7 +18,7 @@ import { useDataStore } from './store/dataStore.js'
 import { useAuthStore } from './store/authStore.js'
 import { isOnline } from './lib/supabase.js'
 import DashboardLayout from './components/layout/DashboardLayout.js'
-import { OverviewView, RegionsView, UsersView, SettingsView } from './pages/DashboardViews.js'
+import { OverviewView, RegionsView, UsersView, OperationsView, SettingsView } from './pages/DashboardViews.js'
 import AlgorithmComparator from './components/algorithm/AlgorithmComparator.js'
 import RegionSelector from './components/layout/RegionSelector.js'
 
@@ -133,6 +133,7 @@ export default function App() {
                 <OverviewView />
               )}
               {activeTab === 'users' && <UsersView />}
+              {activeTab === 'ops' && <OperationsView />}
               {activeTab === 'assignments' && (
                 currentRegionId === null ? <RegionSelector /> :
                 effectiveRole === 'admin' ? <AdminPage mode="assignments" /> :
@@ -174,6 +175,7 @@ function OfflineApp() {
                 <OverviewView />
               )}
               {activeTab === 'users' && <UsersView />}
+              {activeTab === 'ops' && <OperationsView />}
               {activeTab === 'assignments' && (
                 currentRegionId === null ? <RegionSelector /> :
                 role === 'admin' ? <AdminPage mode="assignments" /> :
