@@ -498,7 +498,7 @@ describe('polygonCentroid', () => {
 // ==========================================
 // ==========================================
 
-describe('buildAdjacencyMatrix', () => {
+  describe('buildAdjacencyMatrix', () => {
   /**
    * Create a zone with a proper unique polygon (square) at given grid position.
    * Each zone occupies a 0.1° × 0.1° cell in a grid.
@@ -609,11 +609,69 @@ describe('buildAdjacencyMatrix', () => {
     expect(matrix['A']).toHaveLength(0);
   });
 
-  it('[INV-3] Isolated zones (no shared edges) → not adjacent', () => {
-    const matrix = buildAdjacencyMatrix([zA, zFar]);
-    expect(matrix['A']).not.toContain('far');
-    expect(matrix['far']).not.toContain('A');
-  });
+    it('[INV-3] Isolated zones (no shared edges) → not adjacent', () => {
+      const matrix = buildAdjacencyMatrix([zA, zFar]);
+      expect(matrix['A']).not.toContain('far');
+      expect(matrix['far']).not.toContain('A');
+    });
+
+    it('[HP-8] Near-boundary (small gap) → adjacent by default (gap-bridging)', () => {
+      // Two 100m-ish squares with a small gap between them.
+      // Default NEAR_BOUNDARY_KM in geometry.ts is 0.12km (~120m),
+      // so a ~50-80m gap should be considered adjacent.
+      const left: Zone = {
+        id: 'left',
+        name: 'left',
+        polygon: {
+          type: 'Polygon',
+          // [lng,lat] around Hanoi-ish coords (degrees), 0.001 ~ 111m lat.
+          coordinates: [[[105.8, 21.0], [105.801, 21.0], [105.801, 21.001], [105.8, 21.001], [105.8, 21.0]]],
+        },
+        centroid: { lat: 21.0005, lng: 105.8005 },
+        activities: [],
+        status: 'unassigned',
+      };
+      const right: Zone = {
+        id: 'right',
+        name: 'right',
+        polygon: {
+          type: 'Polygon',
+          // Gap of 0.0006 deg in lng (~60m at this latitude)
+          coordinates: [[[105.8016, 21.0], [105.8026, 21.0], [105.8026, 21.001], [105.8016, 21.001], [105.8016, 21.0]]],
+        },
+        centroid: { lat: 21.0005, lng: 105.8021 },
+        activities: [],
+        status: 'unassigned',
+      };
+
+      const matrix = buildAdjacencyMatrix([left, right]);
+      expect(matrix['left']).toContain('right');
+      expect(matrix['right']).toContain('left');
+    });
+
+    it('[HP-9] Near-boundary respects thresholdKm override (smaller threshold blocks adjacency)', () => {
+      const left: Zone = {
+        id: 'left2',
+        name: 'left2',
+        polygon: { type: 'Polygon', coordinates: [[[105.8, 21.0], [105.801, 21.0], [105.801, 21.001], [105.8, 21.001], [105.8, 21.0]]] },
+        centroid: { lat: 21.0005, lng: 105.8005 },
+        activities: [],
+        status: 'unassigned',
+      };
+      const right: Zone = {
+        id: 'right2',
+        name: 'right2',
+        polygon: { type: 'Polygon', coordinates: [[[105.8016, 21.0], [105.8026, 21.0], [105.8026, 21.001], [105.8016, 21.001], [105.8016, 21.0]]] },
+        centroid: { lat: 21.0005, lng: 105.8021 },
+        activities: [],
+        status: 'unassigned',
+      };
+
+      // 0.03km (30m) < gap (~60m) → should NOT connect
+      const matrix = buildAdjacencyMatrix([left, right], 0.03);
+      expect(matrix['left2']).not.toContain('right2');
+      expect(matrix['right2']).not.toContain('left2');
+    });
 
   // --- NHÓM 3: Fuzz Test ---
   it('[FUZZ] Grid of NxN zones → symmetric, no self-loop, only edge-sharing adjacency', () => {
