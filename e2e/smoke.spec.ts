@@ -8,7 +8,8 @@ test('app loads without error @smoke', async ({ page }) => {
     if (msg.type() === 'error') errors.push(msg.text())
   })
 
-  await page.goto('/')
+  // Avoid waiting for full 'load' (Leaflet tiles/network may keep the page in loading state).
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(2000)
 
   // Root element không rỗng
@@ -28,7 +29,7 @@ test('app loads without error @smoke', async ({ page }) => {
 })
 
 test('TopBar renders with role tabs @smoke', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
 
   // Sidebar navigation exists (offline mode renders admin role by default)
@@ -38,7 +39,7 @@ test('TopBar renders with role tabs @smoke', async ({ page }) => {
 })
 
 test('role switching changes sidebar @smoke', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
 
   // Navigate between tabs (ensures no crash)
@@ -51,7 +52,7 @@ test('role switching changes sidebar @smoke', async ({ page }) => {
 })
 
 test('locale toggle updates label @smoke', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(1500)
 
   await page.getByRole('button', { name: /Cài đặt/i }).click()
