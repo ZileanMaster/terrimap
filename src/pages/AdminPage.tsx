@@ -22,6 +22,8 @@ import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
 import MapLegend from '../components/map/MapLegend.js'
 import DrawingToolbar from '../components/map/DrawingToolbar.js'
 import SnapshotManager from '../components/snapshot/SnapshotManager.js'
+import MyClusterReports from '../components/reports/MyClusterReports.js'
+import { useAuthStore } from '../store/authStore.js'
 
 import { useSAWorker } from '../hooks/useSAWorker.js'
 import { validatePartition } from '../../lib/validator.js'
@@ -42,6 +44,11 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const removeZone         = useDataStore((s) => s.removeZone)
   const updateZone         = useDataStore((s) => s.updateZone)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
+
+  const authUser = useAuthStore((s) => s.user)
+  const profile  = useAuthStore((s) => s.profile)
+  const currentProjectId = useAuthStore((s) => s.currentProjectId)
+  const currentUserKey = authUser?.id ?? profile?.id ?? profile?.email ?? ''
 
   // Filter zones/agents/assignments by currentRegionId — MANDATORY:
   // The algorithm MUST run on each region independently.
@@ -367,6 +374,15 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
             />
           )}
         </TerritoryMap>
+        {currentUserKey && (
+          <MyClusterReports
+            currentUserKey={currentUserKey}
+            currentProjectId={currentProjectId}
+            currentRegionId={currentRegionId}
+            zones={zones}
+            assignments={assignments}
+          />
+        )}
 
         {/* Floating Region Header */}
         <div style={styles.floatingRegionHeader}>

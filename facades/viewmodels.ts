@@ -202,3 +202,22 @@ export interface ActivityRecord {
   customers: number;
   orders: number;
 }
+
+// ─── District reports (user-entered metrics per cluster) ─────────────────────
+
+/**
+ * DistrictReport — user-entered KPIs for a cluster (district) in a given period.
+ * Stored in Supabase (district_reports) and mirrored in localStorage for offline fallback.
+ */
+export interface DistrictReport {
+  id:         string;
+  projectId?: string;
+  regionId:   string;
+  districtId: number;
+  userId:     string;
+  period:     string;     // 'YYYY-MM'
+  customers:  number;
+  orders:     number;
+  note?:      string;
+  updatedAt:  string;     // ISO
+}

@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore.js';
 import { isOnline, supabase } from '../lib/supabase.js';
 import { loadSnapshots } from '../services/db.js';
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../lib/geometry.js';
+import { loadDistrictReports, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
 
 // Clean email-based mock members for offline mode
 const MOCK_MEMBERS = [
@@ -84,9 +85,13 @@ export function OverviewView() {
   const assignments = useDataStore((s) => s.assignments);
   const agents = useDataStore((s) => s.agents);
   const regions = useDataStore((s) => s.regions);
+  const currentProjectId = useAuthStore((s) => s.currentProjectId);
 
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [loadingSnaps, setLoadingSnaps] = useState(false);
+  const [districtReports, setDistrictReports] = useState<any[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const reportPeriod = currentReportPeriod();
 
   useEffect(() => {
     setLoadingSnaps(true);
@@ -96,8 +101,31 @@ export function OverviewView() {
       .finally(() => setLoadingSnaps(false));
   }, []);
 
+  useEffect(() => {
+    setLoadingReports(true);
+    loadDistrictReports(reportPeriod, currentProjectId ?? undefined)
+      .then((rs) => setDistrictReports(rs as any))
+      .catch(() => setDistrictReports([]))
+      .finally(() => setLoadingReports(false));
+  }, [reportPeriod, currentProjectId]);
+
   const assignedCount = assignments.filter((a) => a.salesAgentId).length;
   const assignmentPercent = zones.length > 0 ? Math.round((assignedCount / zones.length) * 100) : 0;
+
+  const reportStats = useMemo(() => {
+    const totalCustomers = districtReports.reduce((s, r) => s + (Number(r.customers) || 0), 0);
+    const totalOrders = districtReports.reduce((s, r) => s + (Number(r.orders) || 0), 0);
+    const districtKey = (r: any) => `${r.regionId || r.region_id || ''}|${r.districtId || r.district_id || ''}`
+    const districts = new Set(districtReports.map(districtKey));
+    const users = new Set(districtReports.map((r: any) => String(r.userId || r.user_id || '')));
+    return {
+      totalCustomers,
+      totalOrders,
+      reportCount: districtReports.length,
+      districtCount: districts.size,
+      userCount: users.size,
+    };
+  }, [districtReports]);
 
   // Compute total violations and islands across all regions
   let totalContiguityViolations = 0;
@@ -252,6 +280,80 @@ export function OverviewView() {
             <span style={styles.cardVal}>{totalContiguityViolations}</span>
             <span style={styles.cardLbl}>Vi phạm liên thông</span>
           </div>
+        </div>
+      </div>
+
+      {/* District Reports Summary */}
+      <div style={styles.section}>
+        <h4 style={styles.sectionTitle}>ðŸ“ˆ Báo cáo cụm (tháng {reportPeriod})</h4>
+        <div style={styles.cardGrid}>
+          <div style={styles.card}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>C</div>
+            <div style={styles.cardInfo}>
+              <span style={styles.cardVal}>{reportStats.totalCustomers}</span>
+              <span style={styles.cardLbl}>KH báo cáo</span>
+            </div>
+          </div>
+          <div style={styles.card}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>O</div>
+            <div style={styles.cardInfo}>
+              <span style={styles.cardVal}>{reportStats.totalOrders}</span>
+              <span style={styles.cardLbl}>Đơn báo cáo</span>
+            </div>
+          </div>
+          <div style={styles.card}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#f59e0b' }}>D</div>
+            <div style={styles.cardInfo}>
+              <span style={styles.cardVal}>{reportStats.districtCount}</span>
+              <span style={styles.cardLbl}>Cụm có dữ liệu</span>
+            </div>
+          </div>
+          <div style={styles.card}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6' }}>U</div>
+            <div style={styles.cardInfo}>
+              <span style={styles.cardVal}>{reportStats.userCount}</span>
+              <span style={styles.cardLbl}>Người đã nhập</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.tableWrapper}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeaderRow}>
+                <th style={styles.th}>Khu vực</th>
+                <th style={styles.th}>Cụm</th>
+                <th style={styles.th}>Khách hàng</th>
+                <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Cập nhật</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loadingReports && (
+                <tr><td colSpan={5} style={styles.tableEmpty}>Đang tải báo cáo...</td></tr>
+              )}
+              {!loadingReports && districtReports.slice(0, 8).map((r: any) => {
+                const rid = r.regionId ?? r.region_id
+                const regionName = regions.find((rr) => rr.id === rid)?.name ?? String(rid ?? '')
+                return (
+                  <tr key={r.id} style={styles.tr}>
+                    <td style={styles.td}><strong>{regionName || '-'}</strong></td>
+                    <td style={styles.td}>C{r.districtId ?? r.district_id}</td>
+                    <td style={styles.td}>{Number(r.customers ?? 0)}</td>
+                    <td style={styles.td}>{Number(r.orders ?? 0)}</td>
+                    <td style={styles.td}>{new Date(r.updatedAt ?? r.updated_at ?? Date.now()).toLocaleString('vi-VN')}</td>
+                  </tr>
+                )
+              })}
+              {!loadingReports && districtReports.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={styles.tableEmpty}>
+                    Chưa có báo cáo cụm nào trong tháng này.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
