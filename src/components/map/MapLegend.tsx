@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import type { Assignment } from '../../../facades/viewmodels.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
 import { useUIStore } from '../../store/uiStore.js'
@@ -14,11 +14,18 @@ export default function MapLegend({ assignments, disconnectedDistrictIds }: MapL
   const showPolygons = useUIStore((s) => s.showPolygons)
   const togglePolygons = useUIStore((s) => s.togglePolygons)
 
+  const [filter, setFilter] = useState('')
+
   const clusters = useMemo(() => {
     return [...new Set(assignments.map((a) => a.districtId))]
       .sort((a, b) => a - b)
-      .slice(0, 8)
   }, [assignments])
+
+  const visibleClusters = useMemo(() => {
+    const q = filter.trim()
+    if (!q) return clusters
+    return clusters.filter((id) => String(id).includes(q))
+  }, [clusters, filter])
 
   if (assignments.length === 0) return null
 
@@ -30,8 +37,19 @@ export default function MapLegend({ assignments, disconnectedDistrictIds }: MapL
           {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
         </button>
       </div>
+
+      {clusters.length > 8 && (
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder={`Lọc cụm (0-${clusters[clusters.length - 1] ?? ''})`}
+          style={styles.search}
+          inputMode="numeric"
+        />
+      )}
+
       <div style={styles.items}>
-        {clusters.map((id) => {
+        {visibleClusters.map((id) => {
           const disconnected = disconnectedDistrictIds?.has(id) ?? false
           return (
             <button
@@ -56,6 +74,20 @@ export default function MapLegend({ assignments, disconnectedDistrictIds }: MapL
             </button>
           )
         })}
+
+        {clusters.length > 8 && (
+          <div style={styles.countRow}>
+            <span style={styles.countText}>
+              Hiện {visibleClusters.length}/{clusters.length} cụm
+            </span>
+            {filter.trim() && (
+              <button type="button" style={styles.clearBtn} onClick={() => setFilter('')}>
+                Xóa lọc
+              </button>
+            )}
+          </div>
+        )}
+
         {assignments.length > 0 && (
           <div style={styles.item}>
             <span style={{ ...styles.swatch, background: '#9ca3af', borderStyle: 'dashed' }} />
@@ -107,10 +139,24 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     whiteSpace: 'nowrap',
   },
+  search: {
+    width: '100%',
+    height: 32,
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    padding: '0 8px',
+    marginBottom: 8,
+    background: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    fontSize: 12,
+    outline: 'none',
+  },
   items: {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
+    maxHeight: 320,
+    overflowY: 'auto',
   },
   item: {
     display: 'flex',
@@ -164,4 +210,26 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     lineHeight: 1.35,
   },
+  countRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+  },
+  countText: {
+    fontSize: 11,
+    color: 'var(--color-text-3)',
+  },
+  clearBtn: {
+    marginLeft: 'auto',
+    border: '1px solid var(--color-border)',
+    background: 'transparent',
+    color: 'var(--color-text-2)',
+    fontSize: 11,
+    padding: '4px 6px',
+    borderRadius: 'var(--radius-sm)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
 }
+
