@@ -40,6 +40,10 @@ interface UIStore {
   isMapTransitioning:  boolean            // L4b-1: flash effect after algorithm run
   selectedDistrictId:  number | null      // Map legend: focus a cluster/district
   showPolygons:        boolean            // Map layer toggle
+  /** Per-zone visibility toggle (hide selected polygon without hiding all). */
+  hiddenZoneIds:       Record<string, true>
+  /** Enable Leaflet-Draw toolbar for polygon editing (admin UI). */
+  polygonEditEnabled:  boolean
   // Actions
   setRole:                (role: Role) => void
   selectZone:             (id: string | null) => void
@@ -50,6 +54,8 @@ interface UIStore {
   setMapTransitioning:    (v: boolean) => void
   setSelectedDistrictId:  (id: number | null) => void
   togglePolygons:         () => void
+  toggleZoneHidden:       (zoneId: string) => void
+  setPolygonEditEnabled:  (v: boolean) => void
 }
 
 function applyTheme(theme: Theme) {
@@ -79,6 +85,8 @@ export const useUIStore = create<UIStore>((set) => ({
   isMapTransitioning: false,
   selectedDistrictId: null,
   showPolygons:       true,
+  hiddenZoneIds:      {},
+  polygonEditEnabled: false,
 
   setRole: (role) =>
     set({
@@ -86,6 +94,8 @@ export const useUIStore = create<UIStore>((set) => ({
       selectedZoneId: null,
       highlightedSalesId: null,
       selectedDistrictId: null,
+      hiddenZoneIds: {},
+      polygonEditEnabled: false,
     }),
 
   selectZone: (id) => set({ selectedZoneId: id }),
@@ -124,4 +134,14 @@ export const useUIStore = create<UIStore>((set) => ({
     })),
 
   togglePolygons: () => set((s) => ({ showPolygons: !s.showPolygons })),
+
+  toggleZoneHidden: (zoneId) =>
+    set((s) => {
+      const next = { ...s.hiddenZoneIds }
+      if (next[zoneId]) delete next[zoneId]
+      else next[zoneId] = true
+      return { hiddenZoneIds: next }
+    }),
+
+  setPolygonEditEnabled: (v) => set({ polygonEditEnabled: v }),
 }))
