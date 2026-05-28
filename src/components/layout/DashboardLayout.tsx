@@ -18,6 +18,7 @@ const navItems = [
   { id: 'regions', label: 'Khu vực & bản đồ', icon: 'MP', roles: ['admin', 'coordinator'] },
   { id: 'users', label: 'Nhân sự Sales', icon: 'US', roles: ['admin'] },
   { id: 'assignments', label: 'Phân chia lãnh thổ', icon: 'TR', roles: ['admin', 'coordinator', 'sales'] },
+  { id: 'ops', label: 'Vận hành', icon: 'OP', roles: ['admin', 'coordinator'] },
   { id: 'algorithms', label: 'So sánh thuật toán', icon: 'CP', roles: ['admin', 'coordinator'] },
   { id: 'settings', label: 'Cài đặt', icon: 'ST', roles: ['admin', 'coordinator', 'sales'] },
 ]
