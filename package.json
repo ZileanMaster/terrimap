@@ -4,7 +4,7 @@
   "description": "Commercial Territory Design — L0 Data Primitives",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 5173 --strictPort",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

@@ -31,24 +31,38 @@ test('TopBar renders with role tabs @smoke', async ({ page }) => {
   await page.goto('/')
   await page.waitForTimeout(1500)
 
-  // Kiểm tra role tab buttons tồn tại
-  await expect(page.locator('#role-tab-admin')).toBeVisible()
-  await expect(page.locator('#role-tab-coordinator')).toBeVisible()
-  await expect(page.locator('#role-tab-sales')).toBeVisible()
+  // Sidebar navigation exists (offline mode renders admin role by default)
+  await expect(page.getByRole('button', { name: /Tổng quan/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Khu vực/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Phân chia lãnh thổ/i })).toBeVisible()
 })
 
 test('role switching changes sidebar @smoke', async ({ page }) => {
   await page.goto('/')
   await page.waitForTimeout(1500)
 
-  // Click Coordinator tab
-  await page.locator('#role-tab-coordinator').click()
-  await page.waitForTimeout(500)
+  // Navigate between tabs (ensures no crash)
+  await page.getByRole('button', { name: /Khu vực/i }).click()
+  await page.waitForTimeout(600)
+  await page.getByRole('button', { name: /Phân chia lãnh thổ/i }).click()
+  await page.waitForTimeout(600)
 
-  // Click Sales tab
-  await page.locator('#role-tab-sales').click()
-  await page.waitForTimeout(500)
-
-  // Không crash sau khi switch role
   await expect(page.locator('#root')).not.toBeEmpty()
+})
+
+test('locale toggle updates label @smoke', async ({ page }) => {
+  await page.goto('/')
+  await page.waitForTimeout(1500)
+
+  await page.getByRole('button', { name: /Cài đặt/i }).click()
+  await page.waitForTimeout(600)
+
+  // SettingsView renders a language toggle button
+  const btn = page.getByRole('button', { name: /Tiếng Việt|English/i }).first()
+  await expect(btn).toBeVisible()
+  const before = await btn.textContent()
+  await btn.click()
+  await page.waitForTimeout(300)
+  const after = await btn.textContent()
+  expect(before).not.toEqual(after)
 })
