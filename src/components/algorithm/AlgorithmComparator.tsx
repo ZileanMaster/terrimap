@@ -94,7 +94,7 @@ function componentCount(zones: Zone[]): number {
     components > 1 ? `Đồ thị zone có ${components} cụm rời, không thể đảm bảo liên thông.` : null,
   ].filter((x): x is string => Boolean(x))
 
-    const canRun = blockers.length === 0 && !isRunning && showScenarioB
+    const canRun = blockers.length === 0 && !isRunning
   const center: [number, number] = selectedRegion
     ? [selectedRegion.center.lat, selectedRegion.center.lng]
     : [21.03, 105.83]
@@ -109,15 +109,24 @@ function componentCount(zones: Zone[]): number {
       setIsRunning(true)
       setHasRun(false)
       try {
-        const [resultA, resultB] = await Promise.all([
-          runScenario(algoA, numDistrictsA),
-          runScenario(algoB, numDistrictsB),
-        ])
-      setAssignmentsA(resultA.assignments)
-      setAssignmentsB(resultB.assignments)
-      setMetricsA(resultA)
-      setMetricsB(resultB)
-      setHasRun(true)
+        if (showScenarioB) {
+          const [resultA, resultB] = await Promise.all([
+            runScenario(algoA, numDistrictsA),
+            runScenario(algoB, numDistrictsB),
+          ])
+          setAssignmentsA(resultA.assignments)
+          setAssignmentsB(resultB.assignments)
+          setMetricsA(resultA)
+          setMetricsB(resultB)
+          setHasRun(true)
+        } else {
+          const resultA = await runScenario(algoA, numDistrictsA)
+          setAssignmentsA(resultA.assignments)
+          setMetricsA(resultA)
+          setAssignmentsB([])
+          setMetricsB(null)
+          setHasRun(true)
+        }
     } catch (err: any) {
       setError(err?.message ?? String(err))
     } finally {
@@ -125,17 +134,15 @@ function componentCount(zones: Zone[]): number {
       }
     }
 
-  // Auto-run comparison when scenario config changes (debounced).
+  // Auto-run when scenario config changes (debounced).
   const lastRunKeyRef = useRef<string>('')
   useEffect(() => {
-    if (!showScenarioB) return
     if (!canRun) return
 
-    const key = `${selectedRegionId}|${algoA}|${numDistrictsA}|${algoB}|${numDistrictsB}`
+    const key = `${selectedRegionId}|${algoA}|${numDistrictsA}|${showScenarioB ? algoB : '-'}|${showScenarioB ? numDistrictsB : 0}`
     if (key === lastRunKeyRef.current && hasRun) return
 
     const t = window.setTimeout(() => {
-      if (!showScenarioB) return
       if (blockers.length > 0) return
       if (isRunning) return
       void handleRun().then(() => { lastRunKeyRef.current = key })
@@ -175,13 +182,13 @@ function componentCount(zones: Zone[]): number {
     <div style={styles.container}>
         <section style={styles.header}>
           <div>
-            <h1 style={styles.title}>So sánh thuật toán phân chia</h1>
+            <h1 style={styles.title}>Phân chia tự động</h1>
             <p style={styles.subtitle}>
-              Chọn một khu vực hợp lệ, cấu hình hai kịch bản, chạy song song và chỉ áp dụng sau khi xem metrics.
+              Chọn khu vực, chọn thuật toán và số cụm. Hệ thống sẽ tự chạy khi bạn thay đổi cấu hình; bạn có thể thêm kịch bản B để so sánh.
             </p>
           </div>
           <button style={{ ...styles.primaryBtn, opacity: canRun ? 1 : .55 }} disabled={!canRun} onClick={handleRun}>
-            {isRunning ? 'Đang chạy...' : 'Chạy so sánh'}
+            {isRunning ? 'Đang chạy...' : (showScenarioB ? 'Chạy so sánh' : 'Chạy phân chia')}
           </button>
         </section>
 

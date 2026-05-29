@@ -21,6 +21,7 @@ import {
 } from '../../data/district-colors.js'
 import { useUIStore } from '../../store/uiStore.js'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet-draw/dist/leaflet.draw.css'
 
 /** Dimmed opacity when another sales agent is highlighted */
 const DISTRICT_FILL_OPACITY_DIMMED = 0.10

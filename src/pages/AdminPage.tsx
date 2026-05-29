@@ -102,7 +102,14 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const isMapTransitioning    = useUIStore((s) => s.isMapTransitioning)
   const setMapTransitioning   = useUIStore((s) => s.setMapTransitioning)
   const polygonEditEnabled    = useUIStore((s: any) => (s?.polygonEditEnabled ?? false) as boolean)
+  const setPolygonEditEnabled = useUIStore((s: any) => s.setPolygonEditEnabled as (v: boolean) => void)
   const ctx                   = useFacade()
+  const role                  = useUIStore((s) => s.role)
+
+  // Default: show draw/edit tools in "Khu vực & bản đồ".
+  useEffect(() => {
+    if (mode === 'regions' && role === 'admin') setPolygonEditEnabled(true)
+  }, [mode, role, setPolygonEditEnabled])
 
   // Load version history once (local facade — not DB)
   useEffect(() => {
@@ -368,7 +375,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
         >
-          {polygonEditEnabled && (
+          {(mode === 'regions' || polygonEditEnabled) && role === 'admin' && (
             <DrawingToolbar
               onZoneCreated={handleZoneCreated}
               onZoneEdited={handleZoneEdited}
@@ -404,6 +411,15 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                 <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
                   {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
                 </button>
+                {role === 'admin' && (
+                  <button
+                    style={styles.mapHudBtnGhost}
+                    onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
+                    title="Bật/tắt công cụ vẽ và sửa polygon (góc phải bản đồ)"
+                  >
+                    {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
+                  </button>
+                )}
               </div>
             ) : (
               <div style={styles.mapHudRow}>
