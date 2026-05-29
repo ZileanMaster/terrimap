@@ -83,7 +83,7 @@ interface DbRegion {
 
 /**
  * Load zones + activities from Supabase, optionally filtered by project.
- * Fallback: MOCK_ZONES.
+ * Offline fallback: MOCK_ZONES.
  */
 export async function loadZones(projectId?: string): Promise<Zone[]> {
   if (!isOnline()) return MOCK_ZONES
@@ -95,7 +95,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
 
   if (zErr || !zones) {
     console.error('[DB] loadZones error:', zErr)
-    return MOCK_ZONES
+    return []
   }
 
   // Load activities for these zones
@@ -135,8 +135,8 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
   try {
     assertNoPolygonTopologyViolations(loadedZones as any)
   } catch (e) {
-    console.error('[DB] loadZones topology error, fallback to MOCK:', e)
-    return MOCK_ZONES
+    console.error('[DB] loadZones topology error:', e)
+    return []
   }
 
   return loadedZones
@@ -144,7 +144,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
 
 /**
  * Load assignments, optionally filtered by project.
- * Fallback: MOCK_ASSIGNMENTS.
+ * Offline fallback: MOCK_ASSIGNMENTS.
  */
 export async function loadAssignments(projectId?: string): Promise<Assignment[]> {
   if (!isOnline()) return MOCK_ASSIGNMENTS
@@ -156,7 +156,7 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
 
   if (error || !data) {
     console.error('[DB] loadAssignments error:', error)
-    return MOCK_ASSIGNMENTS
+    return []
   }
 
   return (data as DbAssignment[]).map((a) => ({
@@ -168,22 +168,21 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
 
 /**
  * Load sales agents (ordered canonical — OPEN-4), optionally filtered by project.
- * Fallback: MOCK_AGENTS.
+ * Offline fallback: MOCK_AGENTS.
  */
 export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
   if (!isOnline()) return MOCK_AGENTS
 
-  // Fetch agents matching this project OR agents without any project (legacy)
+  // IMPORTANT: never leak demo/legacy (NULL project_id) agents into other projects.
+  // In online mode, data must be project-scoped.
   let query = supabase!.from('sales_agents').select('*').order('id')
-  if (projectId) {
-    query = query.or(`project_id.eq.${projectId},project_id.is.null`)
-  }
+  if (projectId) query = query.eq('project_id', projectId)
 
   const { data, error } = await query
 
   if (error || !data || data.length === 0) {
     console.error('[DB] loadAgents error or empty:', error)
-    return MOCK_AGENTS
+    return []
   }
 
   // Deduplicate by id — prefer the one WITH project_id
@@ -473,11 +472,9 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       .select('*')
       .order('name')
     
-    if (projectId) {
-      query = query.or(`project_id.eq.${projectId},project_id.is.null`)
-    } else {
-      query = query.is('project_id', null)
-    }
+    // IMPORTANT: never leak global/legacy regions into a project.
+    // In online mode, regions must be project-scoped.
+    if (projectId) query = query.eq('project_id', projectId)
 
     const { data, error } = await query
 

@@ -1,9 +1,9 @@
 /**
- * DrawingToolbar — Native Leaflet Draw polygon control (Admin only)
+ * DrawingToolbar - Native Leaflet.Draw polygon control (Admin only)
  *
- * Uses Leaflet Draw directly (not react-leaflet-draw wrapper) to avoid
- * ESM compatibility issues. Renders inside <MapContainer> via useMap().
- * Only polygon drawing is enabled; all other shapes are disabled.
+ * Uses Leaflet Draw directly (not react-leaflet-draw wrapper) to avoid ESM issues.
+ * NOTE: CSS is imported globally once (see src/main.tsx) because dynamic CSS import
+ * can fail in production builds and cause a blank screen.
  */
 
 import { useEffect, useRef } from 'react'
@@ -61,12 +61,9 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
     let drawnItems: L.FeatureGroup | null = null
     let drawControl: any | null = null
 
-    // leaflet-draw is loaded dynamically to avoid crashing routes/pages
-    // that import this component but don't render it.
     const boot = async () => {
       if (typeof window === 'undefined') return
       await import('leaflet-draw')
-      await import('leaflet-draw/dist/leaflet.draw.css')
       if (cancelled) return
 
       drawnItems = new L.FeatureGroup()
@@ -78,11 +75,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         draw: {
           polygon: {
             allowIntersection: false,
-            shapeOptions: {
-              color: '#2563eb',
-              weight: 2,
-              fillOpacity: 0.15,
-            },
+            shapeOptions: { color: '#2563eb', weight: 2, fillOpacity: 0.15 },
           },
           polyline: false,
           rectangle: false,
@@ -106,12 +99,11 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         const zonesNow = existingZonesRef.current
         if (zonesNow && zonesNow.length > 0) {
           for (const zone of zonesNow) {
-            const existingRing = zone.polygon.type === 'Polygon'
-              ? zone.polygon.coordinates[0]
-              : zone.polygon.coordinates[0]?.[0]
+            const existingRing =
+              zone.polygon.type === 'Polygon' ? zone.polygon.coordinates[0] : zone.polygon.coordinates[0]?.[0]
             if (existingRing && polygonsOverlap(ring, existingRing)) {
               drawnItems?.removeLayer(layer)
-              alert(`⚠️ Polygon mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
+              alert(`Polygon mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
               return
             }
           }
@@ -134,15 +126,14 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
           if (zonesNow && zonesNow.length > 0) {
             for (const z of zonesNow) {
               if (z.id === zoneId) continue
-              const existingRing = z.polygon.type === 'Polygon'
-                ? z.polygon.coordinates[0]
-                : z.polygon.coordinates[0]?.[0]
+              const existingRing =
+                z.polygon.type === 'Polygon' ? z.polygon.coordinates[0] : z.polygon.coordinates[0]?.[0]
               if (existingRing && polygonsOverlap(ring, existingRing)) {
                 if (selectedOriginalRingRef.current) {
                   const latlngs = selectedOriginalRingRef.current.map(([lng, lat]) => [lat, lng] as [number, number])
                   layer.setLatLngs([latlngs])
                 }
-                alert('⚠️ Polygon sửa bị chồng lắp vùng khác. Đã hoàn tác.')
+                alert('Polygon sửa bị chồng lắp vùng khác. Đã hoàn tác.')
                 return
               }
             }
@@ -157,8 +148,6 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
       map.on(L.Draw.Event.CREATED, onCreated)
       map.on(L.Draw.Event.EDITED, onEdited)
-
-      // Stash handlers on the control for cleanup (avoid extra refs)
       ;(drawControl as any).__tm_handlers = { onCreated, onEdited }
     }
 
@@ -172,10 +161,18 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         map.off(L.Draw.Event.EDITED, onEdited)
       }
       if (drawControl) {
-        try { map.removeControl(drawControl) } catch { /* ignore */ }
+        try {
+          map.removeControl(drawControl)
+        } catch {
+          /* ignore */
+        }
       }
       if (drawnItems) {
-        try { map.removeLayer(drawnItems) } catch { /* ignore */ }
+        try {
+          map.removeLayer(drawnItems)
+        } catch {
+          /* ignore */
+        }
       }
       drawnItemsRef.current = null
       selectedLayerRef.current = null
@@ -196,9 +193,10 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     if (!selectedZone) return
 
-    const ring = selectedZone.polygon.type === 'Polygon'
-      ? (selectedZone.polygon.coordinates[0] ?? [])
-      : (selectedZone.polygon.coordinates[0]?.[0] ?? [])
+    const ring =
+      selectedZone.polygon.type === 'Polygon'
+        ? selectedZone.polygon.coordinates[0] ?? []
+        : selectedZone.polygon.coordinates[0]?.[0] ?? []
 
     const latlngs = (ring as [number, number][])
       .filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]))
@@ -206,18 +204,14 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     if (latlngs.length < 3) return
 
-    const layer = L.polygon(latlngs, {
-      color: '#2563eb',
-      weight: 2,
-      fillOpacity: 0.05,
-      interactive: false,
-    })
+    const layer = L.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: false })
     ;(layer as any).__zoneId = selectedZone.id
     selectedLayerRef.current = layer
     selectedOriginalRingRef.current = layerToRing(layer)
     drawnItems.addLayer(layer)
   }, [selectedZone])
 
-  // This is a hook-only component — no JSX output needed
+  // Hook-only component - no JSX output
   return null
 }
+

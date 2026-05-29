@@ -10,7 +10,6 @@ import { isOnline, supabase } from '../lib/supabase.js';
 import { loadSnapshots } from '../services/db.js';
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../lib/geometry.js';
 import { loadDistrictReports, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
-import { readLastErrors } from '../utils/telemetry.js';
 
 // Clean email-based mock members for offline mode
 const MOCK_MEMBERS = [
@@ -476,15 +475,15 @@ export function UsersView() {
 
   const reloadMembers = async () => {
     if (!supabase || !currentProjectId) {
-      // Offline/mock mode fallback
-      setMembers(MOCK_MEMBERS);
+      // In online mode, data must be project-scoped. No demo fallback here.
+      setMembers([]);
       return;
     }
     setLoading(true);
     try {
       const { data: rawMembers, error } = await supabase
         .from('project_members')
-        .select('*')
+        .select('id,user_id,role,region_id,joined_at')
         .eq('project_id', currentProjectId)
         .order('joined_at', { ascending: true });
 
@@ -498,10 +497,14 @@ export function UsersView() {
       }
 
         const userIds = rawMembers.map((m: any) => m.user_id);
-        const { data: profiles } = await supabase
+        const profilesRes = await supabase
           .from('profiles')
           .select('id, email, full_name, date_of_birth, phone')
           .in('id', userIds);
+        const profiles = profilesRes.data;
+        if (profilesRes.error) {
+          console.error('[UsersView] load profiles error:', profilesRes.error.message);
+        }
 
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
@@ -985,72 +988,12 @@ export function SettingsView() {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
-  const [healthRunning, setHealthRunning] = useState(false);
-  const [health, setHealth] = useState<{ ok: boolean; label: string; detail?: string }[]>([]);
-  const [lastErrorsOpen, setLastErrorsOpen] = useState(false);
 
   useEffect(() => {
     setFullName(profile?.full_name ?? '');
     setDob(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '');
     setPhone(profile?.phone ?? '');
   }, [profile]);
-
-  const runHealthChecks = async () => {
-    if (!supabase) {
-      setHealth([{ ok: false, label: 'Supabase', detail: 'Offline/mock mode' }]);
-      return;
-    }
-    const checks: { ok: boolean; label: string; detail?: string }[] = [];
-    setHealthRunning(true);
-    try {
-      // 1) Profiles schema (columns exist)
-      const { error: schemaErr } = await supabase
-        .from('profiles')
-        .select('id,email,full_name,date_of_birth,phone')
-        .limit(1);
-      checks.push({
-        ok: !schemaErr,
-        label: 'Schema: profiles(date_of_birth, phone)',
-        detail: schemaErr ? schemaErr.message : 'OK',
-      });
-
-      // 2) Can read project members + profiles (RLS sanity)
-      const currentProjectId = useAuthStore.getState().currentProjectId;
-      if (currentProjectId) {
-        const { data: members, error: pmErr } = await supabase
-          .from('project_members')
-          .select('user_id')
-          .eq('project_id', currentProjectId)
-          .limit(50);
-        checks.push({
-          ok: !pmErr,
-          label: 'RLS: project_members readable',
-          detail: pmErr ? pmErr.message : `OK (${members?.length ?? 0} rows sample)`,
-        });
-
-        const userIds = (members ?? []).map((m: any) => m.user_id).filter(Boolean);
-        if (!pmErr && userIds.length > 0) {
-          const { data: profs, error: pErr } = await supabase
-            .from('profiles')
-            .select('id,email,full_name')
-            .in('id', userIds);
-          const got = (profs ?? []).length;
-          checks.push({
-            ok: !pErr && got > 0,
-            label: 'RLS: profiles readable for project members',
-            detail: pErr ? pErr.message : `OK (${got}/${userIds.length})`,
-          });
-        }
-      } else {
-        checks.push({ ok: false, label: 'Project', detail: 'Chưa chọn project' });
-      }
-    } catch (e: any) {
-      checks.push({ ok: false, label: 'Health check', detail: e?.message || String(e) });
-    } finally {
-      setHealth(checks);
-      setHealthRunning(false);
-    }
-  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1125,63 +1068,6 @@ export function SettingsView() {
             </button>
           {msg && <div style={{ fontSize: '13px', marginTop: '8px', color: msg.startsWith('✅') ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>{msg}</div>}
         </form>
-      </div>
-
-      <div style={{ ...styles.cardContainer, marginTop: '20px' }}>
-        <h4 style={styles.sectionTitle}>🩺 System health</h4>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button type="button" style={styles.submitBtn} onClick={runHealthChecks} disabled={healthRunning}>
-            {healthRunning ? '⏳ Đang kiểm tra...' : 'Chạy kiểm tra'}
-          </button>
-          <button
-            type="button"
-            style={styles.inlineEditBtn}
-            onClick={() => setLastErrorsOpen((v) => !v)}
-            title="Xem lỗi gần đây trên trình duyệt"
-          >
-            {lastErrorsOpen ? 'Ẩn lỗi gần đây' : 'Xem lỗi gần đây'}
-          </button>
-        </div>
-
-        {health.length > 0 && (
-          <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-            {health.map((c) => (
-              <div
-                key={c.label}
-                style={{
-                  border: `1px solid ${c.ok ? '#bbf7d0' : '#fecaca'}`,
-                  background: c.ok ? '#f0fdf4' : '#fef2f2',
-                  color: c.ok ? '#047857' : '#b91c1c',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  fontSize: 13,
-                  fontWeight: 800,
-                }}
-              >
-                {c.ok ? 'OK' : 'FAIL'} · {c.label}
-                {c.detail ? <div style={{ fontWeight: 600, marginTop: 4, color: 'rgba(0,0,0,.65)' }}>{c.detail}</div> : null}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {lastErrorsOpen && (
-          <div style={{ marginTop: 10 }}>
-            {readLastErrors().length === 0 ? (
-              <div style={{ color: 'var(--color-text-2)', fontSize: 13 }}>Không có lỗi được ghi nhận.</div>
-            ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
-                {readLastErrors().slice(0, 10).map((e, idx) => (
-                  <div key={idx} style={{ border: '1px solid var(--color-border)', borderRadius: 10, padding: 10, background: '#fff' }}>
-                    <div style={{ fontWeight: 900, fontSize: 12, color: '#0f172a' }}>{e.kind.toUpperCase()} · {new Date(e.when).toLocaleString('vi-VN')}</div>
-                    <div style={{ fontSize: 12, color: '#334155', marginTop: 4 }}>{e.message}</div>
-                    {e.href && <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{e.href}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       <div style={{ ...styles.cardContainer, marginTop: '20px' }}>

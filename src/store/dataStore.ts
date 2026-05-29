@@ -68,7 +68,7 @@ interface DataStore {
 export const useDataStore = create<DataStore>((set, get) => ({
   zones:           [],
   assignments:     [],
-  agents:          MOCK_AGENTS,
+  agents:          [],
   regions:         [],
   currentRegionId: null,
   currentProjectId: undefined,
@@ -101,8 +101,10 @@ export const useDataStore = create<DataStore>((set, get) => ({
       // Keep regionId as-is; null = unassigned (no forced default)
       set({ zones: z, assignments: a, agents: ag, regions: rg })
     } catch (e) {
-      console.error('[DataStore] init error, fallback to MOCK:', e)
-      set({ zones: MOCK_ZONES, assignments: MOCK_ASSIGNMENTS, agents: MOCK_AGENTS, regions: [] })
+      console.error('[DataStore] init error:', e)
+      // Important: never leak MOCK data into real accounts/projects when online.
+      // Offline mode is handled by services/db.ts when Supabase isn't configured.
+      set({ zones: [], assignments: [], agents: [], regions: [] })
     } finally {
       set({ loading: false, initialized: true })
     }
