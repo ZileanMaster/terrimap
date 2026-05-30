@@ -9,6 +9,7 @@
 import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import L from 'leaflet'
+import 'leaflet-draw'
 import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
@@ -63,7 +64,6 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     const boot = async () => {
       if (typeof window === 'undefined') return
-      await import('leaflet-draw')
       if (cancelled) return
 
       drawnItems = new L.FeatureGroup()
@@ -214,4 +214,3 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
   // Hook-only component - no JSX output
   return null
 }
-
