@@ -71,7 +71,8 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       drawnItemsRef.current = drawnItems
 
       drawControl = new (L.Control as any).Draw({
-        position: 'topright',
+        // Avoid overlapping the app's top-right map actions ("Lưu map" / "Mở map").
+        position: 'bottomright',
         draw: {
           polygon: {
             allowIntersection: false,
