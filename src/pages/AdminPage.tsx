@@ -415,7 +415,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                   <button
                     style={styles.mapHudBtnGhost}
                     onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
-                    title="Bật/tắt công cụ vẽ và sửa polygon (góc phải bản đồ)"
+                    title="Bật/tắt công cụ vẽ và sửa polygon (góc phải dưới bản đồ)"
                   >
                     {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
                   </button>
@@ -435,6 +435,15 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                     {islandZoneIds.size} cô lập
                   </span>
                 </div>
+                {role === 'admin' && (
+                  <button
+                    style={styles.mapHudBtnGhost}
+                    onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
+                    title="Bật/tắt công cụ vẽ và sửa polygon (góc phải dưới bản đồ)"
+                  >
+                    {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
+                  </button>
+                )}
               </div>
             )}
           </div>
