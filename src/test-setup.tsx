@@ -14,8 +14,6 @@ vi.mock('react-leaflet', () => ({
     React.createElement('div', { 'data-testid': 'map-container' }, children),
 
   TileLayer: () => null,
-  Polyline: () => null,
-  CircleMarker: () => null,
 
   Polygon: ({
     eventHandlers,
@@ -43,7 +41,6 @@ vi.mock('react-leaflet', () => ({
     React.createElement('div', { 'data-testid': 'tooltip' }, children),
 
   useMap: () => ({ setView: vi.fn(), invalidateSize: vi.fn() }),
-  useMapEvents: () => ({}),
 }))
 
 // Mock leaflet (icon fix tạo lỗi trong jsdom)
