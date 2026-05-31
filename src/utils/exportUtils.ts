@@ -172,7 +172,7 @@ export function printReport(
   <meta charset="UTF-8">
   <title>Territory Report — ${dateShort}</title>
   <style>
-    body { font-family: 'Inter', -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; }
+    body { font-family: 'Be Vietnam Pro', 'Segoe UI', Roboto, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; }
     h1 { font-size: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
     h2 { font-size: 16px; margin-top: 24px; color: #2563eb; }
     table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
