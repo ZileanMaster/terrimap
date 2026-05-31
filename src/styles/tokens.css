@@ -100,6 +100,11 @@ html, body, #root {
   filter: var(--map-tile-filter) !important;
 }
 
+/* Leaflet.Draw toolbar: place at top-right but below the app's Save/Load controls. */
+.leaflet-top.leaflet-right .leaflet-draw {
+  margin-top: 64px;
+}
+
 /* ── Utility classes ── */
 .text-muted { color: var(--color-text-2); }
 .text-faint  { color: var(--color-text-3); }

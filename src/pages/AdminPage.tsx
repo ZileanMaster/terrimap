@@ -101,15 +101,12 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
   const isMapTransitioning    = useUIStore((s) => s.isMapTransitioning)
   const setMapTransitioning   = useUIStore((s) => s.setMapTransitioning)
-  const polygonEditEnabled    = useUIStore((s: any) => (s?.polygonEditEnabled ?? false) as boolean)
-  const setPolygonEditEnabled = useUIStore((s: any) => s.setPolygonEditEnabled as (v: boolean) => void)
+  // Leaflet.Draw toolbar is always visible for admins; no toggle state needed here.
   const ctx                   = useFacade()
   const role                  = useUIStore((s) => s.role)
 
   // Default: show draw/edit tools in "Khu vực & bản đồ".
-  useEffect(() => {
-    if (mode === 'regions' && role === 'admin') setPolygonEditEnabled(true)
-  }, [mode, role, setPolygonEditEnabled])
+  // No per-mode enable/disable for drawing toolbar.
 
   // Load version history once (local facade — not DB)
   useEffect(() => {
@@ -375,7 +372,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
         >
-          {(mode === 'regions' || polygonEditEnabled) && role === 'admin' && (
+          {role === 'admin' && (
             <DrawingToolbar
               onZoneCreated={handleZoneCreated}
               onZoneEdited={handleZoneEdited}
@@ -411,15 +408,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                 <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
                   {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
                 </button>
-                {role === 'admin' && (
-                  <button
-                    style={styles.mapHudBtnGhost}
-                    onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
-                    title="Bật/tắt công cụ vẽ và sửa polygon (góc phải dưới bản đồ)"
-                  >
-                    {polygonEditEnabled ? 'Tắt vẽ/sửa polygon' : 'Vẽ/sửa polygon'}
-                  </button>
-                )}
+                {/* Drawing toolbar is always visible for admins (top-right). */}
               </div>
             ) : (
               <div style={styles.mapHudRow}>
@@ -435,15 +424,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                     {islandZoneIds.size} cô lập
                   </span>
                 </div>
-                {role === 'admin' && (
-                  <button
-                    style={styles.mapHudBtnGhost}
-                    onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
-                    title="Bật/tắt công cụ vẽ và sửa polygon (góc phải dưới bản đồ)"
-                  >
-                    {polygonEditEnabled ? 'Tắt vẽ/sửa polygon' : 'Vẽ/sửa polygon'}
-                  </button>
-                )}
+                {/* Drawing toolbar is always visible for admins (top-right). */}
               </div>
             )}
           </div>
