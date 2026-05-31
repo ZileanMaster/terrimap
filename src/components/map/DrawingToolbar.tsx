@@ -205,7 +205,9 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     if (latlngs.length < 3) return
 
-    const layer = L.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: false })
+    // IMPORTANT: must be interactive for Leaflet.Draw edit handles to work.
+    // If interactive is false, the polygon will not receive pointer events and edits feel "non-clickable".
+    const layer = L.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
     ;(layer as any).__zoneId = selectedZone.id
     selectedLayerRef.current = layer
     selectedOriginalRingRef.current = layerToRing(layer)

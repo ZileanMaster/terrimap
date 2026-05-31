@@ -164,7 +164,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
     position: 'relative',
     overflow: 'auto',
-    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    fontFamily: "'Be Vietnam Pro', 'Segoe UI', Roboto, system-ui, sans-serif",
   },
   bgShape1: {
     position: 'fixed',

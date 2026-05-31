@@ -417,7 +417,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                     onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
                     title="Bật/tắt công cụ vẽ và sửa polygon (góc phải dưới bản đồ)"
                   >
-                    {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
+                    {polygonEditEnabled ? 'Tắt vẽ/sửa polygon' : 'Vẽ/sửa polygon'}
                   </button>
                 )}
               </div>
@@ -441,7 +441,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
                     onClick={() => setPolygonEditEnabled(!polygonEditEnabled)}
                     title="Bật/tắt công cụ vẽ và sửa polygon (góc phải dưới bản đồ)"
                   >
-                    {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
+                    {polygonEditEnabled ? 'Tắt vẽ/sửa polygon' : 'Vẽ/sửa polygon'}
                   </button>
                 )}
               </div>

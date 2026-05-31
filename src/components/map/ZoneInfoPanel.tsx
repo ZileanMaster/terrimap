@@ -26,9 +26,11 @@ export default function ZoneInfoPanel({
   const { t } = useTranslation()
   const role = useUIStore((s) => s.role)
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
+  const selectZone = useUIStore((s) => s.selectZone)
   const toggleZoneHidden = useUIStore((s: any) => s.toggleZoneHidden as (zoneId: string) => void)
   const hiddenZoneIds = useUIStore((s: any) => (s.hiddenZoneIds ?? {}) as Record<string, true>)
   const setPolygonEditEnabled = useUIStore((s: any) => s.setPolygonEditEnabled as (v: boolean) => void)
+  const polygonEditEnabled = useUIStore((s: any) => (s?.polygonEditEnabled ?? false) as boolean)
   const showPolygons = useUIStore((s: any) => (s.showPolygons ?? true) as boolean)
   const togglePolygons = useUIStore((s: any) => s.togglePolygons as () => void)
 
@@ -126,11 +128,26 @@ export default function ZoneInfoPanel({
           <h3 style={styles.zoneName}>{zone.name}</h3>
           <div style={styles.zoneSub}>Polygon {zone.id}</div>
         </div>
-        {districtId >= 0 && (
-          <span style={{ ...styles.badge, background: distColor }}>
-            C{districtId}
-          </span>
-        )}
+        <div style={styles.headerRight}>
+          {districtId >= 0 && (
+            <span style={{ ...styles.badge, background: distColor }}>
+              C{districtId}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              selectZone(null)
+              setPolygonEditEnabled(false)
+            }}
+            aria-label="Đóng bảng thông tin"
+            title="Đóng"
+            style={styles.closeBtn}
+            data-testid="zone-panel-close"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       <div style={styles.quickActions}>
@@ -152,12 +169,12 @@ export default function ZoneInfoPanel({
               if (!selectedZoneId) return
               if (!showPolygons) togglePolygons()
               if (hiddenZoneIds[selectedZoneId]) toggleZoneHidden(selectedZoneId)
-              setPolygonEditEnabled(true)
+              setPolygonEditEnabled(!polygonEditEnabled)
             }}
             data-testid="enable-polygon-edit"
             title="Bật công cụ sửa polygon (góc phải bản đồ)"
           >
-            Sửa polygon
+            {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
           </button>
         )}
       </div>
@@ -338,6 +355,25 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     gap: 12,
     marginBottom: 12,
+  },
+  headerRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text-2)',
+    cursor: 'pointer',
+    fontSize: 18,
+    lineHeight: '26px',
+    textAlign: 'center',
+    padding: 0,
   },
   zoneName: {
     fontSize: 16,

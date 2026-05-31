@@ -81,7 +81,7 @@
 
 html, body, #root {
   height: 100%;
-  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Roboto, system-ui, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
   font-size: 14px;
