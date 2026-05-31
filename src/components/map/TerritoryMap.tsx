@@ -3,14 +3,13 @@
  *
  * L4b-1: highlightedSalesId + isTransitioning
  * L4b-2: islandZoneIds (dashed orange border) + disconnectedDistrictIds (dashed red border)
- * L4c:   children prop for DrawingToolbar
  *
  * Priority chain: disconnected(red) > island(orange) > highlighted > selected > normal
  */
 
-import React, { useMemo } from 'react'
-import { MapContainer, TileLayer, Polygon, Tooltip, useMap } from 'react-leaflet'
-import type { Zone, Assignment } from '../../../facades/viewmodels.js'
+import React, { useMemo, useEffect, useState, useCallback } from 'react'
+import { MapContainer, TileLayer, Polygon, Polyline, CircleMarker, Tooltip, useMap, useMapEvents } from 'react-leaflet'
+import type { Zone, Assignment, GeoJSONPolygon } from '../../../facades/viewmodels.js'
 
 import {
   getDistrictFillColor,
@@ -37,9 +36,13 @@ export interface TerritoryMapProps {
   isTransitioning?:   boolean          // L4b-1
   center?:            [number, number]
   zoom?:              number
-  children?:          React.ReactNode  // L4c: DrawingToolbar
+  children?:          React.ReactNode
   islandZoneIds?:           Set<string>   // L4b-2 EC-1
   disconnectedDistrictIds?: Set<number>   // L4b-2 EC-2
+  /** Show a single top-right button that lets the user draw a polygon by clicking points on the map. */
+  canDrawPolygon?: boolean
+  /** Called when the user finishes drawing a polygon via click-to-add-points mode. */
+  onPolygonDrawn?: (polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
 }
 
 // ── Leaflet position fix ───────────────────────────────────────────────────────
@@ -122,6 +125,8 @@ export default function TerritoryMap({
   children,
   islandZoneIds,
   disconnectedDistrictIds,
+  canDrawPolygon = false,
+  onPolygonDrawn,
 }: TerritoryMapProps) {
   // Note: uiStore is mocked in some unit tests with partial state, so keep defaults here.
   const selectedDistrictId = useUIStore((s: any) => (s?.selectedDistrictId ?? null) as number | null)
@@ -152,8 +157,99 @@ export default function TerritoryMap({
     return m
   }, [zones])
 
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [drawPoints, setDrawPoints] = useState<[number, number][]>([]) // [lat,lng]
+
+  const resetDrawing = useCallback(() => {
+    setIsDrawing(false)
+    setDrawPoints([])
+  }, [])
+
+  const finishDrawing = useCallback(() => {
+    if (!onPolygonDrawn) {
+      resetDrawing()
+      return
+    }
+    if (drawPoints.length < 3) {
+      alert('Cần ít nhất 3 điểm để tạo polygon.')
+      return
+    }
+
+    const ring: [number, number][] = drawPoints.map(([lat, lng]) => [lng, lat])
+    const first = ring[0]
+    const last = ring[ring.length - 1]
+    if (first && last && (first[0] !== last[0] || first[1] !== last[1])) ring.push([first[0], first[1]])
+
+    const centroid = {
+      lat: drawPoints.reduce((s, p) => s + p[0], 0) / drawPoints.length,
+      lng: drawPoints.reduce((s, p) => s + p[1], 0) / drawPoints.length,
+    }
+    const polygon: GeoJSONPolygon = { type: 'Polygon', coordinates: [ring] }
+    onPolygonDrawn(polygon, centroid)
+    resetDrawing()
+  }, [drawPoints, onPolygonDrawn, resetDrawing])
+
+  // Keyboard shortcuts while drawing:
+  // - Esc: cancel
+  // - Backspace: undo last point
+  useEffect(() => {
+    if (!isDrawing) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        resetDrawing()
+      } else if (e.key === 'Backspace') {
+        e.preventDefault()
+        setDrawPoints((prev) => prev.slice(0, -1))
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isDrawing, resetDrawing])
+
+  function DrawPointCatcher({ enabled }: { enabled: boolean }) {
+    useMapEvents({
+      click: (e) => {
+        if (!enabled) return
+        const t = e.originalEvent?.target as HTMLElement | undefined
+        if (t && (t.closest?.('[data-tm-overlay]') || t.closest?.('[data-snapshot-manager]'))) return
+        setDrawPoints((prev) => [...prev, [e.latlng.lat, e.latlng.lng]])
+      },
+    })
+    return null
+  }
+
   return (
     <div style={styles.wrapper} data-testid="territory-map">
+      {canDrawPolygon && (
+        <div style={styles.drawOverlay} data-tm-overlay>
+          <button
+            type="button"
+            style={styles.drawBtn}
+            onClick={() => {
+              if (!isDrawing) {
+                setIsDrawing(true)
+                setDrawPoints([])
+                return
+              }
+              finishDrawing()
+            }}
+            title={isDrawing ? 'Kết thúc vẽ polygon' : 'Vẽ polygon (chấm các điểm trên bản đồ)'}
+          >
+            {isDrawing ? 'Kết thúc vẽ' : 'Vẽ polygon'}
+          </button>
+          {isDrawing && (
+            <button
+              type="button"
+              style={styles.drawBtnGhost}
+              onClick={resetDrawing}
+              title="Hủy vẽ (Esc)"
+            >
+              Hủy
+            </button>
+          )}
+        </div>
+      )}
       <MapContainer
         center={center}
         zoom={zoom}
@@ -169,6 +265,29 @@ export default function TerritoryMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           className="map-tiles"
         />
+
+        <DrawPointCatcher enabled={Boolean(canDrawPolygon && onPolygonDrawn && isDrawing)} />
+
+        {isDrawing && drawPoints.length > 0 && (
+          <>
+            <Polyline positions={drawPoints} pathOptions={{ color: '#2563eb', weight: 2, opacity: 0.9 }} />
+            {drawPoints.map((p, idx) => (
+              <CircleMarker
+                key={idx}
+                center={p}
+                radius={4}
+                pathOptions={{ color: '#1d4ed8', weight: 2, fillColor: '#60a5fa', fillOpacity: 1 }}
+              />
+            ))}
+          </>
+        )}
+
+        {isDrawing && drawPoints.length >= 3 && (
+          <Polygon
+            positions={[drawPoints]}
+            pathOptions={{ color: '#2563eb', weight: 2, fillColor: '#60a5fa', fillOpacity: 0.08, dashArray: '4 3' }}
+          />
+        )}
 
         {showPolygons && zones
           .filter((z) => !hiddenZoneIds[z.id])
@@ -347,6 +466,41 @@ const styles: Record<string, React.CSSProperties> = {
   map: {
     width: '100%',
     height: '100%',
+  },
+  drawOverlay: {
+    position: 'absolute',
+    top: 14,
+    right: 10,
+    zIndex: 1200,
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+  },
+  drawBtn: {
+    padding: '7px 12px',
+    borderRadius: 8,
+    border: '1.5px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+    backdropFilter: 'blur(8px)',
+    whiteSpace: 'nowrap',
+  },
+  drawBtnGhost: {
+    padding: '7px 12px',
+    borderRadius: 8,
+    border: '1.5px solid var(--color-border)',
+    background: 'rgba(255,255,255,0.7)',
+    color: 'var(--color-text)',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+    backdropFilter: 'blur(8px)',
+    whiteSpace: 'nowrap',
   },
   emptyOverlay: {
     position: 'absolute',
