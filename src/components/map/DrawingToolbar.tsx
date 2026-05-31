@@ -9,7 +9,6 @@
 import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import L from 'leaflet'
-import 'leaflet-draw'
 import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
@@ -64,6 +63,18 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     const boot = async () => {
       if (typeof window === 'undefined') return
+      if (cancelled) return
+
+      // Leaflet.Draw is CJS and can be finicky in Vite/E SM builds.
+      // Dynamic import here prevents hard crashes and ensures the side-effect runs before we access L.Control.Draw.
+      try {
+        await import('leaflet-draw')
+      } catch (e) {
+        // Without Leaflet.Draw, the toolbar cannot render; surface a useful error for debugging.
+        // eslint-disable-next-line no-console
+        console.error('[TerriMap] Failed to load leaflet-draw:', e)
+        return
+      }
       if (cancelled) return
 
       drawnItems = new L.FeatureGroup()
