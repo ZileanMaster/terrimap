@@ -29,6 +29,8 @@ export default function ZoneInfoPanel({
   const selectZone = useUIStore((s) => s.selectZone)
   const toggleZoneHidden = useUIStore((s: any) => s.toggleZoneHidden as (zoneId: string) => void)
   const hiddenZoneIds = useUIStore((s: any) => (s.hiddenZoneIds ?? {}) as Record<string, true>)
+  const setPolygonEditEnabled = useUIStore((s: any) => s.setPolygonEditEnabled as (v: boolean) => void)
+  const polygonEditEnabled = useUIStore((s: any) => (s?.polygonEditEnabled ?? false) as boolean)
   const showPolygons = useUIStore((s: any) => (s.showPolygons ?? true) as boolean)
   const togglePolygons = useUIStore((s: any) => s.togglePolygons as () => void)
 
@@ -136,6 +138,7 @@ export default function ZoneInfoPanel({
             type="button"
             onClick={() => {
               selectZone(null)
+              setPolygonEditEnabled(false)
             }}
             aria-label="Đóng bảng thông tin"
             title="Đóng"
@@ -159,7 +162,21 @@ export default function ZoneInfoPanel({
         >
           {isHidden ? 'Hiện polygon này' : 'Ẩn polygon này'}
         </button>
-        {/* Intentionally no polygon edit controls here; polygon drawing is provided by the map's top-right button. */}
+        {role === 'admin' && (
+          <button
+            style={styles.quickBtnGhost}
+            onClick={() => {
+              if (!selectedZoneId) return
+              if (!showPolygons) togglePolygons()
+              if (hiddenZoneIds[selectedZoneId]) toggleZoneHidden(selectedZoneId)
+              setPolygonEditEnabled(!polygonEditEnabled)
+            }}
+            data-testid="enable-polygon-edit"
+            title="Bật công cụ sửa polygon (góc phải bản đồ)"
+          >
+            {polygonEditEnabled ? 'Tắt sửa polygon' : 'Sửa polygon'}
+          </button>
+        )}
       </div>
 
       <div style={styles.statsGrid}>

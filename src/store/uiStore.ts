@@ -42,6 +42,8 @@ interface UIStore {
   showPolygons:        boolean            // Map layer toggle
   /** Per-zone visibility toggle (hide selected polygon without hiding all). */
   hiddenZoneIds:       Record<string, true>
+  /** Enable Leaflet-Draw toolbar for polygon editing (admin UI). */
+  polygonEditEnabled:  boolean
   // Actions
   setRole:                (role: Role) => void
   selectZone:             (id: string | null) => void
@@ -53,6 +55,7 @@ interface UIStore {
   setSelectedDistrictId:  (id: number | null) => void
   togglePolygons:         () => void
   toggleZoneHidden:       (zoneId: string) => void
+  setPolygonEditEnabled:  (v: boolean) => void
 }
 
 function applyTheme(theme: Theme) {
@@ -83,6 +86,7 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedDistrictId: null,
   showPolygons:       true,
   hiddenZoneIds:      {},
+  polygonEditEnabled: false,
 
   setRole: (role) =>
     set({
@@ -91,6 +95,7 @@ export const useUIStore = create<UIStore>((set) => ({
       highlightedSalesId: null,
       selectedDistrictId: null,
       hiddenZoneIds: {},
+      polygonEditEnabled: false,
     }),
 
   selectZone: (id) => set({ selectedZoneId: id }),
@@ -137,4 +142,6 @@ export const useUIStore = create<UIStore>((set) => ({
       else next[zoneId] = true
       return { hiddenZoneIds: next }
     }),
+
+  setPolygonEditEnabled: (v) => set({ polygonEditEnabled: v }),
 }))
