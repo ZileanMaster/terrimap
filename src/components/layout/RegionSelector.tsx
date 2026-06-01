@@ -277,8 +277,13 @@ export default function RegionSelector() {
                 <span
                   style={{
                     ...styles.status,
-                    background: blocked ? '#fef2f2' : '#ecfdf5',
-                    color: blocked ? '#b91c1c' : '#047857',
+                    border: `1px solid ${blocked
+                      ? 'color-mix(in srgb, var(--color-danger) 28%, transparent)'
+                      : 'color-mix(in srgb, var(--color-success) 28%, transparent)'}`,
+                    background: blocked
+                      ? 'color-mix(in srgb, var(--color-danger) 12%, var(--color-surface))'
+                      : 'color-mix(in srgb, var(--color-success) 12%, var(--color-surface))',
+                    color: blocked ? 'var(--color-danger)' : 'var(--color-success)',
                   }}
                 >
                   {blocked ? 'Cần xử lý' : 'Sẵn sàng'}
@@ -350,7 +355,7 @@ const styles: Record<string, React.CSSProperties> = {
   primaryBtn: {
     border: 0,
     borderRadius: 8,
-    background: '#2563eb',
+    background: 'var(--color-accent)',
     color: '#fff',
     padding: '10px 14px',
     fontWeight: 800,
@@ -440,6 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--color-border)',
     borderRadius: 8,
     background: 'var(--color-bg)',
+    color: 'var(--color-text)',
     padding: 18,
     cursor: 'pointer',
     display: 'flex',

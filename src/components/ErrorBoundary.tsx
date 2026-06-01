@@ -91,8 +91,8 @@ const styles: Record<string, React.CSSProperties> = {
   ghostBtn: {
     border: '1px solid var(--color-border, rgba(148,163,184,.45))',
     borderRadius: 10,
-    background: '#fff',
-    color: '#0f172a',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
     padding: '8px 12px',
     fontWeight: 900,
     cursor: 'pointer',
@@ -100,13 +100,12 @@ const styles: Record<string, React.CSSProperties> = {
   stack: {
     marginTop: 12,
     padding: 12,
-    background: 'rgba(15,23,42,.04)',
+    background: 'var(--color-surface-2)',
     borderRadius: 10,
     overflow: 'auto',
     maxHeight: 240,
     fontSize: 11,
-    color: '#0f172a',
-    border: '1px solid rgba(148,163,184,.35)',
+    color: 'var(--color-text)',
+    border: '1px solid var(--color-border)',
   },
 }
-

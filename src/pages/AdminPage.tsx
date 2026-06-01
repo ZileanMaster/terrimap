@@ -478,7 +478,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 36,
     height: 36,
     border: '3px solid var(--color-border)',
-    borderTopColor: 'var(--color-primary)',
+    borderTopColor: 'var(--color-accent)',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
@@ -496,7 +496,7 @@ const styles: Record<string, React.CSSProperties> = {
       flexDirection: 'column',
       gap: 8,
       padding: 10,
-      background: 'rgba(255,255,255,0.92)',
+      background: 'color-mix(in srgb, var(--color-surface) 92%, transparent)',
       border: '1px solid var(--color-border)',
       borderRadius: 12,
       boxShadow: '0 8px 18px rgba(0,0,0,.10)',
@@ -513,7 +513,7 @@ const styles: Record<string, React.CSSProperties> = {
     mapHudTitle: {
       fontSize: 13,
       fontWeight: 800,
-      color: '#0f172a',
+      color: 'var(--color-text)',
     },
     mapHudBtn: {
       border: 'none',
@@ -528,8 +528,8 @@ const styles: Record<string, React.CSSProperties> = {
     },
     mapHudBtnGhost: {
       border: '1px solid var(--color-border)',
-      background: '#fff',
-      color: '#0f172a',
+      background: 'var(--color-surface)',
+      color: 'var(--color-text)',
       padding: '6px 10px',
       borderRadius: 10,
       fontWeight: 800,

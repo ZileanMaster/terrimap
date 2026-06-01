@@ -284,7 +284,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {!isOnline() && <span style={styles.statusPill}>Dữ liệu mock/offline</span>}
             <div style={styles.controls}>
               <IconButton onClick={cycleTheme} title="Giao diện (Light/Dark/System)" style={styles.controlBtn}>
-                {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '💻'}
+                {theme === 'dark' ? 'D' : theme === 'light' ? 'L' : 'A'}
               </IconButton>
               <IconButton onClick={toggleLocale} title="Đổi ngôn ngữ" style={styles.controlBtn}>
                 {locale.toUpperCase()}
