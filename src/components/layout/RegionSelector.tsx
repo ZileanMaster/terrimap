@@ -14,6 +14,95 @@ const cityPresets = [
   { name: 'Huế', center: { lat: 16.46, lng: 107.59 }, zoom: 13 },
 ]
 
+// Full Vietnam province/city list for region creation (63).
+// Centers are resolved at creation time via OSM Nominatim (no hardcoded coordinates needed).
+const vnProvinces = [
+  'An Giang',
+  'Bà Rịa - Vũng Tàu',
+  'Bắc Giang',
+  'Bắc Kạn',
+  'Bạc Liêu',
+  'Bắc Ninh',
+  'Bến Tre',
+  'Bình Định',
+  'Bình Dương',
+  'Bình Phước',
+  'Bình Thuận',
+  'Cà Mau',
+  'Cần Thơ',
+  'Cao Bằng',
+  'Đà Nẵng',
+  'Đắk Lắk',
+  'Đắk Nông',
+  'Điện Biên',
+  'Đồng Nai',
+  'Đồng Tháp',
+  'Gia Lai',
+  'Hà Giang',
+  'Hà Nam',
+  'Hà Nội',
+  'Hà Tĩnh',
+  'Hải Dương',
+  'Hải Phòng',
+  'Hậu Giang',
+  'Hòa Bình',
+  'Hưng Yên',
+  'Khánh Hòa',
+  'Kiên Giang',
+  'Kon Tum',
+  'Lai Châu',
+  'Lâm Đồng',
+  'Lạng Sơn',
+  'Lào Cai',
+  'Long An',
+  'Nam Định',
+  'Nghệ An',
+  'Ninh Bình',
+  'Ninh Thuận',
+  'Phú Thọ',
+  'Phú Yên',
+  'Quảng Bình',
+  'Quảng Nam',
+  'Quảng Ngãi',
+  'Quảng Ninh',
+  'Quảng Trị',
+  'Sóc Trăng',
+  'Sơn La',
+  'Tây Ninh',
+  'Thái Bình',
+  'Thái Nguyên',
+  'Thanh Hóa',
+  'Thừa Thiên Huế',
+  'Tiền Giang',
+  'TP. Hồ Chí Minh',
+  'Trà Vinh',
+  'Tuyên Quang',
+  'Vĩnh Long',
+  'Vĩnh Phúc',
+  'Yên Bái',
+]
+
+// Fix mojibake preset labels to real Vietnamese names (so presets work with the full dropdown list).
+const presetNameFix: Record<string, string> = {
+  'HÃ  Ná»™i': 'Hà Nội',
+  'TP. Há»“ ChÃ­ Minh': 'TP. Hồ Chí Minh',
+  'ÄÃ  Náºµng': 'Đà Nẵng',
+  'Huáº¿': 'Thừa Thiên Huế',
+}
+
+async function resolveCityCenter(city: string): Promise<{ center: { lat: number; lng: number }; zoom: number }> {
+  const preset = cityPresets.find((p) => p.name === city || presetNameFix[p.name] === city)
+  if (preset) return { center: preset.center, zoom: preset.zoom }
+
+  const q = encodeURIComponent(`${city}, Viet Nam`)
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`
+  const res = await fetch(url)
+  const data = (await res.json()) as Array<{ lat: string; lon: string }>
+  const first = data[0]
+  if (!first) throw new Error(`Không tìm thấy toạ độ cho \"${city}\".`)
+  return { center: { lat: Number(first.lat), lng: Number(first.lon) }, zoom: 12 }
+}
+
 function componentCount(zoneIds: string[], adj: Record<string, string[]>): number {
   if (zoneIds.length === 0) return 0
   const ids = new Set(zoneIds)
@@ -48,8 +137,8 @@ export default function RegionSelector() {
   const role = useUIStore((s) => s.role)
 
   const [creating, setCreating] = useState(false)
-  const [city, setCity] = useState(cityPresets[0]?.name ?? '')
-  const [name, setName] = useState(cityPresets[0]?.name ?? '')
+  const [city, setCity] = useState(vnProvinces[0] ?? 'Hà Nội')
+  const [name, setName] = useState(vnProvinces[0] ?? 'Hà Nội')
 
   const regionCards = useMemo(
     () =>
@@ -75,16 +164,20 @@ export default function RegionSelector() {
   )
 
   const handlePreset = (preset: (typeof cityPresets)[number]) => {
-    setCity(preset.name)
-    setName(preset.name)
+    const normalized = presetNameFix[preset.name] ?? preset.name
+    setCity(normalized)
+    setName(normalized)
     setCreating(true)
   }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    const preset = cityPresets.find((p) => p.name === city)
-    if (!preset) return
-    const region = await addRegion(name.trim() || preset.name, { lat: preset.center.lat, lng: preset.center.lng }, preset.zoom)
+    const resolved = await resolveCityCenter(city)
+    const region = await addRegion(
+      name.trim() || city,
+      { lat: resolved.center.lat, lng: resolved.center.lng },
+      resolved.zoom,
+    )
     setName('')
     setCreating(false)
     setCurrentRegion(region.id)
@@ -144,16 +237,16 @@ export default function RegionSelector() {
                   const next = e.target.value
                   setCity(next)
                   // Auto-fill name to match city unless user already customized.
-                  if (!name || cityPresets.some((p) => p.name === name)) {
+                  if (!name || cityPresets.some((p) => p.name === name || presetNameFix[p.name] === name)) {
                     setName(next)
                   }
                 }}
                 required
                 style={styles.input}
               >
-                {cityPresets.map((preset) => (
-                  <option key={preset.name} value={preset.name}>
-                    {preset.name}
+                {vnProvinces.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
                   </option>
                 ))}
               </select>
@@ -397,4 +490,3 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
   },
 }
-
