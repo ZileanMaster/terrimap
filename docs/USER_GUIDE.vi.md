@@ -46,7 +46,7 @@ Nếu một cụm bị tách thành nhiều phần rời nhau, phần mềm sẽ
 Mở terminal tại thư mục dự án:
 
 ```powershell
-cd C:\Users\IT-THIEN\terrimap
+cd <thu_muc_du_an_terrimap>
 npm run dev
 ```
 
@@ -80,6 +80,15 @@ Các mục điều hướng chính:
 
 ## 4. Luồng Sử Dụng Khuyến Nghị
 
+### 4.0 Quick start (đi đúng workflow)
+
+1. Đăng nhập.
+2. Chọn **Dự án** (hoặc tạo dự án mới).
+3. Trên thanh trên cùng (top bar), bạn có thể:
+   - Đổi **giao diện** (Light/Dark/System).
+   - Đổi **ngôn ngữ** (VI/EN).
+4. Đi theo các bước chuẩn bên dưới để đảm bảo dữ liệu “đủ điều kiện” trước khi chạy thuật toán.
+
 Luồng chuẩn nên đi theo thứ tự sau:
 
 1. Chọn hoặc tạo khu vực.
@@ -93,6 +102,17 @@ Luồng chuẩn nên đi theo thứ tự sau:
 9. Lưu snapshot hoặc export dữ liệu.
 
 Không nên chạy thuật toán khi khu vực chưa có đủ polygon, chưa có sales hoặc dữ liệu polygon đang lỗi topology.
+
+### 4.1 Workflow theo vai trò
+
+#### Admin (Quản trị)
+- Thiết lập dự án/khu vực → import/vẽ zones → cấu hình Sales/Users → chạy thuật toán → chốt snapshot → export.
+
+#### Coordinator (Điều phối)
+- Chọn khu vực → kiểm tra trạng thái sẵn sàng (Topology/Liên thông) → chạy thuật toán/điều chỉnh → theo dõi lỗi liên thông → chốt snapshot.
+
+#### Sales
+- Xem cụm/vùng được giao → kiểm tra khối lượng (khách hàng/đơn hàng) → gửi đánh giá (feedback) nếu có.
 
 ## 5. Màn Tổng Quan
 

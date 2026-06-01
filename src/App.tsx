@@ -21,6 +21,7 @@ import DashboardLayout from './components/layout/DashboardLayout.js'
 import { OverviewView, RegionsView, UsersView, OperationsView, SettingsView } from './pages/DashboardViews.js'
 import AlgorithmComparator from './components/algorithm/AlgorithmComparator.js'
 import RegionSelector from './components/layout/RegionSelector.js'
+import ToastViewport from './components/ui/Toast.js'
 
 // ── Lazy-loaded pages (code splitting) ───────────────────────────────────────
 const AdminPage       = React.lazy(() => import('./pages/AdminPage.js'))
@@ -122,6 +123,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
+        <ToastViewport />
         <DashboardLayout>
           {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
@@ -164,6 +166,7 @@ function OfflineApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
+        <ToastViewport />
         <DashboardLayout>
           {(activeTab) => (
             <Suspense fallback={<PageLoader />}>

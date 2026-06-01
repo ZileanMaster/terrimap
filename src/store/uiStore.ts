@@ -6,6 +6,7 @@ export type Theme  = 'light' | 'dark' | 'system'
 export type Locale = 'vi' | 'en'
 
 const LOCALE_KEY = 'terrimap_locale'
+const THEME_KEY  = 'terrimap_theme'
 
 function getInitialLocale(): Locale {
   try {
@@ -22,11 +23,33 @@ function applyLocale(locale: Locale) {
   } catch {
     // ignore storage errors
   }
+  try {
+    document.documentElement.lang = locale
+  } catch {
+    // ignore DOM errors (tests/non-browser)
+  }
   // Keep i18next in sync so UI updates immediately.
   try {
     i18n.changeLanguage(locale)
   } catch {
     // ignore i18n errors
+  }
+}
+
+function getInitialTheme(): Theme {
+  try {
+    const v = localStorage.getItem(THEME_KEY)
+    return v === 'light' || v === 'dark' || v === 'system' ? v : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+function persistTheme(theme: Theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme)
+  } catch {
+    // ignore storage errors
   }
 }
 
@@ -74,7 +97,13 @@ export const useUIStore = create<UIStore>((set) => ({
   role:               'admin',
   selectedZoneId:     null,
   isAlgorithmRunning: false,
-  theme:              'system',
+  theme:              (() => {
+    const initial = getInitialTheme()
+    persistTheme(initial)
+    // Apply on first load so the whole app (including DashboardLayout) matches.
+    try { applyTheme(initial) } catch { /* ignore */ }
+    return initial
+  })(),
   // Keep i18n initial language in sync with the store (important on first load).
   locale:             (() => {
     const initial = getInitialLocale()
@@ -104,6 +133,7 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setTheme: (theme) => {
     set({ theme })
+    persistTheme(theme)
     applyTheme(theme)
   },
 
