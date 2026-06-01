@@ -98,7 +98,16 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         edit: {
           featureGroup: drawnItems,
           remove: false,
-          edit: true,
+          // Leaflet.Draw expects an object here (it writes selectedPathOptions onto it).
+          // Passing boolean true can crash: "Cannot create property 'selectedPathOptions' on boolean 'true'".
+          edit: {
+            selectedPathOptions: {
+              color: '#2563eb',
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0.08,
+            },
+          },
         },
       })
 
