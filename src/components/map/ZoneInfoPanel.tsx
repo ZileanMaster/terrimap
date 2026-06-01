@@ -38,6 +38,7 @@ export default function ZoneInfoPanel({
   const [editCustomers, setEditCustomers] = useState('')
   const [editOrders, setEditOrders] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [minimized, setMinimized] = useState(false)
 
   const zone = zones.find((z) => z.id === selectedZoneId)
   const assignment = assignments.find((a) => a.zoneId === selectedZoneId)
@@ -61,6 +62,7 @@ export default function ZoneInfoPanel({
     setAssignError('')
     setEditCustomers('')
     setEditOrders('')
+    setMinimized(false)
   }, [selectedZoneId])
 
   useEffect(() => {
@@ -119,6 +121,46 @@ export default function ZoneInfoPanel({
     setEditOrders('')
   }
 
+  if (minimized) {
+    return (
+      <div style={styles.panelMin}>
+        <div style={styles.minRow}>
+          <div style={styles.minLeft}>
+            <div style={styles.minTitle}>{zone.name}</div>
+            <div style={styles.minSub}>Polygon {zone.id}</div>
+          </div>
+          <div style={styles.minRight}>
+            {districtId >= 0 && (
+              <span style={{ ...styles.badge, background: distColor }}>
+                C{districtId}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => setMinimized(false)}
+              aria-label="Mở rộng bảng thông tin"
+              title="Mở rộng"
+              style={styles.iconBtn}
+              data-testid="zone-panel-expand"
+            >
+              ▢
+            </button>
+            <button
+              type="button"
+              onClick={() => selectZone(null)}
+              aria-label="Đóng bảng thông tin"
+              title="Đóng"
+              style={styles.iconBtn}
+              data-testid="zone-panel-close"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={styles.panel}>
       <div style={styles.header}>
@@ -134,12 +176,22 @@ export default function ZoneInfoPanel({
           )}
           <button
             type="button"
+            onClick={() => setMinimized(true)}
+            aria-label="Thu gọn bảng thông tin"
+            title="Thu gọn"
+            style={styles.iconBtn}
+            data-testid="zone-panel-minimize"
+          >
+            –
+          </button>
+          <button
+            type="button"
             onClick={() => {
               selectZone(null)
             }}
             aria-label="Đóng bảng thông tin"
             title="Đóng"
-            style={styles.closeBtn}
+            style={styles.iconBtn}
             data-testid="zone-panel-close"
           >
             ×
@@ -316,6 +368,19 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 999,
     width: 'min(440px, calc(100vw - 32px))',
   },
+  panelMin: {
+    position: 'absolute',
+    bottom: 24,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    padding: '10px 12px',
+    boxShadow: 'var(--shadow-lg)',
+    zIndex: 999,
+    width: 'min(440px, calc(100vw - 32px))',
+  },
   hint: {
     position: 'absolute',
     bottom: 24,
@@ -344,7 +409,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     flexShrink: 0,
   },
-  closeBtn: {
+  iconBtn: {
     width: 28,
     height: 28,
     borderRadius: 8,
@@ -356,6 +421,35 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: '26px',
     textAlign: 'center',
     padding: 0,
+  },
+  minRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  minLeft: {
+    minWidth: 0,
+  },
+  minRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  minTitle: {
+    fontSize: 14,
+    fontWeight: 800,
+    color: 'var(--color-text)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: 280,
+  },
+  minSub: {
+    color: 'var(--color-text-2)',
+    fontSize: 11,
+    marginTop: 2,
   },
   zoneName: {
     fontSize: 16,
