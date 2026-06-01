@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUIStore } from '../../store/uiStore.js'
 import { isOnline } from '../../lib/supabase.js'
+import { IconButton } from '../ui/Button.js'
 
 interface DashboardLayoutProps {
   children: (activeTab: string) => React.ReactNode
@@ -115,6 +116,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const membership = useAuthStore((s) => s.membership)
   const signOut = useAuthStore((s) => s.signOut)
   const role = useUIStore((s) => s.role)
+  const theme = useUIStore((s) => s.theme)
+  const locale = useUIStore((s) => s.locale)
+  const setTheme = useUIStore((s) => s.setTheme)
+  const toggleLocale = useUIStore((s) => s.toggleLocale)
 
   const effectiveRole = isOnline() ? (membership?.role ?? 'sales') : role
   const currentRoleLabel =
@@ -125,6 +130,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
+  const cycleTheme = () => {
+    const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
+    setTheme(next)
+  }
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 960)
@@ -215,15 +225,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 style={{
                   ...styles.menuItem,
                   justifyContent: expanded ? 'flex-start' : 'center',
-                  background: active ? '#2563eb' : 'transparent',
-                  color: active ? '#fff' : '#9ca3af',
+                  background: active ? 'var(--color-nav-item-bg-active)' : 'var(--color-nav-item-bg)',
+                  color: active ? 'var(--color-nav-item-text-active)' : 'var(--color-nav-item-text)',
                 }}
               >
                 <span
                   style={{
                     ...styles.menuIcon,
-                    background: active ? 'rgba(255,255,255,.18)' : '#111827',
-                    color: active ? '#fff' : '#93c5fd',
+                    background: active ? 'var(--color-nav-icon-bg-active)' : 'var(--color-nav-icon-bg)',
+                    color: active ? 'var(--color-nav-item-text-active)' : 'var(--color-nav-item-icon)',
                     marginRight: expanded ? 12 : 0,
                   }}
                 >
@@ -246,7 +256,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </button>
           )}
           {expanded && (
-            <button onClick={signOut} style={{ ...styles.footerBtn, color: '#f87171' }}>
+            <button onClick={signOut} style={{ ...styles.footerBtn, color: 'var(--color-danger)' }}>
               Đăng xuất
             </button>
           )}
@@ -272,6 +282,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div style={styles.headerRight}>
             {!isOnline() && <span style={styles.statusPill}>Dữ liệu mock/offline</span>}
+            <div style={styles.controls}>
+              <IconButton onClick={cycleTheme} title="Giao diện (Light/Dark/System)" style={styles.controlBtn}>
+                {theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '💻'}
+              </IconButton>
+              <IconButton onClick={toggleLocale} title="Đổi ngôn ngữ" style={styles.controlBtn}>
+                {locale.toUpperCase()}
+              </IconButton>
+            </div>
             {!isMobile && (
               <div style={styles.userPill}>
                 <span style={styles.onlineDot} />
@@ -308,10 +326,9 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     height: '100%',
     flexShrink: 0,
-    background: '#111827',
-    borderRight: '1px solid #263244',
+    background: 'var(--color-nav-bg)',
+    borderRight: '1px solid var(--color-nav-border)',
     transition: 'width 180ms ease, transform 180ms ease',
-    fontFamily: "'Times New Roman', Times, serif",
   },
   brand: {
     height: 60,
@@ -319,13 +336,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     padding: '0 18px',
     gap: 10,
-    borderBottom: '1px solid #1f2937',
+    borderBottom: '1px solid var(--color-nav-border)',
   },
   brandMark: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    background: '#2563eb',
+    background: 'var(--color-accent)',
     color: '#fff',
     display: 'grid',
     placeItems: 'center',
@@ -333,7 +350,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 0,
   },
   brandText: {
-    color: '#fff',
+    color: 'var(--color-text)',
     fontWeight: 900,
     fontSize: 16,
   },
@@ -347,8 +364,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 40,
     height: 40,
     borderRadius: 14,
-    background: '#1f2937',
-    color: '#93c5fd',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-accent)',
     display: 'grid',
     placeItems: 'center',
     fontWeight: 900,
@@ -360,7 +377,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
   },
   profileName: {
-    color: '#e5e7eb',
+    color: 'var(--color-text)',
     fontWeight: 800,
     fontSize: 14,
     overflow: 'hidden',
@@ -368,7 +385,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   profileRole: {
-    color: '#9ca3af',
+    color: 'var(--color-text-2)',
     fontSize: 12,
     fontWeight: 700,
   },
@@ -379,9 +396,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     height: 36,
     borderRadius: 10,
-    border: '1px solid #263244',
-    background: '#0b1220',
-    color: '#e5e7eb',
+    border: '1px solid var(--color-nav-border)',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text)',
     padding: '0 10px',
     outline: 'none',
   },
@@ -424,10 +441,10 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   footerBtn: {
-    border: '1px solid #263244',
+    border: '1px solid var(--color-nav-border)',
     borderRadius: 10,
-    background: '#0b1220',
-    color: '#e5e7eb',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text)',
     padding: '8px 10px',
     cursor: 'pointer',
     fontWeight: 900,
@@ -481,6 +498,16 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 10,
   },
+  controls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  controlBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+  },
   statusPill: {
     border: '1px solid var(--color-border)',
     background: 'var(--color-surface)',
@@ -505,7 +532,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 8,
     height: 8,
     borderRadius: 999,
-    background: '#22c55e',
+    background: 'var(--color-success)',
   },
   content: {
     flex: 1,

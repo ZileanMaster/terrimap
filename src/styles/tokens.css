@@ -21,6 +21,7 @@
   --color-text:         #0f172a;
   --color-text-2:       #475569;
   --color-text-3:       #94a3b8;
+  --color-text-muted:   var(--color-text-2);
   --color-accent:       #2563eb;
   --color-accent-hover: #1d4ed8;
   --color-accent-light: #eff6ff;
@@ -42,6 +43,17 @@
   --shadow-sm:  0 1px 3px rgba(0,0,0,.08);
   --shadow-md:  0 4px 12px rgba(0,0,0,.10);
   --shadow-lg:  0 8px 24px rgba(0,0,0,.12);
+
+  /* App shell (sidebar/nav) */
+  --color-nav-bg:               var(--color-surface);
+  --color-nav-border:           var(--color-border);
+  --color-nav-item-text:        var(--color-text-2);
+  --color-nav-item-icon:        var(--color-accent);
+  --color-nav-item-bg:          transparent;
+  --color-nav-item-bg-active:   var(--color-accent);
+  --color-nav-item-text-active: #ffffff;
+  --color-nav-icon-bg:          var(--color-surface-2);
+  --color-nav-icon-bg-active:   var(--color-accent-light);
 
   /* District colors — good contrast both modes */
   --district-0: #3b82f6;
@@ -66,6 +78,7 @@
   --color-text:         #e6edf3;
   --color-text-2:       #8b949e;
   --color-text-3:       #6e7681;
+  --color-text-muted:   var(--color-text-2);
   --color-accent:       #60a5fa;
   --color-accent-hover: #93c5fd;
   --color-accent-light: rgba(30,58,138,.22);
@@ -74,6 +87,17 @@
   --color-danger:       #f06060;
   --color-info:         #38bdf8;
   --map-tile-filter:    invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+
+  /* App shell (sidebar/nav) */
+  --color-nav-bg:               var(--color-surface);
+  --color-nav-border:           var(--color-border);
+  --color-nav-item-text:        var(--color-text-2);
+  --color-nav-item-icon:        var(--color-accent);
+  --color-nav-item-bg:          transparent;
+  --color-nav-item-bg-active:   var(--color-accent);
+  --color-nav-item-text-active: #0d1117;
+  --color-nav-icon-bg:          var(--color-surface-2);
+  --color-nav-icon-bg-active:   var(--color-accent-light);
 }
 
 /* ── Base reset ── */
@@ -131,7 +155,7 @@ html, body, #root {
 
 /* Focus styles for login inputs */
 input:focus {
-  border-color: #818cf8 !important;
-  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2) !important;
+  border-color: var(--color-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent) !important;
 }
 
