@@ -215,6 +215,8 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 }) {
   const { t } = useTranslation()
   const ctx                = useFacade()
+  // Sales team sidebar section removed from assignments view, but we keep the underlying state/hooks
+  // to avoid large refactors in this file.
   const highlightedSalesId = useUIStore((s) => s.highlightedSalesId)
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
   const allAgents = useDataStore((s) => s.agents)
@@ -222,7 +224,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   const agents = currentRegionId
     ? allAgents.filter((a) => (a as any).region_id === currentRegionId || (a as any).regionId === currentRegionId)
     : allAgents
-    const [agentModalOpen, setAgentModalOpen] = useState(false)
+  const [agentModalOpen, setAgentModalOpen] = useState(false)
 
   if (ctx.role !== 'admin') return null
   const mgmt = ctx.facade.getSalesManagement(zones, assignments, agents)
@@ -237,6 +239,21 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
       </div>
     )
   }
+
+  // Per request: remove the Sales team section from "Phân chia lãnh thổ" sidebar.
+  return (
+    <div style={styles.content}>
+      <DistrictAgentAssigner />
+
+      <div style={styles.divider} />
+      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
+
+      <div style={styles.divider} />
+      <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot}>
+        ðŸ“¸ {t('sidebar.create_snapshot')}
+      </button>
+    </div>
+  )
 
     return (
       <div style={styles.content}>

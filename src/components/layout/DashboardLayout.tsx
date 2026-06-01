@@ -311,6 +311,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#111827',
     borderRight: '1px solid #263244',
     transition: 'width 180ms ease, transform 180ms ease',
+    fontFamily: "'Times New Roman', Times, serif",
   },
   brand: {
     height: 60,
@@ -511,4 +512,3 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'auto',
   },
 }
-
