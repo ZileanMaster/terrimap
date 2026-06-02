@@ -1,23 +1,11 @@
-/**
- * LoginPage — Authentication
- *
- * - Glass card on dark gradient background
- * - Tabs: Sign In / Sign Up
- * - Locale toggle via uiStore (i18next sync)
- */
-
 import React, { useState } from 'react'
 import { useAuthStore } from '../store/authStore.js'
-import { useUIStore } from '../store/uiStore.js'
+import Button from '../components/ui/Button.js'
 import Input from '../components/ui/Input.js'
-import Button, { IconButton } from '../components/ui/Button.js'
 
 type Mode = 'signin' | 'signup'
 
 export default function LoginPage() {
-  const locale = useUIStore((s) => s.locale)
-  const toggleLocale = useUIStore((s) => s.toggleLocale)
-
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -43,117 +31,131 @@ export default function LoginPage() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.topRight}>
-        <IconButton onClick={toggleLocale} style={styles.topBtn} title="Đổi ngôn ngữ">
-          {locale.toUpperCase()}
-        </IconButton>
-      </div>
+      <div style={styles.glowA} />
+      <div style={styles.glowB} />
+      <div style={styles.shell}>
+        <section style={styles.brandPanel}>
+          <div style={styles.brandBadge}>TM</div>
+          <div style={styles.brandKicker}>TerriMap</div>
+          <h1 style={styles.brandTitle}>Quản lý lãnh thổ, báo cáo cụm và phân chia khu vực trong một luồng duy nhất.</h1>
+          <p style={styles.brandText}>
+            Giao diện được tối ưu cho vận hành hằng ngày: rõ ràng, ít nhiễu, tập trung vào việc chọn dự án và đi thẳng vào màn làm việc.
+          </p>
 
-      <div style={styles.bgShape1} />
-      <div style={styles.bgShape2} />
-      <div style={styles.bgShape3} />
+          <div style={styles.statRow}>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>01</div>
+              <div style={styles.statLabel}>Đăng nhập</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>02</div>
+              <div style={styles.statLabel}>Chọn dự án</div>
+            </div>
+            <div style={styles.statCard}>
+              <div style={styles.statValue}>03</div>
+              <div style={styles.statLabel}>Bắt đầu vận hành</div>
+            </div>
+          </div>
+        </section>
 
-      <div style={styles.card}>
-        <div style={styles.logoRow}>
-          <span style={styles.logoIcon}>⬡</span>
-          <span style={styles.logoText}>TerriMap</span>
-        </div>
-        <p style={styles.subtitle}>
-          {mode === 'signin'
-            ? 'Đăng nhập vào hệ thống quản lý vùng thương mại'
-            : 'Tạo tài khoản mới'}
-        </p>
+        <section style={styles.formPanel}>
+          <div style={styles.panelHeader}>
+            <div>
+              <div style={styles.panelKicker}>{mode === 'signin' ? 'Đăng nhập hệ thống' : 'Tạo tài khoản mới'}</div>
+              <div style={styles.panelTitle}>TerriMap</div>
+            </div>
+            <div style={styles.panelHint}>Tiếng Việt cố định</div>
+          </div>
 
-        <div style={styles.tabs}>
-          <button
-            type="button"
-            onClick={() => { setMode('signin'); clearError() }}
-            style={{ ...styles.tab, ...(mode === 'signin' ? styles.tabActive : {}) }}
-          >
-            Đăng nhập
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); clearError() }}
-            style={{ ...styles.tab, ...(mode === 'signup' ? styles.tabActive : {}) }}
-          >
-            Đăng ký
-          </button>
-        </div>
+          <div style={styles.tabs}>
+            <button
+              type="button"
+              onClick={() => { setMode('signin'); clearError() }}
+              style={{ ...styles.tab, ...(mode === 'signin' ? styles.tabActive : {}) }}
+            >
+              Đăng nhập
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); clearError() }}
+              style={{ ...styles.tab, ...(mode === 'signup' ? styles.tabActive : {}) }}
+            >
+              Đăng ký
+            </button>
+          </div>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          {mode === 'signup' && (
+          <form onSubmit={handleSubmit} style={styles.form}>
+            {mode === 'signup' && (
+              <div style={styles.field}>
+                <label style={styles.label}>Họ và tên</label>
+                <Input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Nguyễn Văn A"
+                  required
+                  autoComplete="name"
+                />
+                <div style={styles.helper}>Tên hiển thị trong khu vực làm việc và báo cáo.</div>
+              </div>
+            )}
+
             <div style={styles.field}>
-              <label style={styles.label}>Họ và tên</label>
+              <label style={styles.label}>Email</label>
               <Input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nguyễn Văn A"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
                 required
-                autoComplete="name"
-                style={styles.input}
+                autoComplete="email"
               />
             </div>
-          )}
 
-          <div style={styles.field}>
-            <label style={styles.label}>Email</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-              required
-              autoComplete="email"
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.field}>
-            <label style={styles.label}>Mật khẩu</label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              style={styles.input}
-            />
-          </div>
-
-          {authError && (
-            <div style={styles.error} role="alert">
-              <span style={styles.errorIcon}>⚠</span>
-              <span>{authError}</span>
+            <div style={styles.field}>
+              <label style={styles.label}>Mật khẩu</label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+              />
+              <div style={styles.helper}>Mật khẩu tối thiểu 6 ký tự.</div>
             </div>
-          )}
 
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={submitting}
-            style={{ ...styles.submit, ...(submitting ? styles.submitDisabled : {}) }}
-          >
-            {submitting ? '⏳ Đang xử lý…' : (mode === 'signin' ? 'Đăng nhập' : 'Tạo tài khoản')}
-          </Button>
-        </form>
+            {authError && (
+              <div style={styles.error} role="alert">
+                {authError}
+              </div>
+            )}
 
-        <div style={styles.footer}>
-          {mode === 'signin' ? (
-            <span>
-              Chưa có tài khoản?{' '}
-              <button type="button" onClick={() => setMode('signup')} style={styles.link}>Đăng ký</button>
-            </span>
-          ) : (
-            <span>
-              Đã có tài khoản?{' '}
-              <button type="button" onClick={() => setMode('signin')} style={styles.link}>Đăng nhập</button>
-            </span>
-          )}
-        </div>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={submitting}
+              style={styles.submit}
+            >
+              {submitting ? 'Đang xử lý...' : (mode === 'signin' ? 'Đăng nhập' : 'Tạo tài khoản')}
+            </Button>
+          </form>
+
+          <div style={styles.footer}>
+            {mode === 'signin' ? (
+              <span>
+                Chưa có tài khoản?{' '}
+                <button type="button" onClick={() => setMode('signup')} style={styles.link}>Đăng ký</button>
+              </span>
+            ) : (
+              <span>
+                Đã có tài khoản?{' '}
+                <button type="button" onClick={() => setMode('signin')} style={styles.link}>Đăng nhập</button>
+              </span>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   )
@@ -161,182 +163,222 @@ export default function LoginPage() {
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+    minHeight: '100dvh',
     position: 'relative',
     overflow: 'hidden',
-    fontFamily: "'Be Vietnam Pro', 'Segoe UI', Roboto, system-ui, sans-serif",
+    background: 'radial-gradient(circle at top left, color-mix(in srgb, var(--color-accent) 16%, transparent) 0, transparent 34%), linear-gradient(180deg, var(--color-bg) 0%, color-mix(in srgb, var(--color-bg) 85%, #000) 100%)',
+    padding: '24px',
   },
-
-  topRight: {
+  glowA: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 20,
-    display: 'flex',
-    gap: 10,
-  },
-  topBtn: {
-    borderRadius: 999,
-    border: '1px solid rgba(255,255,255,0.15)',
-    background: 'rgba(255,255,255,0.08)',
-    backdropFilter: 'blur(8px)',
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: 900,
-    width: 48,
-  },
-
-  bgShape1: {
-    position: 'absolute',
-    width: 400,
-    height: 400,
+    inset: 'auto auto -140px -120px',
+    width: 340,
+    height: 340,
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)',
-    top: -100,
-    left: -100,
-    animation: 'float 8s ease-in-out infinite',
+    background: 'radial-gradient(circle, color-mix(in srgb, var(--color-accent) 20%, transparent) 0%, transparent 72%)',
+    pointerEvents: 'none',
   },
-  bgShape2: {
+  glowB: {
     position: 'absolute',
-    width: 300,
-    height: 300,
+    inset: '-120px -80px auto auto',
+    width: 380,
+    height: 380,
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(139,92,246,0.25) 0%, transparent 70%)',
-    bottom: -50,
-    right: -50,
-    animation: 'float 10s ease-in-out infinite reverse',
+    background: 'radial-gradient(circle, color-mix(in srgb, var(--color-info) 18%, transparent) 0%, transparent 72%)',
+    pointerEvents: 'none',
   },
-  bgShape3: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(236,72,153,0.2) 0%, transparent 70%)',
-    top: '50%',
-    right: '20%',
-    animation: 'float 12s ease-in-out infinite',
-  },
-
-  card: {
+  shell: {
     position: 'relative',
-    zIndex: 10,
-    width: 420,
-    maxWidth: '92vw',
-    padding: '40px 36px 28px',
-    borderRadius: 20,
-    background: 'rgba(255, 255, 255, 0.08)',
-    backdropFilter: 'blur(24px)',
-    WebkitBackdropFilter: 'blur(24px)',
-    border: '1px solid rgba(255, 255, 255, 0.12)',
-    boxShadow: '0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05) inset',
+    zIndex: 1,
+    maxWidth: 1180,
+    minHeight: 'calc(100dvh - 48px)',
+    margin: '0 auto',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: 24,
+    alignItems: 'stretch',
   },
-
-  logoRow: {
+  brandPanel: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 28,
+    background: 'color-mix(in srgb, var(--color-surface) 92%, transparent)',
+    boxShadow: '0 24px 56px rgba(0,0,0,.18)',
+    padding: 32,
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 8,
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    minHeight: 0,
   },
-  logoIcon: {
-    fontSize: 32,
-    color: '#818cf8',
-    filter: 'drop-shadow(0 0 8px rgba(129,140,248,0.5))',
-  },
-  logoText: {
-    fontSize: 26,
-    fontWeight: 800,
+  brandBadge: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'var(--color-accent)',
     color: '#fff',
-    letterSpacing: '-0.03em',
+    fontWeight: 900,
+    letterSpacing: '.06em',
+    marginBottom: 18,
   },
-  subtitle: {
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 13,
-    marginBottom: 24,
-    lineHeight: 1.5,
+  brandKicker: {
+    textTransform: 'uppercase',
+    letterSpacing: '.12em',
+    fontSize: 11,
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
   },
-
-  tabs: {
+  brandTitle: {
+    marginTop: 12,
+    fontSize: 'clamp(2.1rem, 4vw, 4rem)',
+    lineHeight: 1.02,
+    letterSpacing: '-0.05em',
+    color: 'var(--color-text)',
+    maxWidth: '12ch',
+  },
+  brandText: {
+    marginTop: 18,
+    maxWidth: 560,
+    color: 'var(--color-text-2)',
+    lineHeight: 1.7,
+    fontSize: 15,
+  },
+  statRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+    marginTop: 32,
+  },
+  statCard: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 20,
+    background: 'var(--color-surface)',
+    padding: 16,
+  },
+  statValue: {
+    fontSize: 12,
+    fontWeight: 900,
+    color: 'var(--color-accent)',
+    letterSpacing: '.08em',
+  },
+  statLabel: {
+    marginTop: 10,
+    color: 'var(--color-text)',
+    fontWeight: 800,
+    fontSize: 14,
+  },
+  formPanel: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 28,
+    background: 'color-mix(in srgb, var(--color-surface) 96%, transparent)',
+    boxShadow: '0 24px 56px rgba(0,0,0,.18)',
+    padding: 28,
     display: 'flex',
-    gap: 4,
-    background: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 24,
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  panelHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 22,
+  },
+  panelKicker: {
+    color: 'var(--color-text-2)',
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '.08em',
+  },
+  panelTitle: {
+    marginTop: 6,
+    fontSize: 28,
+    fontWeight: 900,
+    letterSpacing: '-0.04em',
+    color: 'var(--color-text)',
+  },
+  panelHint: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 999,
+    padding: '8px 12px',
+    color: 'var(--color-text-2)',
+    fontSize: 12,
+    fontWeight: 800,
+    background: 'var(--color-surface-2)',
+    whiteSpace: 'nowrap',
+  },
+  tabs: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 8,
+    padding: 6,
+    borderRadius: 18,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    marginBottom: 22,
   },
   tab: {
-    flex: 1,
-    padding: '10px 0',
-    borderRadius: 10,
-    border: 'none',
+    border: 0,
     background: 'transparent',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--color-text-2)',
+    fontWeight: 800,
     fontSize: 14,
-    fontWeight: 700,
+    borderRadius: 12,
+    padding: '12px 14px',
     cursor: 'pointer',
   },
   tabActive: {
-    background: 'rgba(99,102,241,0.25)',
-    color: '#c7d2fe',
-    boxShadow: '0 2px 8px rgba(99,102,241,0.2)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    boxShadow: '0 10px 28px rgba(0,0,0,.08)',
   },
-
-  form: { display: 'flex', flexDirection: 'column', gap: 14 },
-  field: { display: 'flex', flexDirection: 'column', gap: 6 },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
   label: {
     fontSize: 12,
-    fontWeight: 700,
-    color: 'rgba(255,255,255,0.6)',
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
+    letterSpacing: '.08em',
   },
-  input: {
-    borderRadius: 12,
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.06)',
-    color: '#fff',
+  helper: {
+    fontSize: 12,
+    color: 'var(--color-text-3)',
+    lineHeight: 1.4,
   },
-
   error: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '10px 14px',
-    borderRadius: 10,
-    background: 'rgba(239,68,68,0.15)',
-    border: '1px solid rgba(239,68,68,0.3)',
-    color: '#fca5a5',
+    border: '1px solid rgba(220,38,38,.25)',
+    background: 'rgba(220,38,38,.10)',
+    color: 'var(--color-danger)',
+    borderRadius: 14,
+    padding: '11px 12px',
     fontSize: 13,
   },
-  errorIcon: { fontSize: 14, flexShrink: 0 },
-
   submit: {
-    marginTop: 6,
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-    borderColor: 'transparent',
-    boxShadow: '0 4px 16px rgba(99,102,241,0.4)',
-    height: 44,
+    marginTop: 4,
+    width: '100%',
+    height: 46,
   },
-  submitDisabled: { opacity: 0.7 },
-
   footer: {
     marginTop: 18,
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.45)',
+    color: 'var(--color-text-2)',
     fontSize: 13,
   },
   link: {
-    background: 'none',
-    border: 'none',
-    color: '#c7d2fe',
-    fontWeight: 800,
+    border: 0,
+    background: 'transparent',
+    color: 'var(--color-accent)',
+    fontWeight: 900,
     cursor: 'pointer',
-    textDecoration: 'underline',
-    fontSize: 13,
+    padding: 0,
   },
 }
-

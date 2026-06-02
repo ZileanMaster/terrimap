@@ -68,6 +68,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     userSelect: 'none',
     lineHeight: 1,
+    transition: 'transform 120ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
   },
   md: { height: 40, padding: '0 14px', fontSize: 14 },
   sm: { height: 32, padding: '0 10px', fontSize: 13, borderRadius: 8 },
@@ -104,6 +105,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     color: 'var(--color-text)',
+    transition: 'transform 120ms ease, background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease',
   },
 }
 

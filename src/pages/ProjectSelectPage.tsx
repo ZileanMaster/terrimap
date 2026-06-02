@@ -1,16 +1,9 @@
-/**
- * ProjectSelectPage — Select or create a project after login
- *
- * - List projects user belongs to
- * - Create project in a modal
- */
-
 import React, { useState } from 'react'
 import { useAuthStore, type Project } from '../store/authStore.js'
 import Button from '../components/ui/Button.js'
 import Input, { Textarea } from '../components/ui/Input.js'
 import Modal from '../components/ui/Modal.js'
-import ToastViewport, { useToast } from '../components/ui/Toast.js'
+import { useToast } from '../components/ui/Toast.js'
 
 export default function ProjectSelectPage() {
   const projects = useAuthStore((s) => s.projects)
@@ -50,24 +43,23 @@ export default function ProjectSelectPage() {
 
   return (
     <div style={styles.page}>
-      <ToastViewport />
-
-      <div style={styles.bgShape1} />
-      <div style={styles.bgShape2} />
+      <div style={styles.glowA} />
+      <div style={styles.glowB} />
 
       <div style={styles.container}>
         <div style={styles.header}>
-          <div style={styles.logoRow}>
-            <span style={styles.logoIcon}>⬡</span>
-            <span style={styles.logoText}>TerriMap</span>
+          <div>
+            <div style={styles.kicker}>TerriMap</div>
+            <h1 style={styles.title}>Chọn dự án làm việc</h1>
+            <p style={styles.desc}>
+              Mỗi dự án giữ một tập dữ liệu riêng. Chọn dự án để đi vào bản đồ, phân chia lãnh thổ và báo cáo cụm.
+            </p>
           </div>
 
-          <div style={styles.userRow}>
-            <span style={styles.userAvatar}>
-              {profile?.full_name?.charAt(0)?.toUpperCase() || '?'}
-            </span>
+          <div style={styles.userBlock}>
+            <div style={styles.avatar}>{profile?.full_name?.charAt(0)?.toUpperCase() || 'T'}</div>
             <div style={styles.userMeta}>
-              <div style={styles.userName}>{profile?.full_name || 'User'}</div>
+              <div style={styles.userName}>{profile?.full_name || 'Tài khoản'}</div>
               <div style={styles.userEmail}>{profile?.email}</div>
             </div>
             <Button onClick={signOut} variant="ghost" style={styles.signOutBtn}>
@@ -76,36 +68,44 @@ export default function ProjectSelectPage() {
           </div>
         </div>
 
-        <h2 style={styles.title}>Chọn dự án</h2>
-        <p style={styles.desc}>
-          Chọn một dự án để bắt đầu làm việc, hoặc tạo dự án mới.
-        </p>
-
         {authError && (
           <div style={styles.error} role="alert">
-            ⚠ {authError}
+            {authError}
           </div>
         )}
 
         <div style={styles.grid}>
-          {projects.map((p) => (
+          {projects.map((project, index) => (
             <button
-              key={p.id}
-              onClick={() => handleSelect(p)}
-              style={styles.projectCard}
+              key={project.id}
+              type="button"
+              onClick={() => handleSelect(project)}
+              style={{
+                ...styles.projectCard,
+                ...(index === 0 ? styles.projectCardFeatured : {}),
+              }}
             >
-              <div style={styles.projectIcon}>📁</div>
-              <div style={styles.projectName}>{p.name}</div>
-              {p.description && <div style={styles.projectDesc}>{p.description}</div>}
-              <div style={styles.projectDate}>
-                Tạo: {new Date(p.created_at).toLocaleDateString('vi-VN')}
+              <div style={styles.projectTop}>
+                <div style={styles.projectIcon}>PR</div>
+                <span style={styles.projectChip}>Mở dự án</span>
+              </div>
+              <div style={styles.projectName}>{project.name}</div>
+              {project.description && <div style={styles.projectDesc}>{project.description}</div>}
+              <div style={styles.projectMeta}>
+                <span>Tạo ngày</span>
+                <strong>{new Date(project.created_at).toLocaleDateString('vi-VN')}</strong>
               </div>
             </button>
           ))}
 
-          <button onClick={() => setShowCreate(true)} style={styles.createCard}>
-            <div style={styles.createIcon}>＋</div>
-            <div style={styles.createText}>Tạo dự án mới</div>
+          <button
+            type="button"
+            onClick={() => setShowCreate(true)}
+            style={styles.createCard}
+          >
+            <div style={styles.createIcon}>+</div>
+            <div style={styles.createTitle}>Tạo dự án mới</div>
+            <div style={styles.createDesc}>Thêm một không gian làm việc mới với tên và mô tả riêng.</div>
           </button>
         </div>
 
@@ -113,7 +113,7 @@ export default function ProjectSelectPage() {
           open={showCreate}
           onClose={() => (!creating ? setShowCreate(false) : null)}
           title="Tạo dự án mới"
-          description="Tên dự án nên ngắn gọn, dễ nhận biết theo thời gian/khu vực."
+          description="Dùng tên ngắn gọn, dễ nhận diện theo khu vực hoặc thời gian."
           width={520}
           footer={(
             <>
@@ -131,7 +131,7 @@ export default function ProjectSelectPage() {
                 form="create-project-form"
                 disabled={creating || !newName.trim()}
               >
-                {creating ? '⏳ Đang tạo…' : 'Tạo dự án'}
+                {creating ? 'Đang tạo...' : 'Tạo dự án'}
               </Button>
             </>
           )}
@@ -147,12 +147,12 @@ export default function ProjectSelectPage() {
               />
             </div>
             <div style={styles.field}>
-              <label style={styles.label}>Mô tả (tùy chọn)</label>
+              <label style={styles.label}>Mô tả</label>
               <Textarea
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Mô tả ngắn về dự án…"
-                rows={3}
+                placeholder="Mô tả ngắn về dự án..."
+                rows={4}
               />
             </div>
           </form>
@@ -164,136 +164,242 @@ export default function ProjectSelectPage() {
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+    minHeight: '100dvh',
     position: 'relative',
     overflow: 'hidden',
-    fontFamily: "'Be Vietnam Pro', 'Segoe UI', Roboto, system-ui, sans-serif",
+    background: 'radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent) 14%, transparent) 0, transparent 30%), linear-gradient(180deg, var(--color-bg) 0%, color-mix(in srgb, var(--color-bg) 84%, #000) 100%)',
+    padding: '24px',
   },
-  bgShape1: {
-    position: 'fixed',
-    width: 520,
-    height: 520,
+  glowA: {
+    position: 'absolute',
+    top: -120,
+    right: -120,
+    width: 360,
+    height: 360,
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
-    top: -170,
-    right: -170,
+    background: 'radial-gradient(circle, color-mix(in srgb, var(--color-success) 16%, transparent) 0%, transparent 72%)',
+    pointerEvents: 'none',
   },
-  bgShape2: {
-    position: 'fixed',
+  glowB: {
+    position: 'absolute',
+    bottom: -160,
+    left: -100,
     width: 420,
     height: 420,
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)',
-    bottom: -120,
-    left: -120,
+    background: 'radial-gradient(circle, color-mix(in srgb, var(--color-info) 16%, transparent) 0%, transparent 72%)',
+    pointerEvents: 'none',
   },
   container: {
     position: 'relative',
-    zIndex: 10,
-    maxWidth: 920,
+    zIndex: 1,
+    maxWidth: 1240,
     margin: '0 auto',
-    padding: '40px 24px 56px',
+    minHeight: 'calc(100dvh - 48px)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 18,
   },
   header: {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
-    marginBottom: 36,
+    alignItems: 'flex-start',
+    gap: 18,
+    flexWrap: 'wrap',
+    border: '1px solid var(--color-border)',
+    borderRadius: 28,
+    background: 'color-mix(in srgb, var(--color-surface) 94%, transparent)',
+    boxShadow: '0 24px 56px rgba(0,0,0,.18)',
+    padding: 24,
   },
-  logoRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
+  kicker: {
+    textTransform: 'uppercase',
+    letterSpacing: '.12em',
+    fontSize: 11,
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
   },
-  logoIcon: { fontSize: 28, color: '#818cf8' },
-  logoText: { fontSize: 22, fontWeight: 800, color: '#fff' },
-  userRow: {
+  title: {
+    marginTop: 8,
+    fontSize: 'clamp(1.8rem, 3vw, 3rem)',
+    lineHeight: 1.05,
+    letterSpacing: '-0.04em',
+    color: 'var(--color-text)',
+  },
+  desc: {
+    marginTop: 12,
+    maxWidth: 680,
+    color: 'var(--color-text-2)',
+    lineHeight: 1.65,
+  },
+  userBlock: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    minWidth: 0,
+    border: '1px solid var(--color-border)',
+    borderRadius: 18,
+    background: 'var(--color-surface)',
+    padding: 10,
+    marginLeft: 'auto',
   },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    background: 'var(--color-accent)',
+    display: 'grid',
+    placeItems: 'center',
     color: '#fff',
-    fontWeight: 800,
-    fontSize: 16,
+    fontWeight: 900,
     flexShrink: 0,
   },
-  userMeta: { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 },
-  userName: { color: '#fff', fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  userEmail: { color: 'rgba(255,255,255,0.45)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  signOutBtn: {
-    borderColor: 'rgba(255,255,255,0.15)',
-    background: 'transparent',
-    color: 'rgba(255,255,255,0.75)',
+  userMeta: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    minWidth: 0,
   },
-  title: { color: '#fff', fontSize: 24, fontWeight: 800, marginBottom: 8 },
-  desc: { color: 'rgba(255,255,255,0.45)', fontSize: 14, marginBottom: 22 },
+  userName: {
+    color: 'var(--color-text)',
+    fontWeight: 900,
+    fontSize: 14,
+  },
+  userEmail: {
+    color: 'var(--color-text-2)',
+    fontSize: 12,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: 220,
+  },
+  signOutBtn: {
+    marginLeft: 4,
+  },
   error: {
-    padding: '10px 14px',
-    borderRadius: 12,
-    background: 'rgba(239,68,68,0.15)',
-    border: '1px solid rgba(239,68,68,0.3)',
-    color: '#fca5a5',
+    border: '1px solid rgba(220,38,38,.25)',
+    background: 'rgba(220,38,38,.10)',
+    color: 'var(--color-danger)',
+    borderRadius: 16,
+    padding: '12px 14px',
     fontSize: 13,
-    marginBottom: 16,
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
     gap: 16,
   },
   projectCard: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 22,
+    background: 'color-mix(in srgb, var(--color-surface) 95%, transparent)',
     padding: 18,
-    borderRadius: 18,
-    background: 'rgba(255,255,255,0.07)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    cursor: 'pointer',
     textAlign: 'left',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    color: '#fff',
-  },
-  projectIcon: { fontSize: 26 },
-  projectName: { fontSize: 16, fontWeight: 800 },
-  projectDesc: { fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1.4 },
-  projectDate: { fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 'auto' },
-
-  createCard: {
-    padding: 18,
-    borderRadius: 18,
-    background: 'transparent',
-    border: '2px dashed rgba(255,255,255,0.15)',
     cursor: 'pointer',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    minHeight: 120,
-    color: 'rgba(255,255,255,0.55)',
+    gap: 12,
+    color: 'var(--color-text)',
+    minHeight: 180,
   },
-  createIcon: { fontSize: 32, color: 'rgba(255,255,255,0.35)', lineHeight: 1 },
-  createText: { fontSize: 14, fontWeight: 700 },
-
-  form: { display: 'flex', flexDirection: 'column', gap: 12 },
-  field: { display: 'flex', flexDirection: 'column', gap: 6 },
+  projectCardFeatured: {
+    borderColor: 'color-mix(in srgb, var(--color-accent) 35%, var(--color-border))',
+    boxShadow: '0 18px 36px rgba(0,0,0,.12)',
+  },
+  projectTop: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  projectIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-accent)',
+    fontSize: 12,
+    fontWeight: 900,
+    letterSpacing: '.1em',
+  },
+  projectChip: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 999,
+    padding: '6px 10px',
+    fontSize: 12,
+    color: 'var(--color-text-2)',
+    fontWeight: 800,
+  },
+  projectName: {
+    fontSize: 16,
+    fontWeight: 900,
+    letterSpacing: '-0.02em',
+  },
+  projectDesc: {
+    color: 'var(--color-text-2)',
+    fontSize: 13,
+    lineHeight: 1.55,
+    flex: 1,
+  },
+  projectMeta: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    fontSize: 12,
+    color: 'var(--color-text-2)',
+  },
+  createCard: {
+    border: '1px dashed color-mix(in srgb, var(--color-border) 80%, var(--color-accent))',
+    borderRadius: 22,
+    background: 'transparent',
+    padding: 18,
+    textAlign: 'left',
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    color: 'var(--color-text)',
+    minHeight: 180,
+    justifyContent: 'center',
+  },
+  createIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-accent)',
+    fontSize: 22,
+    fontWeight: 800,
+  },
+  createTitle: {
+    fontSize: 16,
+    fontWeight: 900,
+    letterSpacing: '-0.02em',
+  },
+  createDesc: {
+    color: 'var(--color-text-2)',
+    fontSize: 13,
+    lineHeight: 1.55,
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 14,
+  },
+  field: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
   label: {
     fontSize: 12,
     fontWeight: 800,
-    color: 'var(--color-text)',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
+    letterSpacing: '.08em',
+    color: 'var(--color-text-2)',
   },
 }
-

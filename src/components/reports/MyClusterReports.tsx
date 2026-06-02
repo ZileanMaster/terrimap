@@ -131,17 +131,28 @@ export default function MyClusterReports({
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <div>
+        <div style={styles.headerCopy}>
           <div style={styles.kicker}>Báo cáo cụm</div>
           <div style={styles.title}>Số liệu của bạn</div>
+          <div style={styles.subtitle}>
+            Nhập số khách hàng, số đơn hàng và ghi chú cho các cụm bạn đang quản lý.
+          </div>
+          <div style={styles.badgeRow}>
+            <span style={styles.badge}>{period}</span>
+            <span style={styles.badge}>{myDistrictIds.length} cụm</span>
+            <span style={styles.badge}>{myReports.length} dòng đã lưu</span>
+          </div>
         </div>
-        <input
-          type="month"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          style={styles.month}
-          aria-label="Chọn tháng"
-        />
+        <label style={styles.monthWrap}>
+          <span style={styles.monthLabel}>Tháng</span>
+          <input
+            type="month"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value)}
+            style={styles.month}
+            aria-label="Chọn tháng"
+          />
+        </label>
       </div>
 
       {loading && (
@@ -150,6 +161,11 @@ export default function MyClusterReports({
 
       {!loading && (
         <div style={styles.list}>
+          {myReports.length === 0 && (
+            <div style={styles.emptyState}>
+              Chưa có báo cáo nào trong tháng này. Nhập số liệu để dashboard cập nhật ngay.
+            </div>
+          )}
           {myDistrictIds.map((did) => {
             const row = rows[did] ?? { customers: 0, orders: 0, note: '', saving: false }
             const updatedAt = myReports.find((r) => r.districtId === did)?.updatedAt
@@ -216,22 +232,29 @@ const styles: Record<string, React.CSSProperties> = {
     top: 16,
     right: 16,
     zIndex: 850,
-    width: 320,
+    width: 360,
     maxWidth: 'calc(100vw - 32px)',
     border: '1px solid var(--color-border)',
-    borderRadius: 10,
-    background: 'var(--color-surface)',
-    boxShadow: 'var(--shadow-md)',
+    borderRadius: 20,
+    background: 'color-mix(in srgb, var(--color-surface) 96%, transparent)',
+    boxShadow: '0 18px 36px rgba(0,0,0,.18)',
     overflow: 'hidden',
+    backdropFilter: 'blur(12px)',
   },
   header: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
-    padding: '10px 12px',
+    gap: 12,
+    padding: '14px 14px 12px',
     borderBottom: '1px solid var(--color-border)',
     background: 'var(--color-surface-2)',
+  },
+  headerCopy: {
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
   },
   kicker: {
     fontSize: 11,
@@ -241,15 +264,49 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 0.4,
   },
   title: {
-    fontSize: 13,
-    fontWeight: 800,
+    fontSize: 15,
+    fontWeight: 900,
     color: 'var(--color-text)',
-    marginTop: 2,
+    letterSpacing: '-0.02em',
+  },
+  subtitle: {
+    fontSize: 12,
+    color: 'var(--color-text-2)',
+    lineHeight: 1.5,
+    maxWidth: '28ch',
+  },
+  badgeRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  badge: {
+    border: '1px solid var(--color-border)',
+    borderRadius: 999,
+    background: 'var(--color-surface)',
+    color: 'var(--color-text-2)',
+    padding: '6px 10px',
+    fontSize: 11,
+    fontWeight: 800,
+  },
+  monthWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    minWidth: 122,
+    flexShrink: 0,
+  },
+  monthLabel: {
+    fontSize: 11,
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
+    textTransform: 'uppercase',
+    letterSpacing: '.08em',
   },
   month: {
-    height: 32,
+    height: 36,
     border: '1px solid var(--color-border)',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: '0 8px',
     background: 'var(--color-bg)',
     color: 'var(--color-text)',
@@ -264,15 +321,24 @@ const styles: Record<string, React.CSSProperties> = {
   list: {
     maxHeight: 420,
     overflowY: 'auto',
-    padding: 12,
+    padding: 14,
     display: 'flex',
     flexDirection: 'column',
-    gap: 10,
+    gap: 12,
+  },
+  emptyState: {
+    border: '1px dashed var(--color-border)',
+    borderRadius: 16,
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text-2)',
+    padding: 14,
+    fontSize: 12,
+    lineHeight: 1.5,
   },
   card: {
     border: '1px solid var(--color-border)',
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 16,
+    padding: 12,
     background: 'var(--color-bg)',
   },
   cardTop: {
@@ -283,14 +349,14 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
   },
   cardTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 900,
     color: 'var(--color-text)',
   },
   saveBtn: {
     border: 0,
-    borderRadius: 8,
-    background: '#2563eb',
+    borderRadius: 10,
+    background: 'var(--color-accent)',
     color: '#fff',
     padding: '6px 10px',
     fontSize: 12,
@@ -336,4 +402,3 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-3)',
   },
 }
-

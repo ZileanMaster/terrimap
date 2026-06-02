@@ -245,10 +245,10 @@ export function OverviewView() {
       </div>
 
       {/* Metric Cards Deck */}
-      <div style={styles.cardGrid}>
+      <div style={styles.summaryGrid}>
         {/* Card 1 */}
-        <div style={styles.card}>
-          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>📍</div>
+        <div style={{ ...styles.card, ...styles.cardWide }}>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8' }}>R</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{regions.length}</span>
             <span style={styles.cardLbl}>Khu vực Địa lý</span>
@@ -256,8 +256,8 @@ export function OverviewView() {
         </div>
 
         {/* Card 2 */}
-        <div style={styles.card}>
-          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(52, 211, 153, 0.15)', color: '#34d399' }}>👥</div>
+        <div style={{ ...styles.card, ...styles.cardWide }}>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>S</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{agents.length}</span>
             <span style={styles.cardLbl}>Nhân viên Sales</span>
@@ -265,8 +265,8 @@ export function OverviewView() {
         </div>
 
         {/* Card 3 */}
-        <div style={styles.card}>
-          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>🏝️</div>
+        <div style={{ ...styles.card, ...styles.cardNarrow }}>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24' }}>I</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{totalIslandZones}</span>
             <span style={styles.cardLbl}>Vùng cô lập (Islands)</span>
@@ -274,8 +274,8 @@ export function OverviewView() {
         </div>
 
         {/* Card 4 */}
-        <div style={styles.card}>
-          <div style={{ ...styles.cardBadge, backgroundColor: totalContiguityViolations > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(129, 140, 248, 0.15)', color: totalContiguityViolations > 0 ? '#ef4444' : '#818cf8' }}>⚠️</div>
+        <div style={{ ...styles.card, ...styles.cardNarrow }}>
+          <div style={{ ...styles.cardBadge, backgroundColor: totalContiguityViolations > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(129, 140, 248, 0.12)', color: totalContiguityViolations > 0 ? '#ef4444' : '#818cf8' }}>C</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{totalContiguityViolations}</span>
             <span style={styles.cardLbl}>Vi phạm liên thông</span>
@@ -285,31 +285,37 @@ export function OverviewView() {
 
       {/* District Reports Summary */}
       <div style={styles.section}>
-        <h4 style={styles.sectionTitle}>Báo cáo cụm (tháng {reportPeriod})</h4>
-        <div style={styles.cardGrid}>
-          <div style={styles.card}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>C</div>
+        <div style={styles.sectionHeader}>
+          <div>
+            <h4 style={styles.sectionTitle}>Báo cáo cụm</h4>
+            <div style={styles.sectionMeta}>Tháng {reportPeriod} · tổng hợp dữ liệu nhập theo cụm, user và khu vực</div>
+          </div>
+          <div style={styles.sectionPill}>{reportStats.reportCount} dòng báo cáo</div>
+        </div>
+        <div style={styles.reportGrid}>
+          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardWide }}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>K</div>
             <div style={styles.cardInfo}>
               <span style={styles.cardVal}>{reportStats.totalCustomers}</span>
               <span style={styles.cardLbl}>KH báo cáo</span>
             </div>
           </div>
-          <div style={styles.card}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>O</div>
+          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardWide }}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>O</div>
             <div style={styles.cardInfo}>
               <span style={styles.cardVal}>{reportStats.totalOrders}</span>
               <span style={styles.cardLbl}>Đơn báo cáo</span>
             </div>
           </div>
-          <div style={styles.card}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#f59e0b' }}>D</div>
+          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardNarrow }}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#f59e0b' }}>D</div>
             <div style={styles.cardInfo}>
               <span style={styles.cardVal}>{reportStats.districtCount}</span>
               <span style={styles.cardLbl}>Cụm có dữ liệu</span>
             </div>
           </div>
-          <div style={styles.card}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8b5cf6' }}>U</div>
+          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardNarrow }}>
+            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}>U</div>
             <div style={styles.cardInfo}>
               <span style={styles.cardVal}>{reportStats.userCount}</span>
               <span style={styles.cardLbl}>Người đã nhập</span>
@@ -977,8 +983,6 @@ export function OperationsView() {
 export function SettingsView() {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
-  const locale = useUIStore((s) => s.locale);
-  const toggleLocale = useUIStore((s) => s.toggleLocale);
 
   const profile = useAuthStore((s) => s.profile);
   const updateProfile = useAuthStore((s) => s.updateProfile);
@@ -1094,12 +1098,9 @@ export function SettingsView() {
       </div>
 
       <div style={{ ...styles.cardContainer, marginTop: '20px' }}>
-        <h4 style={styles.sectionTitle}>🌐 Ngôn ngữ (Language)</h4>
+        <h4 style={styles.sectionTitle}>🌐 Tiếng Việt cố định</h4>
         <div style={styles.langWrapper}>
-          <span style={styles.langLabel}>Ngôn ngữ hiện tại:</span>
-          <button onClick={toggleLocale} style={styles.langBtn}>
-            {locale === 'vi' ? '🇻🇳 Tiếng Việt' : '🇬🇧 English'}
-          </button>
+          <span style={styles.langLabel}>Dự án chỉ dùng tiếng Việt, không còn tuỳ chọn đổi ngôn ngữ.</span>
         </div>
       </div>
     </div>
@@ -1165,58 +1166,99 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     fontWeight: 800,
   },
-  cardGrid: {
+  summaryGrid: {
     display: 'flex',
-    gap: '20px',
+    gap: '16px',
     flexWrap: 'wrap',
   },
   card: {
-    flex: 1,
-    minWidth: '220px',
-    padding: '20px',
-    backgroundColor: 'var(--color-surface, #161b22)',
+    minWidth: '0',
+    padding: '18px 18px 16px',
+    backgroundColor: 'color-mix(in srgb, var(--color-surface) 92%, transparent)',
     border: '1px solid var(--color-border, #30363d)',
-    borderRadius: '12px',
+    borderRadius: '18px',
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    gap: '14px',
     boxShadow: 'var(--shadow-sm)',
-    transition: 'transform 150ms ease, box-shadow 150ms ease',
+    transition: 'transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease',
+  },
+  cardWide: {
+    flex: '2 1 320px',
+  },
+  cardNarrow: {
+    flex: '1 1 200px',
   },
   cardBadge: {
     width: '46px',
     height: '46px',
-    borderRadius: '10px',
+    borderRadius: '14px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '20px',
+    fontWeight: 900,
   },
   cardInfo: {
     display: 'flex',
     flexDirection: 'column',
   },
   cardVal: {
-    fontSize: '22px',
+    fontSize: '24px',
     fontWeight: 800,
     color: 'var(--color-text)',
+    lineHeight: 1,
   },
   cardLbl: {
     fontSize: '12px',
     color: 'var(--color-text-2)',
-    marginTop: '2px',
+    marginTop: '4px',
   },
   section: {
-    backgroundColor: 'var(--color-surface, #161b22)',
+    backgroundColor: 'color-mix(in srgb, var(--color-surface) 94%, transparent)',
     border: '1px solid var(--color-border, #30363d)',
-    borderRadius: '12px',
+    borderRadius: '20px',
     padding: '20px',
   },
   sectionTitle: {
-    fontSize: '14px',
-    fontWeight: 'bold',
+    fontSize: '15px',
+    fontWeight: 900,
     color: 'var(--color-text)',
+    letterSpacing: '-0.01em',
+    marginBottom: '4px',
+  },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '12px',
     marginBottom: '16px',
+  },
+  sectionMeta: {
+    marginTop: '6px',
+    fontSize: '12px',
+    color: 'var(--color-text-2)',
+    maxWidth: '60ch',
+  },
+  sectionPill: {
+    flexShrink: 0,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text-2)',
+    padding: '7px 10px',
+    borderRadius: '999px',
+    fontSize: '12px',
+    fontWeight: 800,
+    whiteSpace: 'nowrap',
+  },
+  reportGrid: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+  reportCard: {
+    padding: '18px 16px',
   },
   tableWrapper: {
     overflowX: 'auto',

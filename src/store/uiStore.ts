@@ -1,40 +1,9 @@
 import { create } from 'zustand'
-import i18n from '../i18n/index.js'
 
 export type Role   = 'admin' | 'coordinator' | 'sales'
 export type Theme  = 'light' | 'dark' | 'system'
-export type Locale = 'vi' | 'en'
 
-const LOCALE_KEY = 'terrimap_locale'
 const THEME_KEY  = 'terrimap_theme'
-
-function getInitialLocale(): Locale {
-  try {
-    const v = localStorage.getItem(LOCALE_KEY)
-    return v === 'en' || v === 'vi' ? v : 'vi'
-  } catch {
-    return 'vi'
-  }
-}
-
-function applyLocale(locale: Locale) {
-  try {
-    localStorage.setItem(LOCALE_KEY, locale)
-  } catch {
-    // ignore storage errors
-  }
-  try {
-    document.documentElement.lang = locale
-  } catch {
-    // ignore DOM errors (tests/non-browser)
-  }
-  // Keep i18next in sync so UI updates immediately.
-  try {
-    i18n.changeLanguage(locale)
-  } catch {
-    // ignore i18n errors
-  }
-}
 
 function getInitialTheme(): Theme {
   try {
@@ -58,7 +27,6 @@ interface UIStore {
   selectedZoneId:      string | null
   isAlgorithmRunning:  boolean
   theme:               Theme
-  locale:              Locale
   highlightedSalesId:  string | null      // L4b-1: click agent card → highlight district
   isMapTransitioning:  boolean            // L4b-1: flash effect after algorithm run
   selectedDistrictId:  number | null      // Map legend: focus a cluster/district
@@ -72,7 +40,6 @@ interface UIStore {
   selectZone:             (id: string | null) => void
   setAlgorithmRunning:    (v: boolean) => void
   setTheme:               (theme: Theme) => void
-  toggleLocale:           () => void
   setHighlightedSalesId:  (id: string | null) => void
   setMapTransitioning:    (v: boolean) => void
   setSelectedDistrictId:  (id: number | null) => void
@@ -104,12 +71,6 @@ export const useUIStore = create<UIStore>((set) => ({
     try { applyTheme(initial) } catch { /* ignore */ }
     return initial
   })(),
-  // Keep i18n initial language in sync with the store (important on first load).
-  locale:             (() => {
-    const initial = getInitialLocale()
-    applyLocale(initial)
-    return initial
-  })(),
   highlightedSalesId: null,
   isMapTransitioning: false,
   selectedDistrictId: null,
@@ -136,13 +97,6 @@ export const useUIStore = create<UIStore>((set) => ({
     persistTheme(theme)
     applyTheme(theme)
   },
-
-  toggleLocale: () =>
-    set((s) => {
-      const next: Locale = s.locale === 'vi' ? 'en' : 'vi'
-      applyLocale(next)
-      return { locale: next }
-    }),
 
   // Toggle: click same agent → deselect; click different → select new
   // Also clear selectedZoneId to avoid conflicting highlights

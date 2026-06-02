@@ -20,12 +20,10 @@ export type MockStoreState = {
   selectedZoneId:      string | null
   isAlgorithmRunning:  boolean
   theme:               'light' | 'dark' | 'system'
-  locale:              'vi' | 'en'
   setRole:             ReturnType<typeof vi.fn>
   selectZone:          ReturnType<typeof vi.fn>
   setAlgorithmRunning: ReturnType<typeof vi.fn>
   setTheme:            ReturnType<typeof vi.fn>
-  toggleLocale:        ReturnType<typeof vi.fn>
 }
 
 export function makeStore(
@@ -36,12 +34,10 @@ export function makeStore(
     selectedZoneId:     null,
     isAlgorithmRunning: false,
     theme:              'light',
-    locale:             'vi',
     setRole:            vi.fn(),
     selectZone:         vi.fn(),
     setAlgorithmRunning: vi.fn(),
     setTheme:           vi.fn(),
-    toggleLocale:       vi.fn(),
     ...overrides,
   }
 }

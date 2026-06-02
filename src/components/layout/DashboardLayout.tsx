@@ -117,9 +117,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const signOut = useAuthStore((s) => s.signOut)
   const role = useUIStore((s) => s.role)
   const theme = useUIStore((s) => s.theme)
-  const locale = useUIStore((s) => s.locale)
   const setTheme = useUIStore((s) => s.setTheme)
-  const toggleLocale = useUIStore((s) => s.toggleLocale)
 
   const effectiveRole = isOnline() ? (membership?.role ?? 'sales') : role
   const currentRoleLabel =
@@ -285,9 +283,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div style={styles.controls}>
               <IconButton onClick={cycleTheme} title="Giao diện (Light/Dark/System)" style={styles.controlBtn}>
                 {theme === 'dark' ? 'D' : theme === 'light' ? 'L' : 'A'}
-              </IconButton>
-              <IconButton onClick={toggleLocale} title="Đổi ngôn ngữ" style={styles.controlBtn}>
-                {locale.toUpperCase()}
               </IconButton>
             </div>
             {!isMobile && (

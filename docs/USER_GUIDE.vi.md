@@ -86,7 +86,7 @@ Các mục điều hướng chính:
 2. Chọn **Dự án** (hoặc tạo dự án mới).
 3. Trên thanh trên cùng (top bar), bạn có thể:
    - Đổi **giao diện** (Light/Dark/System).
-   - Đổi **ngôn ngữ** (VI/EN).
+   - Dự án hiện cố định **tiếng Việt**.
 4. Đi theo các bước chuẩn bên dưới để đảm bảo dữ liệu “đủ điều kiện” trước khi chạy thuật toán.
 
 Luồng chuẩn nên đi theo thứ tự sau:

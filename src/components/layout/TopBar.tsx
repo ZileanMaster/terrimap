@@ -3,7 +3,7 @@
  *
  * Online mode: User info + role badge + view-as (admin only) + logout
  * Offline mode: Role tabs (original behavior)
- * Both: Theme toggle | Locale toggle
+ * Both: Theme toggle
  */
 
 import React from 'react'
@@ -40,24 +40,17 @@ export default function TopBar() {
   const { t } = useTranslation()
   const role   = useUIStore((s) => s.role)
   const theme  = useUIStore((s) => s.theme)
-  const locale = useUIStore((s) => s.locale)
   const setRole       = useUIStore((s) => s.setRole)
   const setTheme      = useUIStore((s) => s.setTheme)
-  const toggleLocale  = useUIStore((s) => s.toggleLocale)
 
   // Auth state (for online mode)
   const profile    = useAuthStore((s) => s.profile)
   const membership = useAuthStore((s) => s.membership)
   const signOut    = useAuthStore((s) => s.signOut)
-  const selectProject = useAuthStore((s) => s.selectProject)
 
   const online     = isOnline()
   const isAdmin    = membership?.role === 'admin'
   const actualRole = membership?.role ?? 'admin'
-
-  function handleLocaleToggle() {
-    toggleLocale()
-  }
 
   function handleBackToProjects() {
     // Clear current project → go back to project selection
@@ -143,17 +136,6 @@ export default function TopBar() {
             </button>
           ))}
         </div>
-
-        {/* Locale toggle */}
-        <button
-          id="locale-toggle"
-          data-testid="locale-toggle"
-          onClick={handleLocaleToggle}
-          style={styles.localeBtn}
-          title="Switch language"
-        >
-          {locale === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
-        </button>
 
         {/* User menu (online only) */}
         {online && profile && (
@@ -325,17 +307,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--color-surface)',
     boxShadow: 'var(--shadow-sm)',
   },
-  localeBtn: {
-    padding: '5px 12px',
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)',
-    color: 'var(--color-text)',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-
   // User section
   userSection: {
     display: 'flex',
