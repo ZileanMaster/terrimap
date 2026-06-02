@@ -38,6 +38,34 @@ function lsKey(base: string): string {
   return _currentProjectId ? `${base}_${_currentProjectId}` : base
 }
 
+function scopedKey(base: string, projectId?: string): string {
+  return projectId ? `${base}_${projectId}` : base
+}
+
+function readJsonArray<T>(key: string): T[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) ?? '[]')
+    return Array.isArray(parsed) ? (parsed as T[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeJsonArray<T>(key: string, value: T[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (error) {
+    console.error('[DB] localStorage write error:', error)
+  }
+}
+
+function readScopedCollections<T>(base: string, projectId?: string): T[] {
+  const scoped = readJsonArray<T>(scopedKey(base, projectId))
+  if (scoped.length > 0) return scoped
+  const legacy = readJsonArray<T>(base)
+  return legacy
+}
+
 // ── DB row shapes (snake_case) ────────────────────────────────────────────────
 
 interface DbZone {
@@ -86,16 +114,36 @@ interface DbRegion {
  * Offline fallback: MOCK_ZONES.
  */
 export async function loadZones(projectId?: string): Promise<Zone[]> {
-  if (!isOnline()) return MOCK_ZONES
+  if (!isOnline()) return readScopedCollections<Zone>('terrimap_zones', projectId).length > 0
+    ? readScopedCollections<Zone>('terrimap_zones', projectId)
+    : MOCK_ZONES
 
   let query = supabase!.from('zones').select('*').order('id')
   if (projectId) query = query.eq('project_id', projectId)
 
-  const { data: zones, error: zErr } = await query
+  const { data: zoneData, error: zErr } = await query
+  let zones = zoneData
 
-  if (zErr || !zones) {
-    console.error('[DB] loadZones error:', zErr)
-    return []
+  if (zErr || !zones || zones.length === 0) {
+    if (zErr) console.error('[DB] loadZones error:', zErr)
+    const cached = readScopedCollections<Zone>('terrimap_zones', projectId)
+    if (cached.length > 0) return cached
+    if (projectId) {
+      const { data: legacyZones, error: legacyErr } = await supabase!
+        .from('zones')
+        .select('*')
+        .is('project_id', null)
+        .order('id')
+      if (legacyErr) {
+        console.error('[DB] loadZones legacy error:', legacyErr)
+      } else if (legacyZones && legacyZones.length > 0) {
+        zones = legacyZones as DbZone[]
+      } else {
+        return []
+      }
+    } else {
+      return []
+    }
   }
 
   // Load activities for these zones
@@ -147,15 +195,36 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
  * Offline fallback: MOCK_ASSIGNMENTS.
  */
 export async function loadAssignments(projectId?: string): Promise<Assignment[]> {
-  if (!isOnline()) return MOCK_ASSIGNMENTS
+  if (!isOnline()) return readScopedCollections<Assignment>('terrimap_assignments', projectId).length > 0
+    ? readScopedCollections<Assignment>('terrimap_assignments', projectId)
+    : MOCK_ASSIGNMENTS
 
   let query = supabase!.from('assignments').select('*')
   if (projectId) query = query.eq('project_id', projectId)
 
   const { data, error } = await query
 
-  if (error || !data) {
-    console.error('[DB] loadAssignments error:', error)
+  if (error || !data || data.length === 0) {
+    if (error) console.error('[DB] loadAssignments error:', error)
+    const cached = readScopedCollections<Assignment>('terrimap_assignments', projectId)
+    if (cached.length > 0) return cached
+    if (projectId) {
+      const { data: legacyData, error: legacyErr } = await supabase!
+        .from('assignments')
+        .select('*')
+        .is('project_id', null)
+      if (legacyErr) {
+        console.error('[DB] loadAssignments legacy error:', legacyErr)
+        return []
+      }
+      if (legacyData && legacyData.length > 0) {
+        return (legacyData as DbAssignment[]).map((a) => ({
+          zoneId:       a.zone_id,
+          districtId:   a.district_id,
+          salesAgentId: a.sales_agent_id,
+        }))
+      }
+    }
     return []
   }
 
@@ -171,7 +240,9 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
  * Offline fallback: MOCK_AGENTS.
  */
 export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
-  if (!isOnline()) return MOCK_AGENTS
+  if (!isOnline()) return readScopedCollections<SalesAgent>('terrimap_agents', projectId).length > 0
+    ? readScopedCollections<SalesAgent>('terrimap_agents', projectId)
+    : MOCK_AGENTS
 
   // IMPORTANT: never leak demo/legacy (NULL project_id) agents into other projects.
   // In online mode, data must be project-scoped.
@@ -181,7 +252,28 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
   const { data, error } = await query
 
   if (error || !data || data.length === 0) {
-    console.error('[DB] loadAgents error or empty:', error)
+    if (error) console.error('[DB] loadAgents error or empty:', error)
+    const cached = readScopedCollections<SalesAgent>('terrimap_agents', projectId)
+    if (cached.length > 0) return cached
+    if (projectId) {
+      const { data: legacyData, error: legacyErr } = await supabase!
+        .from('sales_agents')
+        .select('*')
+        .is('project_id', null)
+        .order('id')
+      if (legacyErr) {
+        console.error('[DB] loadAgents legacy error:', legacyErr)
+        return []
+      }
+      if (legacyData && legacyData.length > 0) {
+        return (legacyData as DbSalesAgent[]).map((a) => ({
+          id:           a.id,
+          name:         a.name,
+          activeRegion: a.active_region,
+          capacity:     a.capacity,
+        }))
+      }
+    }
     return []
   }
 
@@ -209,6 +301,14 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
  * Fire-and-forget — does not throw.
  */
 export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
+  const zonesKey = scopedKey('terrimap_zones', projectId)
+  try {
+    const stored = readJsonArray<Zone>(zonesKey)
+    const idx = stored.findIndex((z) => z.id === zone.id)
+    if (idx >= 0) stored[idx] = zone; else stored.push(zone)
+    writeJsonArray(zonesKey, stored)
+  } catch { /* ignore */ }
+
   if (!isOnline()) return
 
   try {
@@ -269,6 +369,16 @@ export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
  * Fire-and-forget.
  */
 export async function deleteZone(zoneId: string): Promise<void> {
+  try {
+    const zonesKey = lsKey('terrimap_zones')
+    const stored = readJsonArray<Zone>(zonesKey)
+    writeJsonArray(zonesKey, stored.filter((z) => z.id !== zoneId))
+
+    const assignmentsKey = lsKey('terrimap_assignments')
+    const storedAssignments = readJsonArray<Assignment>(assignmentsKey)
+    writeJsonArray(assignmentsKey, storedAssignments.filter((a) => a.zoneId !== zoneId))
+  } catch { /* ignore */ }
+
   if (!isOnline()) return
 
   try {
@@ -288,6 +398,8 @@ export async function deleteZone(zoneId: string): Promise<void> {
  * Fire-and-forget.
  */
 export async function saveAssignments(assignments: Assignment[], projectId?: string): Promise<void> {
+  writeJsonArray(scopedKey('terrimap_assignments', projectId), assignments)
+
   if (!isOnline()) return
 
   try {
@@ -401,12 +513,12 @@ export async function loadSnapshots(): Promise<Array<{
  */
 export async function saveAgent(agent: SalesAgent, projectId?: string): Promise<void> {
   // Luôn update mock-agents trong localStorage (project-scoped)
-  const agentKey = lsKey('terrimap_agents')
+  const agentKey = scopedKey('terrimap_agents', projectId)
   try {
-    const stored = JSON.parse(localStorage.getItem(agentKey) ?? '[]') as SalesAgent[]
+    const stored = readJsonArray<SalesAgent>(agentKey)
     const idx = stored.findIndex((a) => a.id === agent.id)
     if (idx >= 0) stored[idx] = agent; else stored.push(agent)
-    localStorage.setItem(agentKey, JSON.stringify(stored))
+    writeJsonArray(agentKey, stored)
   } catch { /* ignore */ }
 
   if (!isOnline()) return
@@ -433,8 +545,8 @@ export async function saveAgent(agent: SalesAgent, projectId?: string): Promise<
 export async function deleteAgent(agentId: string): Promise<void> {
   const agentKey = lsKey('terrimap_agents')
   try {
-    const stored = JSON.parse(localStorage.getItem(agentKey) ?? '[]') as SalesAgent[]
-    localStorage.setItem(agentKey, JSON.stringify(stored.filter((a) => a.id !== agentId)))
+    const stored = readJsonArray<SalesAgent>(agentKey)
+    writeJsonArray(agentKey, stored.filter((a) => a.id !== agentId))
   } catch { /* ignore */ }
 
   if (!isOnline()) return
@@ -456,13 +568,7 @@ export async function deleteAgent(agentId: string): Promise<void> {
  */
 export async function loadRegions(projectId?: string): Promise<Region[]> {
   // Load project-scoped localStorage overrides (coordinator assignments etc.)
-  const regionKey = lsKey('terrimap_regions')
-  let local: Region[] = []
-  try {
-    local = JSON.parse(localStorage.getItem(regionKey) ?? 'null') ?? []
-  } catch {
-    local = []
-  }
+  const local = readScopedCollections<Region>('terrimap_regions', projectId)
 
   if (!isOnline()) return local.length > 0 ? local : DEFAULT_REGIONS
 
@@ -478,7 +584,28 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
 
     const { data, error } = await query
 
-    if (error || !data || data.length === 0) return local.length > 0 ? local : DEFAULT_REGIONS
+    if (error || !data || data.length === 0) {
+      if (local.length > 0) return local
+      if (projectId) {
+        const { data: legacyData, error: legacyErr } = await supabase!
+          .from('regions')
+          .select('*')
+          .is('project_id', null)
+          .order('name')
+        if (legacyErr) {
+          console.error('[DB] loadRegions legacy error:', legacyErr)
+        } else if (legacyData && legacyData.length > 0) {
+          return (legacyData as DbRegion[]).map((r) => ({
+            id:            r.id,
+            name:          r.name,
+            coordinatorId: r.coordinator_id ?? undefined,
+            center:        r.center,
+            zoom:          r.zoom,
+          }))
+        }
+      }
+      return DEFAULT_REGIONS
+    }
 
     return (data as DbRegion[]).map((r) => ({
       id:            r.id,
@@ -497,12 +624,12 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
  */
 export async function saveRegion(region: Region, projectId?: string): Promise<void> {
   // Update project-scoped localStorage
-  const regionKey = lsKey('terrimap_regions')
+  const regionKey = scopedKey('terrimap_regions', projectId)
   try {
-    const stored: Region[] = JSON.parse(localStorage.getItem(regionKey) ?? 'null') ?? []
+    const stored = readJsonArray<Region>(regionKey)
     const idx = (stored as Region[]).findIndex((r) => r.id === region.id)
     if (idx >= 0) stored[idx] = region; else stored.push(region)
-    localStorage.setItem(regionKey, JSON.stringify(stored))
+    writeJsonArray(regionKey, stored)
   } catch { /* ignore */ }
 
   if (!isOnline()) return
@@ -534,8 +661,8 @@ export async function deleteRegion(regionId: string): Promise<void> {
   // Remove from localStorage
   const regionKey = lsKey('terrimap_regions')
   try {
-    const stored: Region[] = JSON.parse(localStorage.getItem(regionKey) ?? '[]') ?? []
-    localStorage.setItem(regionKey, JSON.stringify(stored.filter((r) => r.id !== regionId)))
+    const stored = readJsonArray<Region>(regionKey)
+    writeJsonArray(regionKey, stored.filter((r) => r.id !== regionId))
   } catch { /* ignore */ }
 
   if (!isOnline()) return

@@ -2,9 +2,12 @@
  * RegionSelector - workflow entry for choosing or creating an operating region.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
+import { useAuthStore } from '../../store/authStore.js'
 import { useUIStore } from '../../store/uiStore.js'
+import { useToast } from '../ui/Toast.js'
+import { restoreLegacyDataset } from '../../services/legacyRestore.js'
 import { findPolygonTopologyViolations, buildAdjacencyMatrix } from '../../../lib/geometry.js'
 
 const cityPresets = [
@@ -131,14 +134,76 @@ function componentCount(zoneIds: string[], adj: Record<string, string[]>): numbe
 export default function RegionSelector() {
   const regions = useDataStore((s) => s.regions)
   const zones = useDataStore((s) => s.zones)
+  const assignments = useDataStore((s) => s.assignments)
   const agents = useDataStore((s) => s.agents)
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
   const addRegion = useDataStore((s) => s.addRegion)
   const role = useUIStore((s) => s.role)
+  const currentProjectId = useAuthStore((s) => s.currentProjectId)
+  const userEmail = useAuthStore((s) => s.user?.email ?? '')
+  const { push } = useToast()
 
   const [creating, setCreating] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const [city, setCity] = useState(vnProvinces[0] ?? 'Hà Nội')
   const [name, setName] = useState(vnProvinces[0] ?? 'Hà Nội')
+  const restoreFlag = currentProjectId ? `terrimap_legacy_restore_done_${currentProjectId}` : null
+  const restoreAttemptFlag = currentProjectId ? `terrimap_legacy_restore_attempted_${currentProjectId}` : null
+
+  const handleRestoreLegacyData = useCallback(async () => {
+    if (!currentProjectId || restoring) return
+    setRestoring(true)
+    try {
+      if (restoreAttemptFlag) localStorage.setItem(restoreAttemptFlag, '1')
+      const dataset = await restoreLegacyDataset(currentProjectId)
+      if (
+        dataset.zones.length === 0 &&
+        dataset.assignments.length === 0 &&
+        dataset.agents.length === 0 &&
+        dataset.regions.length === 0
+      ) {
+        push({
+          kind: 'warning',
+          title: 'Không tìm thấy dữ liệu cũ',
+          message: 'Project hiện tại chưa có dữ liệu legacy để khôi phục.',
+        })
+        return
+      }
+      useDataStore.setState({
+        zones: dataset.zones,
+        assignments: dataset.assignments,
+        agents: dataset.agents,
+        regions: dataset.regions,
+        currentRegionId: dataset.regions[0]?.id ?? null,
+        loading: false,
+        initialized: true,
+      })
+      if (restoreFlag) localStorage.setItem(restoreFlag, '1')
+      push({
+        kind: 'success',
+        title: 'Đã khôi phục dữ liệu cũ',
+        message: `Zones: ${dataset.zones.length} · Phân công: ${dataset.assignments.length} · Sales: ${dataset.agents.length} · Khu vực: ${dataset.regions.length}`,
+      })
+    } catch (error) {
+      push({
+        kind: 'error',
+        title: 'Khôi phục thất bại',
+        message: error instanceof Error ? error.message : 'Không thể khôi phục dữ liệu cũ.',
+      })
+    } finally {
+      setRestoring(false)
+    }
+  }, [currentProjectId, push, restoreAttemptFlag, restoreFlag, restoring])
+
+  useEffect(() => {
+    if (role !== 'admin') return
+    if (!currentProjectId) return
+    if (zones.length > 0 || assignments.length > 0 || agents.length > 0) return
+    if (userEmail && !userEmail.endsWith('@terrimap.vn')) return
+    if (restoreFlag && localStorage.getItem(restoreFlag) === '1') return
+    if (restoreAttemptFlag && localStorage.getItem(restoreAttemptFlag) === '1') return
+    void handleRestoreLegacyData()
+  }, [agents.length, assignments.length, currentProjectId, handleRestoreLegacyData, restoreAttemptFlag, restoreFlag, role, userEmail, zones.length])
 
   const regionCards = useMemo(
     () =>
@@ -191,9 +256,18 @@ export default function RegionSelector() {
           <p style={styles.subtitle}>Mọi thao tác vẽ zone, kiểm tra liên thông và chạy thuật toán đều nên bắt đầu từ một khu vực cụ thể.</p>
         </div>
         {role === 'admin' && (
-          <button style={styles.primaryBtn} onClick={() => setCreating(true)}>
-            Tạo khu vực
-          </button>
+          <div style={styles.heroActions}>
+            <button
+              style={styles.secondaryBtn}
+              onClick={handleRestoreLegacyData}
+              disabled={restoring || !currentProjectId}
+            >
+              {restoring ? 'Đang khôi phục...' : 'Khôi phục dữ liệu cũ'}
+            </button>
+            <button style={styles.primaryBtn} onClick={() => setCreating(true)}>
+              Tạo khu vực
+            </button>
+          </div>
         )}
       </section>
 
@@ -208,6 +282,9 @@ export default function RegionSelector() {
               </button>
             ))}
           </div>
+          <p style={styles.restoreHint}>
+            Nếu dữ liệu cũ bị tách khỏi project hiện tại, bấm khôi phục để nạp lại bộ dữ liệu demo vào đúng scope.
+          </p>
         </section>
       )}
 
@@ -335,6 +412,11 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 0 4px',
     flexWrap: 'wrap',
   },
+  heroActions: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   kicker: {
     color: 'var(--color-text-2)',
     fontSize: 12,
@@ -390,6 +472,11 @@ const styles: Record<string, React.CSSProperties> = {
   emptyText: {
     color: 'var(--color-text-2)',
     marginBottom: 14,
+  },
+  restoreHint: {
+    color: 'var(--color-text-2)',
+    marginTop: 12,
+    fontSize: 13,
   },
   presetRow: {
     display: 'flex',
