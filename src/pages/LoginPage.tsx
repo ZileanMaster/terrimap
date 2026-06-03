@@ -64,7 +64,6 @@ export default function LoginPage() {
               <div style={styles.panelKicker}>{mode === 'signin' ? 'Đăng nhập hệ thống' : 'Tạo tài khoản mới'}</div>
               <div style={styles.panelTitle}>TerriMap</div>
             </div>
-            <div style={styles.panelHint}>Tiếng Việt cố định</div>
           </div>
 
           <div style={styles.tabs}>
@@ -297,16 +296,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     letterSpacing: '-0.04em',
     color: 'var(--color-text)',
-  },
-  panelHint: {
-    border: '1px solid var(--color-border)',
-    borderRadius: 999,
-    padding: '8px 12px',
-    color: 'var(--color-text-2)',
-    fontSize: 12,
-    fontWeight: 800,
-    background: 'var(--color-surface-2)',
-    whiteSpace: 'nowrap',
   },
   tabs: {
     display: 'grid',
