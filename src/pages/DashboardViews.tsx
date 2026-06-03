@@ -190,7 +190,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>S</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{agents.length}</span>
-            <span style={styles.cardLbl}>Nhân viên Sales</span>
+            <span style={styles.cardLbl}>Nhân sự</span>
           </div>
         </div>
 
@@ -455,7 +455,7 @@ export function UsersView() {
   const ROLE_LABELS: Record<string, string> = {
     admin: 'Quản trị viên',
     coordinator: 'Điều phối viên',
-    sales: 'Nhân viên Sales',
+    sales: 'Nhân sự',
   };
 
   return (
@@ -498,7 +498,7 @@ export function UsersView() {
                         >
                           <option value="admin">Quản trị viên</option>
                           <option value="coordinator">Điều phối viên</option>
-                          <option value="sales">Nhân viên Sales</option>
+                          <option value="sales">Nhân sự</option>
                         </select>
                       ) : (
                         <span style={{

@@ -122,7 +122,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const effectiveRole = isOnline() ? (membership?.role ?? 'sales') : role
   const currentRoleLabel =
-    effectiveRole === 'admin' ? 'Quản trị viên' : effectiveRole === 'coordinator' ? 'Điều phối viên' : 'Nhân viên Sales'
+    effectiveRole === 'admin' ? 'Quản trị viên' : effectiveRole === 'coordinator' ? 'Điều phối viên' : 'Nhân sự'
 
   const [activeTab, setActiveTab] = useState('overview')
   const [searchQuery, setSearchQuery] = useState('')
@@ -147,7 +147,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ([
         { id: 'overview', label: 'Tổng quan', icon: 'overview' as const, roles: ['admin', 'coordinator', 'sales'] },
         { id: 'regions', label: 'Khu vực & bản đồ', icon: 'regions' as const, roles: ['admin', 'coordinator'] },
-        { id: 'users', label: 'Nhân sự Sales', icon: 'users' as const, roles: ['admin'] },
+        { id: 'users', label: 'Nhân sự', icon: 'users' as const, roles: ['admin'] },
         { id: 'assignments', label: 'Phân chia lãnh thổ', icon: 'assignments' as const, roles: ['admin', 'coordinator', 'sales'] },
         { id: 'ops', label: 'Vận hành', icon: 'ops' as const, roles: ['admin', 'coordinator'] },
         { id: 'algorithms', label: 'Phân chia tự động', icon: 'algorithms' as const, roles: ['admin', 'coordinator'] },
