@@ -167,25 +167,7 @@ export default function TopBar() {
 
             {/* Sign out */}
             <button
-              onClick={async () => {
-                try {
-                  const timeout = setTimeout(() => {
-                    // Force clear state if signOut hangs
-                    useAuthStore.setState({
-                      user: null, session: null, profile: null,
-                      projects: [], currentProjectId: null, membership: null,
-                    })
-                  }, 5000)
-                  await signOut()
-                  clearTimeout(timeout)
-                } catch {
-                  // Force clear even on error
-                  useAuthStore.setState({
-                    user: null, session: null, profile: null,
-                    projects: [], currentProjectId: null, membership: null,
-                  })
-                }
-              }}
+              onClick={() => { void signOut() }}
               style={styles.signOutBtn}
               title="Đăng xuất"
             >
