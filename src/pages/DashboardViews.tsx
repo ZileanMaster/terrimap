@@ -85,6 +85,8 @@ export function OverviewView() {
   const assignments = useDataStore((s) => s.assignments);
   const agents = useDataStore((s) => s.agents);
   const regions = useDataStore((s) => s.regions);
+  const currentRegionId = useDataStore((s) => s.currentRegionId);
+  const setCurrentRegion = useDataStore((s) => s.setCurrentRegion);
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
 
   const [snapshots, setSnapshots] = useState<any[]>([]);
@@ -109,30 +111,47 @@ export function OverviewView() {
       .finally(() => setLoadingReports(false));
   }, [reportPeriod, currentProjectId]);
 
+  const regionOptions = useMemo(
+    () => regions.map((region) => ({ id: region.id, name: region.name })).sort((a, b) => a.name.localeCompare(b.name, 'vi')),
+    [regions],
+  );
+  const regionOptionIds = useMemo(() => new Set(regionOptions.map((region) => region.id)), [regionOptions]);
+
+  const selectedRegion = currentRegionId
+    ? regions.find((region) => region.id === currentRegionId) ?? null
+    : null;
+  const selectedRegionLabel = selectedRegion?.name ?? 'Tất cả khu vực';
+  const filteredReports = useMemo(
+    () => currentRegionId
+      ? districtReports.filter((report: any) => (report.regionId ?? report.region_id) === currentRegionId)
+      : districtReports,
+    [currentRegionId, districtReports],
+  );
+
   const assignedCount = assignments.filter((a) => a.salesAgentId).length;
   const assignmentPercent = zones.length > 0 ? Math.round((assignedCount / zones.length) * 100) : 0;
 
   const reportStats = useMemo(() => {
-    const totalCustomers = districtReports.reduce((s, r) => s + (Number(r.customers) || 0), 0);
-    const totalOrders = districtReports.reduce((s, r) => s + (Number(r.orders) || 0), 0);
+    const totalCustomers = filteredReports.reduce((s, r) => s + (Number(r.customers) || 0), 0);
+    const totalOrders = filteredReports.reduce((s, r) => s + (Number(r.orders) || 0), 0);
     const districtKey = (r: any) => `${r.regionId || r.region_id || ''}|${r.districtId || r.district_id || ''}`
-    const districts = new Set(districtReports.map(districtKey));
-    const users = new Set(districtReports.map((r: any) => String(r.userId || r.user_id || '')));
+    const districts = new Set(filteredReports.map(districtKey));
+    const users = new Set(filteredReports.map((r: any) => String(r.userId || r.user_id || '')));
     return {
       totalCustomers,
       totalOrders,
-      reportCount: districtReports.length,
+      reportCount: filteredReports.length,
       districtCount: districts.size,
       userCount: users.size,
     };
-  }, [districtReports]);
+  }, [filteredReports]);
 
   // Compute total violations and islands across all regions
   let totalContiguityViolations = 0;
   let totalIslandZones = 0;
   let totalTopologyErrors = 0;
 
-  const regionStatsList = regions.map((r) => {
+  const regionStatsList = (currentRegionId ? regions.filter((region) => region.id === currentRegionId) : regions).map((r) => {
     const regionZones = zones.filter((z) => (z as any).regionId === r.id);
     const regionZonesCount = regionZones.length;
 
@@ -228,6 +247,22 @@ export function OverviewView() {
   return (
     <div style={styles.viewContainer}>
       <h3 style={styles.viewHeader}>Tổng quan dự án</h3>
+      <div style={styles.overviewRegionBar}>
+        <span style={styles.overviewRegionLabel}>Khu vực đang xem</span>
+        <select
+          value={currentRegionId && regionOptionIds.has(currentRegionId) ? currentRegionId : '__all__'}
+          onChange={(e) => setCurrentRegion(e.target.value === '__all__' ? null : e.target.value)}
+          style={styles.overviewRegionSelect}
+        >
+          <option value="__all__">Tất cả khu vực</option>
+          {regionOptions.map((region) => (
+            <option key={region.id} value={region.id}>{region.name}</option>
+          ))}
+        </select>
+        <span style={styles.overviewRegionHint}>
+          {selectedRegion ? `Đang xem báo cáo của ${selectedRegionLabel}` : 'Đang xem toàn bộ khu vực của dự án'}
+        </span>
+      </div>
       {/* Metric Cards Deck */}
       <div style={styles.summaryGrid}>
         {/* Card 1 */}
@@ -272,7 +307,7 @@ export function OverviewView() {
         <div style={styles.sectionHeader}>
           <div>
             <h4 style={styles.sectionTitle}>Báo cáo cụm</h4>
-            <div style={styles.sectionMeta}>Tháng {reportPeriod} · tổng hợp dữ liệu nhập theo cụm, user và khu vực</div>
+            <div style={styles.sectionMeta}>Tháng {reportPeriod} · {selectedRegion ? `khu vực ${selectedRegionLabel}` : 'tổng hợp dữ liệu theo toàn bộ khu vực của dự án'}</div>
           </div>
           <div style={styles.sectionPill}>{reportStats.reportCount} dòng báo cáo</div>
         </div>
@@ -322,7 +357,7 @@ export function OverviewView() {
               {loadingReports && (
                 <tr><td colSpan={5} style={styles.tableEmpty}>Đang tải báo cáo...</td></tr>
               )}
-              {!loadingReports && districtReports.slice(0, 8).map((r: any) => {
+              {!loadingReports && filteredReports.slice(0, 8).map((r: any) => {
                 const rid = r.regionId ?? r.region_id
                 const regionName = regions.find((rr) => rr.id === rid)?.name ?? String(rid ?? '')
                 return (
@@ -335,10 +370,10 @@ export function OverviewView() {
                   </tr>
                 )
               })}
-              {!loadingReports && districtReports.length === 0 && (
+              {!loadingReports && filteredReports.length === 0 && (
                 <tr>
                   <td colSpan={5} style={styles.tableEmpty}>
-                    Chưa có báo cáo cụm nào trong tháng này.
+                    {selectedRegion ? `Chưa có báo cáo cụm nào trong tháng này cho ${selectedRegionLabel}.` : 'Chưa có báo cáo cụm nào trong tháng này.'}
                   </td>
                 </tr>
               )}
@@ -396,7 +431,7 @@ export function OverviewView() {
               {regionStatsList.length === 0 && (
                 <tr>
                   <td colSpan={6} style={styles.tableEmpty}>
-                    📭 Chưa cấu hình khu vực nào cho dự án này.
+                    📭 {selectedRegion ? `Khu vực ${selectedRegionLabel} chưa có dữ liệu.` : 'Chưa cấu hình khu vực nào cho dự án này.'}
                   </td>
                 </tr>
               )}
@@ -1108,6 +1143,39 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     color: 'var(--color-text)',
     marginBottom: '10px',
+  },
+  overviewRegionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '18px',
+    padding: '12px 14px',
+    border: '1px solid var(--color-border, #30363d)',
+    borderRadius: '16px',
+    background: 'color-mix(in srgb, var(--color-surface) 94%, transparent)',
+  },
+  overviewRegionLabel: {
+    fontSize: '12px',
+    fontWeight: 800,
+    color: 'var(--color-text-2)',
+    textTransform: 'uppercase',
+    letterSpacing: '.04em',
+  },
+  overviewRegionSelect: {
+    minWidth: '220px',
+    padding: '10px 12px',
+    borderRadius: '12px',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    fontWeight: 800,
+    outline: 'none',
+  },
+  overviewRegionHint: {
+    color: 'var(--color-text-2)',
+    fontSize: '13px',
+    fontWeight: 600,
   },
   summaryGrid: {
     display: 'flex',
