@@ -223,7 +223,7 @@ export function OverviewView() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Khu vá»±c</th>
+                <th style={styles.th}>Khu vực</th>
                 <th style={styles.th}>Khách hàng</th>
                 <th style={styles.th}>Đơn hàng</th>
                 <th style={styles.th}>Số báo cáo</th>
