@@ -114,6 +114,7 @@ function NavIcon({ name, active }: { name: NavIconKey; active: boolean }) {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const profile = useAuthStore((s) => s.profile)
   const membership = useAuthStore((s) => s.membership)
+  const deselectProject = useAuthStore((s) => s.deselectProject)
   const signOut = useAuthStore((s) => s.signOut)
   const role = useUIStore((s) => s.role)
   const theme = useUIStore((s) => s.theme)
@@ -280,6 +281,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div style={styles.headerRight}>
             {!isOnline() && <span style={styles.statusPill}>Dữ liệu mock/offline</span>}
+            <button onClick={deselectProject} style={styles.projectSwitchBtn} title="Đổi dự án">
+              Đổi dự án
+            </button>
             <div style={styles.controls}>
               <IconButton onClick={cycleTheme} title="Giao diện (Light/Dark/System)" style={styles.controlBtn}>
                 {theme === 'dark' ? 'D' : theme === 'light' ? 'L' : 'A'}
@@ -502,6 +506,17 @@ const styles: Record<string, React.CSSProperties> = {
     width: 36,
     height: 36,
     borderRadius: 10,
+  },
+  projectSwitchBtn: {
+    height: 36,
+    borderRadius: 10,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    padding: '0 14px',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
   },
   statusPill: {
     border: '1px solid var(--color-border)',

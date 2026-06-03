@@ -60,6 +60,7 @@ interface AuthStore {
   signIn: (email: string, password: string) => Promise<boolean>
   signUp: (email: string, password: string, fullName: string) => Promise<boolean>
   signOut: () => Promise<void>
+  deselectProject: () => void
   clearError: () => void
 
   // Data actions
@@ -235,6 +236,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       session: null,
       profile: null,
       projects: [],
+      currentProjectId: null,
+      membership: null,
+    })
+  },
+
+  deselectProject: () => {
+    localStorage.removeItem('terrimap_project')
+    set({
       currentProjectId: null,
       membership: null,
     })
