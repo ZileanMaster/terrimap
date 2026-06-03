@@ -230,8 +230,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <span
                   style={{
                     ...styles.menuIcon,
-                    background: active ? 'var(--color-nav-icon-bg-active)' : 'var(--color-nav-icon-bg)',
-                    color: active ? 'var(--color-nav-item-text-active)' : 'var(--color-nav-item-icon)',
+                    background: active ? 'rgba(255,255,255,0.92)' : 'var(--color-nav-icon-bg)',
+                    color: active ? 'var(--color-accent)' : 'var(--color-nav-item-icon)',
                     marginRight: expanded ? 12 : 0,
                   }}
                 >
