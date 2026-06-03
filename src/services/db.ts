@@ -166,7 +166,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
     actMap.set(a.zone_id, list)
   }
 
-  const loadedZones = (zones as DbZone[]).map((z) => ({
+  const loadedZones: Zone[] = (zones as DbZone[]).map((z) => ({
     id:       z.id,
     name:     z.name,
     status:   z.status as Zone['status'],
@@ -178,7 +178,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
       type:  a.type as 'CUSTOMER' | 'ORDER' | 'REVENUE',
       value: a.value,
     })),
-  }))
+  } as any))
 
   try {
     assertNoPolygonTopologyViolations(loadedZones as any)
@@ -328,7 +328,7 @@ export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
       centroid:   z.centroid,
       regionId:   z.region_id ?? undefined,
       activities: [],
-    }))
+    } as any))
     assertNoPolygonTopologyViolations([...existingZones, zone] as any)
 
     const row: Record<string, unknown> = {
@@ -570,7 +570,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
   // Load project-scoped localStorage overrides (coordinator assignments etc.)
   const local = readScopedCollections<Region>('terrimap_regions', projectId)
 
-  if (!isOnline()) return local.length > 0 ? local : DEFAULT_REGIONS
+  if (!isOnline()) return local.length > 0 ? local : (projectId ? [] : DEFAULT_REGIONS)
 
   try {
     let query = supabase!
@@ -596,26 +596,27 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
           console.error('[DB] loadRegions legacy error:', legacyErr)
         } else if (legacyData && legacyData.length > 0) {
           return (legacyData as DbRegion[]).map((r) => ({
-            id:            r.id,
-            name:          r.name,
-            coordinatorId: r.coordinator_id ?? undefined,
-            center:        r.center,
-            zoom:          r.zoom,
+            id:     r.id,
+            name:   r.name,
+            ...(r.coordinator_id ? { coordinatorId: r.coordinator_id } : {}),
+            center: r.center,
+            zoom:   r.zoom,
           }))
         }
+        return []
       }
       return DEFAULT_REGIONS
     }
 
     return (data as DbRegion[]).map((r) => ({
-      id:            r.id,
-      name:          r.name,
-      coordinatorId: r.coordinator_id ?? undefined,
-      center:        r.center,
-      zoom:          r.zoom,
+      id:     r.id,
+      name:   r.name,
+      ...(r.coordinator_id ? { coordinatorId: r.coordinator_id } : {}),
+      center: r.center,
+      zoom:   r.zoom,
     }))
   } catch {
-    return local.length > 0 ? local : DEFAULT_REGIONS
+    return local.length > 0 ? local : (projectId ? [] : DEFAULT_REGIONS)
   }
 }
 

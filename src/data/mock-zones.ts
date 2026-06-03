@@ -38,7 +38,7 @@ function makeZone(
       { id: `${id}-c`, type: 'CUSTOMER', value: customers },
       { id: `${id}-o`, type: 'ORDER',    value: orders },
     ],
-  }
+  } as any
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
