@@ -341,11 +341,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return null
 
+    const insertPayload = { name, description, owner_id: user.id }
+
     const { data, error } = await supabase
       .from('projects')
-      .insert({ name, description, owner_id: user.id })
-      .select()
-      .single()
+      .insert(insertPayload)
+      .select('id,name,description,owner_id,created_at')
+      .maybeSingle()
 
     if (error) {
       console.error('[AuthStore] createProject error:', error)
@@ -353,16 +355,44 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return null
     }
 
-    const project = data as Project
+    let project = data as Project | null
+
+    if (!project) {
+      const { data: fallbackProject, error: fallbackError } = await supabase
+        .from('projects')
+        .select('id,name,description,owner_id,created_at')
+        .eq('owner_id', user.id)
+        .eq('name', name)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (fallbackError) {
+        console.error('[AuthStore] createProject fallback error:', fallbackError)
+        set({ authError: fallbackError.message })
+        return null
+      }
+
+      project = fallbackProject as Project | null
+    }
+
+    if (!project?.id) {
+      set({ authError: 'Không thể tạo dự án. Vui lòng thử lại.' })
+      return null
+    }
 
     // Auto-add owner as admin member
-    await supabase
+    const { error: memberError } = await supabase
       .from('project_members')
       .insert({
         project_id: project.id,
         user_id: user.id,
         role: 'admin',
       })
+
+    if (memberError) {
+      console.warn('[AuthStore] createProject member insert warning:', memberError)
+    }
 
     await get().loadProjects()
     await get().selectProject(project.id)

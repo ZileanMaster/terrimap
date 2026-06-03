@@ -346,7 +346,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   brandText: {
     color: 'var(--color-text)',
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 16,
   },
   profileSection: {
@@ -373,7 +373,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   profileName: {
     color: 'var(--color-text)',
-    fontWeight: 700,
+    fontWeight: 600,
     fontSize: 14,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -425,7 +425,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   menuText: {
-    fontWeight: 600,
+    fontWeight: 500,
     fontSize: 14,
   },
   sidebarFooter: {
@@ -483,7 +483,7 @@ const styles: Record<string, React.CSSProperties> = {
   breadcrumbMuted: { color: 'var(--color-text-2)', fontWeight: 700 },
   breadcrumbSeparator: { color: 'var(--color-text-2)' },
   breadcrumbActive: {
-    fontWeight: 700,
+    fontWeight: 600,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',

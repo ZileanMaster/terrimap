@@ -31,6 +31,8 @@ export default function ProjectSelectPage() {
         setShowCreate(false)
         setNewName('')
         setNewDesc('')
+      } else {
+        push({ kind: 'error', title: 'Không tạo được dự án', message: useAuthStore.getState().authError || 'Vui lòng thử lại.' })
       }
     } finally {
       setCreating(false)
