@@ -73,7 +73,7 @@ function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) 
   return null
 }
 
-// ── MapZoneFlyTo — fitBounds to selected zone polygon ─────────────────────────
+// ── MapZoneFlyTo — fitBounds to selected zone vùng ─────────────────────────
 // Accurate zoom-to-zone using Leaflet bounds (avoids centroid storage issues)
 function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId?: string | null }) {
   const map = useMap()
@@ -252,7 +252,7 @@ export default function TerritoryMap({
               ring.map(([lng, lat]) => [lat, lng] as [number, number]),
             )
           } else {
-            // MultiPolygon — pick first polygon for now
+            // MultiPolygon — pick first vùng for now
             positions = (zone.polygon.coordinates[0] ?? []).map((ring) =>
               ring.map(([lng, lat]) => [lat, lng] as [number, number]),
             )

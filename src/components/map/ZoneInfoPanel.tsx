@@ -96,7 +96,7 @@ export default function ZoneInfoPanel({
     try {
       await onAssign(selectedZoneId, targetDistrict)
     } catch (error) {
-      setAssignError(error instanceof Error ? error.message : 'Không thể chuyển polygon.')
+      setAssignError(error instanceof Error ? error.message : 'Không thể chuyển vùng.')
     } finally {
       setAssigning(false)
     }
@@ -127,7 +127,7 @@ export default function ZoneInfoPanel({
         <div style={styles.minRow}>
           <div style={styles.minLeft}>
             <div style={styles.minTitle}>{zone.name}</div>
-            <div style={styles.minSub}>Polygon {zone.id}</div>
+            <div style={styles.minSub}>Vùng {zone.id}</div>
           </div>
           <div style={styles.minRight}>
             {districtId >= 0 && (
@@ -166,7 +166,7 @@ export default function ZoneInfoPanel({
       <div style={styles.header}>
         <div>
           <h3 style={styles.zoneName}>{zone.name}</h3>
-          <div style={styles.zoneSub}>Polygon {zone.id}</div>
+          <div style={styles.zoneSub}>Vùng {zone.id}</div>
         </div>
         <div style={styles.headerRight}>
           {districtId >= 0 && (
@@ -209,7 +209,7 @@ export default function ZoneInfoPanel({
           }}
           data-testid="toggle-selected-zone-visibility"
         >
-          {isHidden ? 'Hiện polygon này' : 'Ẩn polygon này'}
+          {isHidden ? 'Hiện vùng này' : 'Ẩn vùng này'}
         </button>
       </div>
 

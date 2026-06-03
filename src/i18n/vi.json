@@ -40,7 +40,7 @@
   "map.save_activity": "Lưu",
   "map.delete_zone": "Xóa vùng",
   "map.delete_confirm": "Xóa \"{{name}}\"? Không thể hoàn tác.",
-  "map.overlap_error": "Polygon chồng lắp với vùng \"{{name}}\". Vui lòng vẽ lại.",
+  "map.overlap_error": "Vùng chồng lắp với vùng \"{{name}}\". Vui lòng vẽ lại.",
 
   "sidebar.team_overview": "Tổng quan đội ngũ",
   "sidebar.my_district": "Cụm của tôi",

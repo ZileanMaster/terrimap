@@ -15,7 +15,7 @@ function centroidOf(ring: number[][]): { lat: number; lng: number } {
   return { lat: Math.round(lat * 100000) / 100000, lng: Math.round(lng * 100000) / 100000 }
 }
 
-/** Tạo rectangle polygon [lng,lat] — closed ring, counter-clockwise */
+/** Tạo rectangle vùng [lng,lat] — closed ring, counter-clockwise */
 function rect(left: number, bottom: number, right: number, top: number): number[][] {
   return [
     [left, bottom],

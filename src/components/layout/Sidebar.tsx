@@ -4,7 +4,7 @@
  * L4b-1: Now accepts `assignments` prop from Page (reflects algorithm results).
  * - Zone cards section with scroll-into-view on selectedZoneId change
  * - Agent card click → setHighlightedSalesId → map highlights district
- * - Zone card click → selectZone → map highlights polygon
+ * - Zone card click → selectZone → map highlights vùng
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react'
@@ -69,7 +69,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardLi
     if (onFlyTo) {
       const zone = zones.find(z => z.id === zoneId)
       if (zone) {
-        // Compute centroid from polygon (GeoJSON coords are [lng, lat])
+        // Compute centroid from vùng (GeoJSON coords are [lng, lat])
         // Avoids using the stored centroid field which may be stale/incorrect
         let ring: number[][] = []
         if (zone.polygon.type === 'Polygon') {

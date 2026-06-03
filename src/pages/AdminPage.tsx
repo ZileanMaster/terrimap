@@ -275,7 +275,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
     const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
     if (disconnected) {
-      throw new Error('Không thể chuyển polygon vì thao tác này sẽ làm cụm mất liên thông.')
+      throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm mất liên thông.')
     }
 
     const scopedZoneIds = new Set(displayZones.map((z) => z.id))
@@ -406,7 +406,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
               <div style={styles.mapHudRow}>
                 <span style={styles.modeBadgeEdit}>Chế độ: Khu vực & bản đồ</span>
                 <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
-                  {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
+                  {showPolygons ? 'Ẩn vùng' : 'Hiện vùng'}
                 </button>
                 {/* Drawing toolbar is always visible for admins (top-right). */}
               </div>

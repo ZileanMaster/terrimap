@@ -40,7 +40,7 @@
   "map.save_activity": "Save",
   "map.delete_zone": "Delete zone",
   "map.delete_confirm": "Delete \"{{name}}\"? This cannot be undone.",
-  "map.overlap_error": "Polygon overlaps with zone \"{{name}}\". Please redraw.",
+  "map.overlap_error": "Zone overlaps with zone \"{{name}}\". Please redraw.",
 
   "sidebar.team_overview": "Team Overview",
   "sidebar.my_district": "My Cluster",

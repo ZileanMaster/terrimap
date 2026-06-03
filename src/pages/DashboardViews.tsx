@@ -7,8 +7,6 @@ import { useDataStore } from '../store/dataStore.js';
 import { useUIStore } from '../store/uiStore.js';
 import { useAuthStore } from '../store/authStore.js';
 import { isOnline, supabase } from '../lib/supabase.js';
-import { loadSnapshots } from '../services/db.js';
-import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../lib/geometry.js';
 import { loadDistrictReports, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
 
 // Clean email-based mock members for offline mode
@@ -82,26 +80,15 @@ const MOCK_MEMBERS = [
 // ── 1. TỔNG QUAN (OverviewView) ───────────────────────────────────────────────
 export function OverviewView() {
   const zones = useDataStore((s) => s.zones);
-  const assignments = useDataStore((s) => s.assignments);
   const agents = useDataStore((s) => s.agents);
   const regions = useDataStore((s) => s.regions);
   const currentRegionId = useDataStore((s) => s.currentRegionId);
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion);
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
 
-  const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [loadingSnaps, setLoadingSnaps] = useState(false);
   const [districtReports, setDistrictReports] = useState<any[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
   const reportPeriod = currentReportPeriod();
-
-  useEffect(() => {
-    setLoadingSnaps(true);
-    loadSnapshots()
-      .then((data) => setSnapshots(data || []))
-      .catch(console.error)
-      .finally(() => setLoadingSnaps(false));
-  }, []);
 
   useEffect(() => {
     setLoadingReports(true);
@@ -120,7 +107,7 @@ export function OverviewView() {
   const selectedRegion = currentRegionId
     ? regions.find((region) => region.id === currentRegionId) ?? null
     : null;
-  const selectedRegionLabel = selectedRegion?.name ?? 'Tất cả khu vực';
+  const selectedRegionLabel = selectedRegion?.name ?? 'T?t c? khu v?c';
   const filteredReports = useMemo(
     () => currentRegionId
       ? districtReports.filter((report: any) => (report.regionId ?? report.region_id) === currentRegionId)
@@ -128,13 +115,10 @@ export function OverviewView() {
     [currentRegionId, districtReports],
   );
 
-  const assignedCount = assignments.filter((a) => a.salesAgentId).length;
-  const assignmentPercent = zones.length > 0 ? Math.round((assignedCount / zones.length) * 100) : 0;
-
   const reportStats = useMemo(() => {
     const totalCustomers = filteredReports.reduce((s, r) => s + (Number(r.customers) || 0), 0);
     const totalOrders = filteredReports.reduce((s, r) => s + (Number(r.orders) || 0), 0);
-    const districtKey = (r: any) => `${r.regionId || r.region_id || ''}|${r.districtId || r.district_id || ''}`
+    const districtKey = (r: any) => `${r.regionId || r.region_id || ''}|${r.districtId || r.district_id || ''}`;
     const districts = new Set(filteredReports.map(districtKey));
     const users = new Set(filteredReports.map((r: any) => String(r.userId || r.user_id || '')));
     return {
@@ -146,326 +130,131 @@ export function OverviewView() {
     };
   }, [filteredReports]);
 
-  // Compute total violations and islands across all regions
-  let totalContiguityViolations = 0;
-  let totalIslandZones = 0;
-  let totalTopologyErrors = 0;
+  const businessRegionStats = useMemo(() => {
+    const visibleRegions = currentRegionId
+      ? regions.filter((region) => region.id === currentRegionId)
+      : regions;
 
-  const regionStatsList = (currentRegionId ? regions.filter((region) => region.id === currentRegionId) : regions).map((r) => {
-    const regionZones = zones.filter((z) => (z as any).regionId === r.id);
-    const regionZonesCount = regionZones.length;
+    return visibleRegions.map((region) => {
+      const regionZones = zones.filter((zone) => (zone as any).regionId === region.id);
+      const regionReports = districtReports.filter((report: any) => (report.regionId ?? report.region_id) === region.id);
+      const customers = regionReports.reduce((sum: number, report: any) => sum + (Number(report.customers) || 0), 0);
+      const orders = regionReports.reduce((sum: number, report: any) => sum + (Number(report.orders) || 0), 0);
+      const reportedDistricts = new Set(regionReports.map((report: any) => String(report.districtId ?? report.district_id ?? '')));
+      const activeUsers = new Set(regionReports.map((report: any) => String(report.userId ?? report.user_id ?? '')));
+      const coveragePercent = regionZones.length > 0 ? Math.round((reportedDistricts.size / regionZones.length) * 100) : 0;
 
-    const regionAssignments = assignments.filter((a) =>
-      regionZones.some((z) => z.id === a.zoneId)
-    );
-    const regionAssignedCount = regionAssignments.filter((a) => a.salesAgentId).length;
-
-    // Contiguity & Island zones
-    const adj = buildAdjacencyMatrix(regionZones, 50);
-    const topologyErrors = findPolygonTopologyViolations(regionZones).length;
-    totalTopologyErrors += topologyErrors;
-    const islandCount = regionZones.filter((z) => (adj[z.id] ?? []).length === 0).length;
-    totalIslandZones += islandCount;
-
-    // Match agents to this region by name or ID
-    const agentsInRegion = agents.filter((a) => {
-      const regId = (a as any).regionId || (a as any).region_id;
-      return a.activeRegion === r.name || a.activeRegion === r.id || regId === r.id;
-    });
-
-    let regionContiguityViolations = 0;
-    let overloadedCount = 0;
-    let underloadedCount = 0;
-    let totalDeviationSum = 0;
-    let agentsWithWorkloadCount = 0;
-
-    const zoneMap = new Map(regionZones.map((z) => [z.id, z]));
-
-    agentsInRegion.forEach((agent) => {
-      const agentZoneIds = regionAssignments.filter((a) => a.salesAgentId === agent.id).map((a) => a.zoneId);
-
-      if (agentZoneIds.length > 0) {
-        agentsWithWorkloadCount++;
-
-        // Contiguity check via BFS
-        if (agentZoneIds.length > 1) {
-          const zoneIdsSet = new Set(agentZoneIds);
-          const [start] = zoneIdsSet;
-          const visited = new Set<string>([start!]);
-          const queue: string[] = [start!];
-          while (queue.length > 0) {
-            const cur = queue.shift()!;
-            for (const nb of adj[cur] ?? []) {
-              if (zoneIdsSet.has(nb) && !visited.has(nb)) {
-                visited.add(nb);
-                queue.push(nb);
-              }
-            }
-          }
-          if (visited.size !== zoneIdsSet.size) {
-            regionContiguityViolations++;
-            totalContiguityViolations++;
-          }
-        }
-
-        // Calculate workload (sum of customers)
-        const workload = agentZoneIds.reduce((sum, zId) => {
-          const z = zoneMap.get(zId);
-          if (!z) return sum;
-          return sum + z.activities.filter((act) => act.type === 'CUSTOMER').reduce((s, act) => s + act.value, 0);
-        }, 0);
-
-        if (workload > agent.capacity) {
-          overloadedCount++;
-        } else if (workload < agent.capacity * 0.7) {
-          underloadedCount++;
-        }
-
-        const deviation = Math.abs(workload - agent.capacity) / agent.capacity;
-        totalDeviationSum += deviation;
-      }
-    });
-
-    const avgDeviation = agentsWithWorkloadCount > 0
-      ? Math.round((totalDeviationSum / agentsWithWorkloadCount) * 1000) / 10
-      : 0;
-
-    return {
-      regionId: r.id,
-      regionName: r.name,
-      zonesCount: regionZonesCount,
-      assignedCount: regionAssignedCount,
-      islandCount,
-      topologyErrors,
-      contiguityViolations: regionContiguityViolations,
-      overloadedCount,
-      underloadedCount,
-      avgDeviation,
-    };
-  });
+      return {
+        regionId: region.id,
+        regionName: region.name,
+        customers,
+        orders,
+        reportCount: regionReports.length,
+        reportedDistricts: reportedDistricts.size,
+        coveragePercent,
+        activeUsers: activeUsers.size,
+      };
+    }).sort((a, b) => (b.orders * 2 + b.customers) - (a.orders * 2 + a.customers)).slice(0, 4);
+  }, [currentRegionId, districtReports, regions, zones]);
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>Tổng quan dự án</h3>
+      <h3 style={styles.viewHeader}>T?ng quan d? ?n</h3>
       <div style={styles.overviewRegionBar}>
-        <span style={styles.overviewRegionLabel}>Khu vực đang xem</span>
+        <span style={styles.overviewRegionLabel}>Khu v?c ?ang xem</span>
         <select
           value={currentRegionId && regionOptionIds.has(currentRegionId) ? currentRegionId : '__all__'}
           onChange={(e) => setCurrentRegion(e.target.value === '__all__' ? null : e.target.value)}
           style={styles.overviewRegionSelect}
         >
-          <option value="__all__">Tất cả khu vực</option>
+          <option value="__all__">T?t c? khu v?c</option>
           {regionOptions.map((region) => (
             <option key={region.id} value={region.id}>{region.name}</option>
           ))}
         </select>
         <span style={styles.overviewRegionHint}>
-          {selectedRegion ? `Đang xem báo cáo của ${selectedRegionLabel}` : 'Đang xem toàn bộ khu vực của dự án'}
+          {selectedRegion ? `?ang xem b?o c?o c?a ${selectedRegionLabel}` : '?ang xem to?n b? khu v?c c?a d? ?n'}
         </span>
       </div>
-      {/* Metric Cards Deck */}
+
       <div style={styles.summaryGrid}>
-        {/* Card 1 */}
         <div style={{ ...styles.card, ...styles.cardWide }}>
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8' }}>R</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{regions.length}</span>
-            <span style={styles.cardLbl}>Khu vực Địa lý</span>
+            <span style={styles.cardLbl}>Khu v?c ??a l?</span>
           </div>
         </div>
 
-        {/* Card 2 */}
         <div style={{ ...styles.card, ...styles.cardWide }}>
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>S</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{agents.length}</span>
-            <span style={styles.cardLbl}>Nhân viên Sales</span>
+            <span style={styles.cardLbl}>Nh?n vi?n Sales</span>
           </div>
         </div>
 
-        {/* Card 3 */}
         <div style={{ ...styles.card, ...styles.cardNarrow }}>
-          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24' }}>I</div>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24' }}>K</div>
           <div style={styles.cardInfo}>
-            <span style={styles.cardVal}>{totalIslandZones}</span>
-            <span style={styles.cardLbl}>Vùng cô lập (Islands)</span>
+            <span style={styles.cardVal}>{reportStats.totalCustomers}</span>
+            <span style={styles.cardLbl}>Kh?ch h?ng b?o c?o</span>
           </div>
         </div>
 
-        {/* Card 4 */}
         <div style={{ ...styles.card, ...styles.cardNarrow }}>
-          <div style={{ ...styles.cardBadge, backgroundColor: totalContiguityViolations > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(129, 140, 248, 0.12)', color: totalContiguityViolations > 0 ? '#ef4444' : '#818cf8' }}>C</div>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(129, 140, 248, 0.12)', color: '#818cf8' }}>O</div>
           <div style={styles.cardInfo}>
-            <span style={styles.cardVal}>{totalContiguityViolations}</span>
-            <span style={styles.cardLbl}>Vi phạm liên thông</span>
+            <span style={styles.cardVal}>{reportStats.totalOrders}</span>
+            <span style={styles.cardLbl}>??n h?ng b?o c?o</span>
           </div>
         </div>
       </div>
 
-      {/* District Reports Summary */}
       <div style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
-            <h4 style={styles.sectionTitle}>Báo cáo cụm</h4>
-            <div style={styles.sectionMeta}>Tháng {reportPeriod} · {selectedRegion ? `khu vực ${selectedRegionLabel}` : 'tổng hợp dữ liệu theo toàn bộ khu vực của dự án'}</div>
+            <h4 style={styles.sectionTitle}>?? Hi?u qu? kinh doanh theo khu v?c</h4>
+            <div style={styles.sectionMeta}>Th?ng {reportPeriod} ? {selectedRegion ? `khu v?c ${selectedRegionLabel}` : 't?ng h?p theo to?n b? khu v?c c?a d? ?n'}</div>
           </div>
-          <div style={styles.sectionPill}>{reportStats.reportCount} dòng báo cáo</div>
+          <div style={styles.sectionPill}>{reportStats.reportCount} d?ng b?o c?o</div>
         </div>
-        <div style={styles.reportGrid}>
-          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardWide }}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>K</div>
-            <div style={styles.cardInfo}>
-              <span style={styles.cardVal}>{reportStats.totalCustomers}</span>
-              <span style={styles.cardLbl}>KH báo cáo</span>
-            </div>
-          </div>
-          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardWide }}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>O</div>
-            <div style={styles.cardInfo}>
-              <span style={styles.cardVal}>{reportStats.totalOrders}</span>
-              <span style={styles.cardLbl}>Đơn báo cáo</span>
-            </div>
-          </div>
-          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardNarrow }}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#f59e0b' }}>D</div>
-            <div style={styles.cardInfo}>
-              <span style={styles.cardVal}>{reportStats.districtCount}</span>
-              <span style={styles.cardLbl}>Cụm có dữ liệu</span>
-            </div>
-          </div>
-          <div style={{ ...styles.card, ...styles.reportCard, ...styles.cardNarrow }}>
-            <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}>U</div>
-            <div style={styles.cardInfo}>
-              <span style={styles.cardVal}>{reportStats.userCount}</span>
-              <span style={styles.cardLbl}>Người đã nhập</span>
-            </div>
-          </div>
-        </div>
-
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Khu vực</th>
-                <th style={styles.th}>Cụm</th>
-                <th style={styles.th}>Khách hàng</th>
-                <th style={styles.th}>Đơn hàng</th>
-                <th style={styles.th}>Cập nhật</th>
+                <th style={styles.th}>Khu v?c</th>
+                <th style={styles.th}>Kh?ch h?ng</th>
+                <th style={styles.th}>??n h?ng</th>
+                <th style={styles.th}>S? b?o c?o</th>
+                <th style={styles.th}>?? ph? b?o c?o</th>
+                <th style={styles.th}>Nh?n x?t</th>
               </tr>
             </thead>
             <tbody>
               {loadingReports && (
-                <tr><td colSpan={5} style={styles.tableEmpty}>Đang tải báo cáo...</td></tr>
+                <tr><td colSpan={6} style={styles.tableEmpty}>?ang t?i d? li?u kinh doanh...</td></tr>
               )}
-              {!loadingReports && filteredReports.slice(0, 8).map((r: any) => {
-                const rid = r.regionId ?? r.region_id
-                const regionName = regions.find((rr) => rr.id === rid)?.name ?? String(rid ?? '')
-                return (
-                  <tr key={r.id} style={styles.tr}>
-                    <td style={styles.td}><strong>{regionName || '-'}</strong></td>
-                    <td style={styles.td}>C{r.districtId ?? r.district_id}</td>
-                    <td style={styles.td}>{Number(r.customers ?? 0)}</td>
-                    <td style={styles.td}>{Number(r.orders ?? 0)}</td>
-                    <td style={styles.td}>{new Date(r.updatedAt ?? r.updated_at ?? Date.now()).toLocaleString('vi-VN')}</td>
-                  </tr>
-                )
-              })}
-              {!loadingReports && filteredReports.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={styles.tableEmpty}>
-                    {selectedRegion ? `Chưa có báo cáo cụm nào trong tháng này cho ${selectedRegionLabel}.` : 'Chưa có báo cáo cụm nào trong tháng này.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Region Status Details */}
-      <div style={styles.section}>
-        <h4 style={styles.sectionTitle}>📍 Tình trạng Sức khỏe của các Khu vực</h4>
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Tên Khu vực</th>
-                <th style={styles.th}>Quy mô Zones</th>
-                <th style={styles.th}>Tỷ lệ Phân công</th>
-                <th style={styles.th}>Liên thông địa lý</th>
-                <th style={styles.th}>Cân bằng tải (Lệch TB)</th>
-                <th style={styles.th}>Over / Underloaded</th>
-              </tr>
-            </thead>
-            <tbody>
-              {regionStatsList.map((stat) => (
+              {!loadingReports && businessRegionStats.map((stat) => (
                 <tr key={stat.regionId} style={styles.tr}>
                   <td style={styles.td}><strong>{stat.regionName}</strong></td>
-                  <td style={styles.td}>{stat.zonesCount} zones ({stat.islandCount} cô lập)</td>
+                  <td style={styles.td}>{stat.customers.toLocaleString('vi-VN')}</td>
+                  <td style={styles.td}>{stat.orders.toLocaleString('vi-VN')}</td>
+                  <td style={styles.td}>{stat.reportCount}</td>
+                  <td style={styles.td}>{stat.coveragePercent}%</td>
                   <td style={styles.td}>
-                    {stat.assignedCount}/{stat.zonesCount} ({stat.zonesCount > 0 ? Math.round((stat.assignedCount / stat.zonesCount) * 100) : 0}%)
-                  </td>
-                  <td style={styles.td}>
-                    {stat.contiguityViolations > 0 ? (
-                      <span style={{ color: '#ef4444', fontWeight: 'bold' }}>
-                        🔴 {stat.contiguityViolations} vi phạm
-                      </span>
-                    ) : (
-                      <span style={{ color: '#10b981', fontWeight: 'bold' }}>🟢 Đảm bảo</span>
-                    )}
-                  </td>
-                  <td style={styles.td}>
-                    ±{stat.avgDeviation}%
-                  </td>
-                  <td style={styles.td}>
-                    <span style={{ color: stat.overloadedCount > 0 ? '#ef4444' : 'inherit', fontWeight: stat.overloadedCount > 0 ? 'bold' : 'normal' }}>
-                      {stat.overloadedCount} Quá tải
-                    </span>
-                    {' / '}
-                    <span style={{ color: stat.underloadedCount > 0 ? '#fbbf24' : 'inherit', fontWeight: stat.underloadedCount > 0 ? 'bold' : 'normal' }}>
-                      {stat.underloadedCount} Thiếu tải
-                    </span>
+                    {stat.reportCount === 0
+                      ? 'Ch?a c? d? li?u'
+                      : stat.coveragePercent >= 80
+                        ? 'Ph? b?o c?o t?t'
+                        : 'C?n c?i thi?n ?? ph?'}
                   </td>
                 </tr>
               ))}
-              {regionStatsList.length === 0 && (
+              {!loadingReports && businessRegionStats.length === 0 && (
                 <tr>
                   <td colSpan={6} style={styles.tableEmpty}>
-                    📭 {selectedRegion ? `Khu vực ${selectedRegionLabel} chưa có dữ liệu.` : 'Chưa cấu hình khu vực nào cho dự án này.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Snapshots Table */}
-      <div style={styles.section}>
-        <h4 style={styles.sectionTitle}>📸 Các Snapshots Phân vùng Lưu Gần đây</h4>
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Label Snapshot</th>
-                <th style={styles.th}>Chu kỳ (Period)</th>
-                <th style={styles.th}>Thời gian Tạo</th>
-                <th style={styles.th}>Quy mô</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshots.slice(0, 5).map((s: any) => (
-                <tr key={s.id} style={styles.tr}>
-                  <td style={styles.td}><code>{s.label}</code></td>
-                  <td style={styles.td}>{s.period || 'Mặc định'}</td>
-                  <td style={styles.td}>{new Date(s.created_at || s.timestamp).toLocaleString('vi-VN')}</td>
-                  <td style={styles.td}>{(s.data?.zones || s.zones || []).length} zones</td>
-                </tr>
-              ))}
-              {snapshots.length === 0 && (
-                <tr>
-                  <td colSpan={4} style={styles.tableEmpty}>
-                    {loadingSnaps ? '⏳ Đang tải snapshots...' : '📭 Chưa có snapshot phân vùng nào được tạo.'}
+                    ?? {selectedRegion ? `Khu v?c ${selectedRegionLabel} ch?a c? d? li?u kinh doanh.` : 'Ch?a c? d? li?u kinh doanh theo khu v?c.'}
                   </td>
                 </tr>
               )}
@@ -476,7 +265,6 @@ export function OverviewView() {
     </div>
   );
 }
-
 // ── 2. QUẢN LÝ USER (UsersView) ──────────────────────────────────────────────
 export function UsersView() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId);

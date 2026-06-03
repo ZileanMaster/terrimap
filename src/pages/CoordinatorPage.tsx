@@ -107,7 +107,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
       // Check source district still connected
       if (!isDistrictConnected(displayZones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
-        throw new Error('Không thể chuyển polygon vì thao tác này sẽ làm cụm nguồn bị tách rời.')
+        throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm nguồn bị tách rời.')
       }
     }
 
@@ -127,7 +127,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
       const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
       if (disconnected) {
-        throw new Error('Không thể chuyển polygon vì thao tác này sẽ làm cụm mất liên thông.')
+        throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm mất liên thông.')
       }
 
       const scopedZoneIds = new Set(displayZones.map((z) => z.id))
@@ -241,7 +241,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
               <div style={styles.mapHudRow}>
                 <span style={styles.modeBadgeEdit}>Chế độ: Khu vực & bản đồ</span>
                 <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
-                  {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
+                  {showPolygons ? 'Ẩn vùng' : 'Hiện vùng'}
                 </button>
               </div>
             ) : (

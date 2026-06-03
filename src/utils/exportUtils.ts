@@ -109,7 +109,7 @@ export function exportMatrixCSV(adj: AdjMatrix): void {
 
 /**
  * Export zones + assignments as GeoJSON FeatureCollection.
- * Polygon coordinates kept in [lng, lat] (GeoJSON spec).
+ * Vùng coordinates kept in [lng, lat] (GeoJSON spec).
  */
 export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
   const assignMap = new Map(assignments.map(a => [a.zoneId, a]))

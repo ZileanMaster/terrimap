@@ -1,5 +1,5 @@
 /**
- * DrawingToolbar - Native Leaflet.Draw polygon control (Admin only)
+ * DrawingToolbar - Native Leaflet.Draw vùng control (Admin only)
  *
  * Uses Leaflet Draw directly (not react-leaflet-draw wrapper) to avoid ESM issues.
  * NOTE: CSS is imported globally once (see src/main.tsx) because dynamic CSS import
@@ -13,9 +13,9 @@ import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
 interface DrawingToolbarProps {
-  /** Callback when user finishes drawing a polygon. */
+  /** Callback when user finishes drawing a vùng. */
   onZoneCreated: (polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
-  /** Callback when user edits an existing zone polygon. */
+  /** Callback when user edits an existing zone vùng. */
   onZoneEdited: (zoneId: string, polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
   /** Existing zones for overlap validation. */
   existingZones?: Zone[]
@@ -124,7 +124,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
               zone.polygon.type === 'Polygon' ? zone.polygon.coordinates[0] : zone.polygon.coordinates[0]?.[0]
             if (existingRing && polygonsOverlap(ring, existingRing)) {
               drawnItems?.removeLayer(layer)
-              alert(`Polygon mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
+              alert(`Vùng mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
               return
             }
           }
@@ -154,7 +154,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
                   const latlngs = selectedOriginalRingRef.current.map(([lng, lat]) => [lat, lng] as [number, number])
                   layer.setLatLngs([latlngs])
                 }
-                alert('Polygon sửa bị chồng lắp vùng khác. Đã hoàn tác.')
+                alert('Vùng sửa bị chồng lắp vùng khác. Đã hoàn tác.')
                 return
               }
             }
@@ -226,7 +226,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
     if (latlngs.length < 3) return
 
     // IMPORTANT: must be interactive for Leaflet.Draw edit handles to work.
-    // If interactive is false, the polygon will not receive pointer events and edits feel "non-clickable".
+    // If interactive is false, the vùng will not receive pointer events and edits feel "non-clickable".
     const layer = L.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
     ;(layer as any).__zoneId = selectedZone.id
     selectedLayerRef.current = layer

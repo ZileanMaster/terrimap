@@ -25,7 +25,7 @@ export function getDistrictColor(districtId: number): string {
   return DISTRICT_COLORS[districtId % 10] ?? DISTRICT_COLORS[0]!
 }
 
-/** Trả về màu fill nhạt hơn (opacity 0.35) cho polygon. */
+/** Trả về màu fill nhạt hơn (opacity 0.35) cho vùng. */
 export function getDistrictFillColor(districtId: number): string {
   return getDistrictColor(districtId)
 }

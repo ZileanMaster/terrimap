@@ -90,7 +90,7 @@ function componentCount(zones: Zone[]): number {
     !selectedRegionId ? 'Chưa chọn khu vực.' : null,
     displayZones.length < 2 ? 'Khu vực cần ít nhất 2 zones.' : null,
     displayAgents.length < 2 ? 'Khu vực cần ít nhất 2 sales đang hoạt động.' : null,
-    topologyViolations.length > 0 ? `Có ${topologyViolations.length} lỗi topology polygon.` : null,
+    topologyViolations.length > 0 ? `Có ${topologyViolations.length} lỗi topology vùng.` : null,
     components > 1 ? `Đồ thị zone có ${components} cụm rời, không thể đảm bảo liên thông.` : null,
   ].filter((x): x is string => Boolean(x))
 

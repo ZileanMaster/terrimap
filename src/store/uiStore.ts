@@ -31,9 +31,9 @@ interface UIStore {
   isMapTransitioning:  boolean            // L4b-1: flash effect after algorithm run
   selectedDistrictId:  number | null      // Map legend: focus a cluster/district
   showPolygons:        boolean            // Map layer toggle
-  /** Per-zone visibility toggle (hide selected polygon without hiding all). */
+  /** Per-zone visibility toggle (hide selected vùng without hiding all). */
   hiddenZoneIds:       Record<string, true>
-  /** Enable Leaflet-Draw toolbar for polygon editing (admin UI). */
+  /** Enable Leaflet-Draw toolbar for vùng editing (admin UI). */
   polygonEditEnabled:  boolean
   // Actions
   setRole:                (role: Role) => void

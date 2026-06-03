@@ -34,7 +34,7 @@ export default function MapLegend({ assignments, disconnectedDistrictIds }: MapL
       <div style={styles.header}>
         <div style={styles.title}>Chú giải</div>
         <button type="button" style={styles.toggleBtn} onClick={togglePolygons}>
-          {showPolygons ? 'Ẩn polygon' : 'Hiện polygon'}
+          {showPolygons ? 'Ẩn vùng' : 'Hiện vùng'}
         </button>
       </div>
 
@@ -232,4 +232,3 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
 }
-
