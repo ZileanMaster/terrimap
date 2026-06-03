@@ -697,13 +697,34 @@ export function OperationsView() {
               <span style={styles.opsLabelTxt}>Tháng</span>
               <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} style={styles.opsInput} />
             </label>
-            <label style={styles.opsLabel}>
+            <div style={styles.opsRegionGroup}>
               <span style={styles.opsLabelTxt}>Khu vực</span>
-              <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} style={styles.opsInput}>
-                <option value="__all__">Tất cả</option>
-                {regionOptions.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </label>
+              <div style={styles.opsRegionChips} role="tablist" aria-label="Lọc khu vực">
+                <button
+                  type="button"
+                  onClick={() => setRegionFilter('__all__')}
+                  style={{
+                    ...styles.opsRegionChip,
+                    ...(regionFilter === '__all__' ? styles.opsRegionChipActive : null),
+                  }}
+                >
+                  Tất cả
+                </button>
+                {regionOptions.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRegionFilter(r.id)}
+                    style={{
+                      ...styles.opsRegionChip,
+                      ...(regionFilter === r.id ? styles.opsRegionChipActive : null),
+                    }}
+                  >
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label style={{ ...styles.opsLabel, flex: 1, minWidth: 180 }}>
               <span style={styles.opsLabelTxt}>Tìm</span>
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cụm / user / ghi chú..." style={styles.opsInput} />
@@ -1264,6 +1285,35 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: 'var(--color-text-2)',
     fontWeight: 800,
+  },
+  opsRegionGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    minWidth: 0,
+  },
+  opsRegionChips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'center',
+  },
+  opsRegionChip: {
+    padding: '8px 12px',
+    borderRadius: 999,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    color: 'var(--color-text-2)',
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: 'pointer',
+    height: 36,
+  },
+  opsRegionChipActive: {
+    background: 'var(--color-accent)',
+    color: '#fff',
+    borderColor: 'transparent',
+    boxShadow: '0 8px 20px rgba(37, 99, 235, 0.18)',
   },
   opsInput: {
     padding: '8px 10px',

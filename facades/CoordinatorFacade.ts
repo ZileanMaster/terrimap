@@ -1,21 +1,24 @@
 /**
  * facades/CoordinatorFacade.ts — L3 Role Façade (stateless)
  *
- * Role: Coordinator — xem + gán + lịch sử, KHÔNG tạo version, KHÔNG chạy thuật toán.
+ * Role: Coordinator — xem + gán + lịch sử + chạy phân chia, KHÔNG tạo version.
  * Không lưu state data trong constructor — nhận qua method params.
  */
 
 import type { Zone, SalesAgent, Activity } from '../types/domain.js';
-import type { Assignment } from '../lib/partition.js';
+import type { Assignment, PartitionOpts } from '../lib/partition.js';
 import type { TerritoryService } from '../services/TerritoryService.js';
 import type { VersionService } from '../services/VersionService.js';
 import type { ActivityService } from '../services/ActivityService.js';
 import { PermissionError } from './errors.js';
 import type {
+  AlgorithmResultVM,
   TeamOverview,
   SalesWithZones,
   AssignResult,
   HistoryEntry,
+  ViolationVM,
+  PartitionResult,
 } from './viewmodels.js';
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
@@ -160,17 +163,59 @@ export class CoordinatorFacade {
   // ─── BLOCKED — async throw (returns rejected Promise) ────────────────────────
 
   /**
-   * @throws {PermissionError} PERMISSION_DENIED
-   * Declared async so callers using `.rejects` work correctly.
+   * Chạy thuật toán partition cho điều phối viên.
+   * Điều phối viên được phép phân chia lại trong phạm vi khu vực phụ trách,
+   * nhưng vẫn không có quyền tạo version snapshot.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async runAlgorithm(_algo: string, ..._rest: unknown[]): Promise<never> {
-    throw new PermissionError({
-      code: 'PERMISSION_DENIED',
-      role: this._role,
-      method: 'runAlgorithm',
-      message: 'Coordinators cannot run partition algorithms. Use AdminFacade instead.',
-    });
+  async runAlgorithm(
+    algo: 'greedy' | 'local-search' | 'sa',
+    zones: Zone[],
+    m: number,
+    salesAgents: SalesAgent[] = [],
+    opts?: PartitionOpts,
+  ): Promise<AlgorithmResultVM> {
+    const result = await this.territorySvc.runPartition(zones, m, algo, salesAgents, opts);
+    return this.toAlgorithmResultVM(result);
+  }
+
+  private toAlgorithmResultVM(result: PartitionResult): AlgorithmResultVM {
+    return {
+      assignments: result.assignments,
+      balanceScore: result.metrics.balanceScore,
+      violationCount: result.violations.length,
+      maxDiameter: result.metrics.maxDiameter,
+      algo: result.algo,
+      durationMs: result.durationMs,
+      suggestSA: result.suggestSA,
+      violations: result.violations.map((v) => this.toViolationVM(v)),
+    };
+  }
+
+  private toViolationVM(v: PartitionResult['violations'][number]): ViolationVM {
+    if ('diameterKm' in v) {
+      return {
+        type: 'DIAMETER',
+        districtId: v.districtId,
+        message: `District ${v.districtId}: diameter ${v.diameterKm.toFixed(1)} km > ${v.maxAllowed} km`,
+        severity: 'warning',
+      };
+    }
+
+    if (v.type === 'DISCONNECTED') {
+      return {
+        type: 'CONTIGUITY',
+        districtId: v.districtId,
+        message: `District ${v.districtId} bị tách rời — không liên thông`,
+        severity: 'error',
+      };
+    }
+
+    return {
+      type: 'BALANCE',
+      districtId: v.districtId,
+      message: `District ${v.districtId}: ${v.type === 'OVER_LOADED' ? 'quá tải' : 'thiếu tải'} (${v.customerCount} KH, mean ${v.mean.toFixed(0)})`,
+      severity: 'warning',
+    };
   }
 }
 
