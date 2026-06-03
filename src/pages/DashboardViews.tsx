@@ -784,11 +784,10 @@ export function OperationsView() {
   }, [zones, assignments, currentRegionId]);
 
   const regionOptions = useMemo(() => {
-    const ids = Array.from(expectedDistrictsByRegion.keys());
-    const list = ids.map((id) => ({ id, name: regions.find((r) => r.id === id)?.name ?? id }));
+    const list = regions.map((region) => ({ id: region.id, name: region.name }));
     list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
     return list;
-  }, [expectedDistrictsByRegion, regions]);
+  }, [regions]);
 
   const rows = useMemo(() => {
     const norm = (r: any) => ({
@@ -824,6 +823,10 @@ export function OperationsView() {
     const byRegion = new Map<string, { expected: number; submitted: number; missing: number }>();
     const submitted = new Set(rows.map((r) => districtKey(r.regionId, r.districtId)));
 
+    for (const region of regions) {
+      byRegion.set(region.id, { expected: 0, submitted: 0, missing: 0 });
+    }
+
     for (const [rid, set] of expectedDistrictsByRegion.entries()) {
       const expected = set.size;
       let submittedCount = 0;
@@ -838,7 +841,7 @@ export function OperationsView() {
     }), { expected: 0, submitted: 0, missing: 0 });
 
     return { byRegion, total };
-  }, [rows, expectedDistrictsByRegion]);
+  }, [rows, expectedDistrictsByRegion, regions]);
 
   const downloadCsv = () => {
     const escape = (v: any) => {
