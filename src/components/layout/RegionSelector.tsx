@@ -2,7 +2,7 @@
  * RegionSelector - workflow entry for choosing or creating an operating region.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useUIStore } from '../../store/uiStore.js'
 import { findPolygonTopologyViolations, buildAdjacencyMatrix } from '../../../lib/geometry.js'
