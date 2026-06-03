@@ -250,7 +250,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 
       <div style={styles.divider} />
       <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot}>
-        ðŸ“¸ {t('sidebar.create_snapshot')}
+        📸 {t('sidebar.create_snapshot')}
       </button>
     </div>
   )

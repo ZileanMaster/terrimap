@@ -84,10 +84,10 @@ const vnProvinces = [
 
 // Fix mojibake preset labels to real Vietnamese names (so presets work with the full dropdown list).
 const presetNameFix: Record<string, string> = {
-  'HÃ  Ná»™i': 'Hà Nội',
-  'TP. Há»“ ChÃ­ Minh': 'TP. Hồ Chí Minh',
-  'ÄÃ  Náºµng': 'Đà Nẵng',
-  'Huáº¿': 'Thừa Thiên Huế',
+  'Hà Ná»™i': 'Hà Nội',
+  'TP. Hồ Chí Minh': 'TP. Hồ Chí Minh',
+  'Đà Nẵng': 'Đà Nẵng',
+  'Huế': 'Thừa Thiên Huế',
 }
 
 async function resolveCityCenter(city: string): Promise<{ center: { lat: number; lng: number }; zoom: number }> {

@@ -1,5 +1,5 @@
-﻿/**
- * DashboardViews.tsx â€” View components for the main Dashboard panels
+/**
+ * DashboardViews.tsx — View components for the main Dashboard panels
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -24,7 +24,7 @@ const MOCK_MEMBERS = [
     user_id: 'coord_test',
     role: 'coordinator',
     region_id: 'region-hn',
-    profile: { email: 'coord.test@terrimap.vn', full_name: 'Äiá»u Phá»‘i Test' },
+    profile: { email: 'coord.test@terrimap.vn', full_name: 'Điều Phối Test' },
     capacity: 0,
   },
   {
@@ -32,7 +32,7 @@ const MOCK_MEMBERS = [
     user_id: 'sales_test',
     role: 'sales',
     region_id: 'region-hn',
-    profile: { email: 'sales.test@terrimap.vn', full_name: 'NhÃ¢n ViÃªn Test' },
+    profile: { email: 'sales.test@terrimap.vn', full_name: 'Nhân Viên Test' },
     capacity: 450,
   },
   {
@@ -40,7 +40,7 @@ const MOCK_MEMBERS = [
     user_id: 'sales_hn_1',
     role: 'sales',
     region_id: 'region-hn',
-    profile: { email: 'sales_hn_1@terrimap.vn', full_name: 'Nguyá»…n VÄƒn A' },
+    profile: { email: 'sales_hn_1@terrimap.vn', full_name: 'Nguyễn Văn A' },
     capacity: 400,
   },
   {
@@ -48,7 +48,7 @@ const MOCK_MEMBERS = [
     user_id: 'sales_hn_2',
     role: 'sales',
     region_id: 'region-hn',
-    profile: { email: 'sales_hn_2@terrimap.vn', full_name: 'Tráº§n Thá»‹ B' },
+    profile: { email: 'sales_hn_2@terrimap.vn', full_name: 'Trần Thị B' },
     capacity: 500,
   },
   {
@@ -56,7 +56,7 @@ const MOCK_MEMBERS = [
     user_id: 'sales_hn_3',
     role: 'sales',
     region_id: 'region-hn',
-    profile: { email: 'sales_hn_3@terrimap.vn', full_name: 'LÃª VÄƒn C' },
+    profile: { email: 'sales_hn_3@terrimap.vn', full_name: 'Lê Văn C' },
     capacity: 600,
   },
   {
@@ -64,7 +64,7 @@ const MOCK_MEMBERS = [
     user_id: 'sales_hcm_1',
     role: 'sales',
     region_id: 'region-hcm',
-    profile: { email: 'sales_hcm_1@terrimap.vn', full_name: 'VÅ© Thá»‹ F' },
+    profile: { email: 'sales_hcm_1@terrimap.vn', full_name: 'Vũ Thị F' },
     capacity: 550,
   },
   {
@@ -72,12 +72,12 @@ const MOCK_MEMBERS = [
     user_id: 'sales_hcm_2',
     role: 'sales',
     region_id: 'region-hcm',
-    profile: { email: 'sales_hcm_2@terrimap.vn', full_name: 'Äáº·ng Minh G' },
+    profile: { email: 'sales_hcm_2@terrimap.vn', full_name: 'Đặng Minh G' },
     capacity: 480,
   },
 ];
 
-// â”€â”€ 1. Tá»”NG QUAN (OverviewView) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 1. TỔNG QUAN (OverviewView) ───────────────────────────────────────────────
 export function OverviewView() {
   const zones = useDataStore((s) => s.zones);
   const agents = useDataStore((s) => s.agents);
@@ -107,7 +107,7 @@ export function OverviewView() {
   const selectedRegion = currentRegionId
     ? regions.find((region) => region.id === currentRegionId) ?? null
     : null;
-  const selectedRegionLabel = selectedRegion?.name ?? 'Táº¥t cáº£ khu vá»±c';
+  const selectedRegionLabel = selectedRegion?.name ?? 'Tất cả khu vực';
   const filteredReports = useMemo(
     () => currentRegionId
       ? districtReports.filter((report: any) => (report.regionId ?? report.region_id) === currentRegionId)
@@ -159,21 +159,21 @@ export function OverviewView() {
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>Tá»•ng quan dá»± Ã¡n</h3>
+      <h3 style={styles.viewHeader}>Tổng quan dự án</h3>
       <div style={styles.overviewRegionBar}>
-        <span style={styles.overviewRegionLabel}>Khu vá»±c Ä‘ang xem</span>
+        <span style={styles.overviewRegionLabel}>Khu vực đang xem</span>
         <select
           value={currentRegionId && regionOptionIds.has(currentRegionId) ? currentRegionId : '__all__'}
           onChange={(e) => setCurrentRegion(e.target.value === '__all__' ? null : e.target.value)}
           style={styles.overviewRegionSelect}
         >
-          <option value="__all__">Táº¥t cáº£ khu vá»±c</option>
+          <option value="__all__">Tất cả khu vực</option>
           {regionOptions.map((region) => (
             <option key={region.id} value={region.id}>{region.name}</option>
           ))}
         </select>
         <span style={styles.overviewRegionHint}>
-          {selectedRegion ? `Äang xem bÃ¡o cÃ¡o cá»§a ${selectedRegionLabel}` : 'Äang xem toÃ n bá»™ khu vá»±c cá»§a dá»± Ã¡n'}
+          {selectedRegion ? `Đang xem báo cáo của ${selectedRegionLabel}` : 'Đang xem toàn bộ khu vực của dự án'}
         </span>
       </div>
 
@@ -182,7 +182,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8' }}>R</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{regions.length}</span>
-            <span style={styles.cardLbl}>Khu vá»±c Ä‘á»‹a lÃ½</span>
+            <span style={styles.cardLbl}>Khu vực địa lý</span>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>S</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{agents.length}</span>
-            <span style={styles.cardLbl}>NhÃ¢n viÃªn Sales</span>
+            <span style={styles.cardLbl}>Nhân viên Sales</span>
           </div>
         </div>
 
@@ -198,7 +198,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24' }}>K</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{reportStats.totalCustomers}</span>
-            <span style={styles.cardLbl}>KhÃ¡ch hÃ ng bÃ¡o cÃ¡o</span>
+            <span style={styles.cardLbl}>Khách hàng báo cáo</span>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(129, 140, 248, 0.12)', color: '#818cf8' }}>O</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{reportStats.totalOrders}</span>
-            <span style={styles.cardLbl}>ÄÆ¡n hÃ ng bÃ¡o cÃ¡o</span>
+            <span style={styles.cardLbl}>Đơn hàng báo cáo</span>
           </div>
         </div>
       </div>
@@ -214,26 +214,26 @@ export function OverviewView() {
       <div style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
-            <h4 style={styles.sectionTitle}>ðŸ“ Hiá»‡u quáº£ kinh doanh theo khu vá»±c</h4>
-            <div style={styles.sectionMeta}>ThÃ¡ng {reportPeriod} Â· {selectedRegion ? `khu vá»±c ${selectedRegionLabel}` : 'tá»•ng há»£p theo toÃ n bá»™ khu vá»±c cá»§a dá»± Ã¡n'}</div>
+            <h4 style={styles.sectionTitle}>📍 Hiệu quả kinh doanh theo khu vực</h4>
+            <div style={styles.sectionMeta}>Tháng {reportPeriod} · {selectedRegion ? `khu vực ${selectedRegionLabel}` : 'tổng hợp theo toàn bộ khu vực của dự án'}</div>
           </div>
-          <div style={styles.sectionPill}>{reportStats.reportCount} dÃ²ng bÃ¡o cÃ¡o</div>
+          <div style={styles.sectionPill}>{reportStats.reportCount} dòng báo cáo</div>
         </div>
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeaderRow}>
                 <th style={styles.th}>Khu vá»±c</th>
-                <th style={styles.th}>KhÃ¡ch hÃ ng</th>
-                <th style={styles.th}>ÄÆ¡n hÃ ng</th>
-                <th style={styles.th}>Sá»‘ bÃ¡o cÃ¡o</th>
-                <th style={styles.th}>Äá»™ phá»§ bÃ¡o cÃ¡o</th>
-                <th style={styles.th}>Nháº­n xÃ©t</th>
+                <th style={styles.th}>Khách hàng</th>
+                <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Số báo cáo</th>
+                <th style={styles.th}>Độ phủ báo cáo</th>
+                <th style={styles.th}>Nhận xét</th>
               </tr>
             </thead>
             <tbody>
               {loadingReports && (
-                <tr><td colSpan={6} style={styles.tableEmpty}>Äang táº£i dá»¯ liá»‡u kinh doanh...</td></tr>
+                <tr><td colSpan={6} style={styles.tableEmpty}>Đang tải dữ liệu kinh doanh...</td></tr>
               )}
               {!loadingReports && businessRegionStats.map((stat) => (
                 <tr key={stat.regionId} style={styles.tr}>
@@ -244,17 +244,17 @@ export function OverviewView() {
                   <td style={styles.td}>{stat.coveragePercent}%</td>
                   <td style={styles.td}>
                     {stat.reportCount === 0
-                      ? 'ChÆ°a cÃ³ dá»¯ liá»‡u'
+                      ? 'Chưa có dữ liệu'
                       : stat.coveragePercent >= 80
-                        ? 'Phá»§ bÃ¡o cÃ¡o tá»‘t'
-                        : 'Cáº§n cáº£i thiá»‡n Ä‘á»™ phá»§'}
+                        ? 'Phủ báo cáo tốt'
+                        : 'Cần cải thiện độ phủ'}
                   </td>
                 </tr>
               ))}
               {!loadingReports && businessRegionStats.length === 0 && (
                 <tr>
                   <td colSpan={6} style={styles.tableEmpty}>
-                    ðŸ“­ {selectedRegion ? `Khu vá»±c ${selectedRegionLabel} chÆ°a cÃ³ dá»¯ liá»‡u kinh doanh.` : 'ChÆ°a cÃ³ dá»¯ liá»‡u kinh doanh theo khu vá»±c.'}
+                    📭 {selectedRegion ? `Khu vực ${selectedRegionLabel} chưa có dữ liệu kinh doanh.` : 'Chưa có dữ liệu kinh doanh theo khu vực.'}
                   </td>
                 </tr>
               )}
@@ -265,7 +265,7 @@ export function OverviewView() {
     </div>
   );
 }
-// â”€â”€ 2. QUáº¢N LÃ USER (UsersView) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 2. QUẢN LÝ USER (UsersView) ──────────────────────────────────────────────
 export function UsersView() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
   const regions = useDataStore((s) => s.regions);
@@ -274,7 +274,7 @@ export function UsersView() {
   const [loading, setLoading] = useState(false);
 
   const formatDob = (dob?: string | null) => {
-    if (!dob) return 'â€”';
+    if (!dob) return '—';
     const s = String(dob).slice(0, 10); // YYYY-MM-DD
     const [y, m, d] = s.split('-');
     if (!y || !m || !d) return s;
@@ -323,7 +323,7 @@ export function UsersView() {
 
         const merged = rawMembers.map((m: any) => ({
           ...m,
-          profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'ChÆ°a cáº­p nháº­t' },
+          profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
           // Keep capacity in memory for existing flows (algorithms), but don't show/edit it here.
           capacity: m.capacity ?? 500,
         }));
@@ -375,7 +375,7 @@ export function UsersView() {
         .eq('id', member.id);
 
       if (pmError) {
-        alert(`âŒ Lá»—i cáº­p nháº­t quyá»n: ${pmError.message}`);
+        alert(`❌ Lỗi cập nhật quyền: ${pmError.message}`);
         return;
       }
 
@@ -408,17 +408,17 @@ export function UsersView() {
       await reloadMembers();
       setEditingId(null);
     } catch (e: any) {
-      alert(`âŒ Lá»—i: ${e.message}`);
+      alert(`❌ Lỗi: ${e.message}`);
     }
   };
 
   const handleDeleteMember = async (member: any) => {
     if (member.role === 'admin' && members.filter((m) => m.role === 'admin').length <= 1) {
-      alert('âš ï¸ KhÃ´ng thá»ƒ xÃ³a Quáº£n trá»‹ viÃªn duy nháº¥t cá»§a dá»± Ã¡n.');
+      alert('⚠️ Không thể xóa Quản trị viên duy nhất của dự án.');
       return;
     }
 
-    if (!window.confirm(`Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a thÃ nh viÃªn "${member.profile?.full_name || member.profile?.email}" khá»i dá»± Ã¡n?`)) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa thành viên "${member.profile?.full_name || member.profile?.email}" khỏi dự án?`)) {
       return;
     }
 
@@ -435,7 +435,7 @@ export function UsersView() {
         .eq('id', member.id);
 
       if (error) {
-        alert(`âŒ Lá»—i xÃ³a thÃ nh viÃªn: ${error.message}`);
+        alert(`❌ Lỗi xóa thành viên: ${error.message}`);
         return;
       }
 
@@ -448,38 +448,38 @@ export function UsersView() {
       await useDataStore.getState().init(currentProjectId);
       await reloadMembers();
     } catch (e: any) {
-      alert(`âŒ Lá»—i: ${e.message}`);
+      alert(`❌ Lỗi: ${e.message}`);
     }
   };
 
   const ROLE_LABELS: Record<string, string> = {
-    admin: 'Quáº£n trá»‹ viÃªn',
-    coordinator: 'Äiá»u phá»‘i viÃªn',
-    sales: 'NhÃ¢n viÃªn Sales',
+    admin: 'Quản trị viên',
+    coordinator: 'Điều phối viên',
+    sales: 'Nhân viên Sales',
   };
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>ðŸ‘¥ Quáº£n lÃ½ ThÃ nh viÃªn Dá»± Ã¡n</h3>
+      <h3 style={styles.viewHeader}>👥 Quản lý Thành viên Dự án</h3>
 
       <div style={styles.section}>
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
                 <tr style={styles.tableHeaderRow}>
-                  <th style={styles.th}>Email TÃ i khoáº£n</th>
-                  <th style={styles.th}>Há» vÃ  TÃªn</th>
-                  <th style={styles.th}>NgÃ y sinh</th>
-                  <th style={styles.th}>SÄT</th>
-                  <th style={styles.th}>Vai trÃ² (Role)</th>
-                  <th style={styles.th}>Khu vá»±c phá»¥ trÃ¡ch</th>
-                  <th style={{ ...styles.th, textAlign: 'right', paddingRight: '20px' }}>Thao tÃ¡c</th>
+                  <th style={styles.th}>Email Tài khoản</th>
+                  <th style={styles.th}>Họ và Tên</th>
+                  <th style={styles.th}>Ngày sinh</th>
+                  <th style={styles.th}>SĐT</th>
+                  <th style={styles.th}>Vai trò (Role)</th>
+                  <th style={styles.th}>Khu vực phụ trách</th>
+                  <th style={{ ...styles.th, textAlign: 'right', paddingRight: '20px' }}>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
               {members.map((m) => {
                 const isEditing = editingId === m.id;
-                const regionName = regions.find((r) => r.id === m.region_id)?.name || 'ChÆ°a gÃ¡n';
+                const regionName = regions.find((r) => r.id === m.region_id)?.name || 'Chưa gán';
 
                 return (
                   <tr key={m.id} style={styles.tr}>
@@ -488,7 +488,7 @@ export function UsersView() {
                       </td>
                       <td style={styles.td}>{m.profile?.full_name}</td>
                       <td style={styles.td}>{formatDob(m.profile?.date_of_birth)}</td>
-                      <td style={styles.td}>{m.profile?.phone || 'â€”'}</td>
+                      <td style={styles.td}>{m.profile?.phone || '—'}</td>
                       <td style={styles.td}>
                         {isEditing ? (
                           <select
@@ -496,9 +496,9 @@ export function UsersView() {
                           onChange={(e) => setEditRole(e.target.value)}
                           style={styles.inlineSelect}
                         >
-                          <option value="admin">Quáº£n trá»‹ viÃªn</option>
-                          <option value="coordinator">Äiá»u phá»‘i viÃªn</option>
-                          <option value="sales">NhÃ¢n viÃªn Sales</option>
+                          <option value="admin">Quản trị viên</option>
+                          <option value="coordinator">Điều phối viên</option>
+                          <option value="sales">Nhân viên Sales</option>
                         </select>
                       ) : (
                         <span style={{
@@ -518,21 +518,21 @@ export function UsersView() {
                             onChange={(e) => setEditRegionId(e.target.value)}
                             style={styles.inlineSelect}
                           >
-                            <option value="">-- ChÆ°a gÃ¡n --</option>
+                            <option value="">-- Chưa gán --</option>
                             {regions.map((r) => (
                               <option key={r.id} value={r.id}>{r.name}</option>
                             ))}
                           </select>
-                        ) : 'â€”'
+                        ) : '—'
                       ) : (
-                        m.role === 'admin' ? 'Táº¥t cáº£' : regionName
+                        m.role === 'admin' ? 'Tất cả' : regionName
                       )}
                     </td>
                       <td style={{ ...styles.td, textAlign: 'right', paddingRight: '20px' }}>
                         {isEditing ? (
                           <div style={styles.btnGroup}>
                           <button onClick={() => handleSaveEdit(m)} style={styles.inlineSaveBtn}>
-                            âœ“ LÆ°u
+                            ✓ Lưu
                           </button>
                           <button onClick={() => setEditingId(null)} style={styles.inlineCancelBtn}>
                             Há»§y
@@ -544,7 +544,7 @@ export function UsersView() {
                             Sá»­a
                           </button>
                           <button onClick={() => handleDeleteMember(m)} style={styles.inlineDeleteBtn}>
-                            XÃ³a
+                            Xóa
                           </button>
                         </div>
                       )}
@@ -555,7 +555,7 @@ export function UsersView() {
                 {members.length === 0 && (
                   <tr>
                       <td colSpan={7} style={styles.tableEmpty}>
-                        {loading ? 'â³ Äang táº£i thÃ nh viÃªn...' : 'ðŸ“­ Dá»± Ã¡n hiá»‡n chÆ°a cÃ³ thÃ nh viÃªn nÃ o.'}
+                        {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên nào.'}
                       </td>
                   </tr>
                 )}
@@ -567,8 +567,8 @@ export function UsersView() {
   );
 }
 
-// â”€â”€ 3. CÃ€I Äáº¶T Há»† THá»NG (SettingsView) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ 3. Váº¬N HÃ€NH (OperationsView) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 3. CÀI ĐẶT HỆ THỐNG (SettingsView) ─────────────────────────────────────────
+// ── 3. VẬN HÀNH (OperationsView) ────────────────────────────────────────────────
 // Focus: reporting workflow + completeness + exports.
 export function OperationsView() {
   const regions = useDataStore((s) => s.regions);
@@ -688,18 +688,18 @@ export function OperationsView() {
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>ðŸ§­ Váº­n hÃ nh</h3>
+      <h3 style={styles.viewHeader}>🧭 Vận hành</h3>
 
       <div style={{ ...styles.section, padding: 12 }}>
         <div style={styles.opsTopRow}>
           <div style={styles.opsFilters}>
             <label style={styles.opsLabel}>
-              <span style={styles.opsLabelTxt}>ThÃ¡ng</span>
+              <span style={styles.opsLabelTxt}>Tháng</span>
               <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} style={styles.opsInput} />
             </label>
             <div style={styles.opsRegionGroup}>
               <span style={styles.opsLabelTxt}>Khu vá»±c</span>
-              <div style={styles.opsRegionChips} role="tablist" aria-label="Lá»c khu vá»±c">
+              <div style={styles.opsRegionChips} role="tablist" aria-label="Lọc khu vực">
                 <button
                   type="button"
                   onClick={() => setRegionFilter('__all__')}
@@ -708,7 +708,7 @@ export function OperationsView() {
                     ...(regionFilter === '__all__' ? styles.opsRegionChipActive : null),
                   }}
                 >
-                  Táº¥t cáº£
+                  Tất cả
                 </button>
                 {regionOptions.map((r) => (
                   <button
@@ -726,31 +726,31 @@ export function OperationsView() {
               </div>
             </div>
             <label style={{ ...styles.opsLabel, flex: 1, minWidth: 180 }}>
-              <span style={styles.opsLabelTxt}>TÃ¬m</span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cá»¥m / user / ghi chÃº..." style={styles.opsInput} />
+              <span style={styles.opsLabelTxt}>Tìm</span>
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cụm / user / ghi chú..." style={styles.opsInput} />
             </label>
           </div>
           <div style={styles.opsActions}>
-            <button style={styles.opsBtn} onClick={downloadCsv} disabled={rows.length === 0}>Táº£i CSV</button>
+            <button style={styles.opsBtn} onClick={downloadCsv} disabled={rows.length === 0}>Tải CSV</button>
           </div>
         </div>
 
         <div style={styles.opsKpis}>
           <div style={styles.opsKpiCard}>
             <div style={styles.opsKpiValue}>{completion.total.submitted}/{completion.total.expected}</div>
-            <div style={styles.opsKpiLabel}>Cá»¥m Ä‘Ã£ cÃ³ bÃ¡o cÃ¡o</div>
+            <div style={styles.opsKpiLabel}>Cụm đã có báo cáo</div>
           </div>
           <div style={styles.opsKpiCard}>
             <div style={styles.opsKpiValue}>{completion.total.missing}</div>
-            <div style={styles.opsKpiLabel}>Cá»¥m thiáº¿u bÃ¡o cÃ¡o</div>
+            <div style={styles.opsKpiLabel}>Cụm thiếu báo cáo</div>
           </div>
           <div style={styles.opsKpiCard}>
             <div style={styles.opsKpiValue}>{rows.reduce((s, r) => s + (Number(r.customers) || 0), 0)}</div>
-            <div style={styles.opsKpiLabel}>Tá»•ng khÃ¡ch hÃ ng</div>
+            <div style={styles.opsKpiLabel}>Tổng khách hàng</div>
           </div>
           <div style={styles.opsKpiCard}>
             <div style={styles.opsKpiValue}>{rows.reduce((s, r) => s + (Number(r.orders) || 0), 0)}</div>
-            <div style={styles.opsKpiLabel}>Tá»•ng Ä‘Æ¡n hÃ ng</div>
+            <div style={styles.opsKpiLabel}>Tổng đơn hàng</div>
           </div>
         </div>
 
@@ -759,16 +759,16 @@ export function OperationsView() {
             <thead>
               <tr style={styles.tableHeaderRow}>
                 <th style={styles.th}>Khu vá»±c</th>
-                <th style={styles.th}>Cá»¥m</th>
+                <th style={styles.th}>Cụm</th>
                 <th style={styles.th}>User</th>
-                <th style={styles.th}>KhÃ¡ch hÃ ng</th>
-                <th style={styles.th}>ÄÆ¡n hÃ ng</th>
-                <th style={styles.th}>Ghi chÃº</th>
-                <th style={styles.th}>Cáº­p nháº­t</th>
+                <th style={styles.th}>Khách hàng</th>
+                <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Ghi chú</th>
+                <th style={styles.th}>Cập nhật</th>
               </tr>
             </thead>
             <tbody>
-              {loading && (<tr><td colSpan={7} style={styles.tableEmpty}>Äang táº£i...</td></tr>)}
+              {loading && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang tải...</td></tr>)}
               {!loading && rows.slice(0, 200).map((r) => {
                 const regionName = regions.find((rr) => rr.id === r.regionId)?.name ?? r.regionId
                 return (
@@ -778,19 +778,19 @@ export function OperationsView() {
                     <td style={styles.td}>{r.userId}</td>
                     <td style={styles.td}>{r.customers}</td>
                     <td style={styles.td}>{r.orders}</td>
-                    <td style={styles.td}>{String(r.note || 'â€”')}</td>
-                    <td style={styles.td}>{r.updatedAt ? new Date(r.updatedAt).toLocaleString('vi-VN') : 'â€”'}</td>
+                    <td style={styles.td}>{String(r.note || '—')}</td>
+                    <td style={styles.td}>{r.updatedAt ? new Date(r.updatedAt).toLocaleString('vi-VN') : '—'}</td>
                   </tr>
                 )
               })}
-              {!loading && rows.length === 0 && (<tr><td colSpan={7} style={styles.tableEmpty}>ChÆ°a cÃ³ bÃ¡o cÃ¡o trong ká»³ nÃ y.</td></tr>)}
-              {!loading && rows.length > 200 && (<tr><td colSpan={7} style={styles.tableEmpty}>Äang hiá»ƒn thá»‹ 200 dÃ²ng Ä‘áº§u tiÃªn (lá»c thÃªm Ä‘á»ƒ xem chi tiáº¿t).</td></tr>)}
+              {!loading && rows.length === 0 && (<tr><td colSpan={7} style={styles.tableEmpty}>Chưa có báo cáo trong kỳ này.</td></tr>)}
+              {!loading && rows.length > 200 && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang hiển thị 200 dòng đầu tiên (lọc thêm để xem chi tiết).</td></tr>)}
             </tbody>
           </table>
         </div>
 
         <div style={{ marginTop: 12 }}>
-          <h4 style={{ ...styles.sectionTitle, marginBottom: 8 }}>âœ… Tá»· lá»‡ hoÃ n thÃ nh theo khu vá»±c</h4>
+          <h4 style={{ ...styles.sectionTitle, marginBottom: 8 }}>✅ Tỷ lệ hoàn thành theo khu vực</h4>
           <div style={styles.opsRegionGrid}>
             {regionOptions.map((r) => {
               const stat = completion.byRegion.get(r.id) ?? { expected: 0, submitted: 0, missing: 0 }
@@ -798,12 +798,12 @@ export function OperationsView() {
               return (
                 <div key={r.id} style={styles.opsRegionCard}>
                   <div style={styles.opsRegionName}>{r.name}</div>
-                  <div style={styles.opsRegionMeta}>{stat.submitted}/{stat.expected} ({pct}%) Â· thiáº¿u {stat.missing}</div>
+                  <div style={styles.opsRegionMeta}>{stat.submitted}/{stat.expected} ({pct}%) · thiếu {stat.missing}</div>
                   <div style={styles.opsBar}><div style={{ ...styles.opsBarFill, width: `${pct}%` }} /></div>
                 </div>
               )
             })}
-            {regionOptions.length === 0 && (<div style={styles.tableEmpty}>ChÆ°a cÃ³ khu vá»±c hoáº·c chÆ°a cÃ³ cá»¥m ká»³ vá»ng Ä‘á»ƒ thá»‘ng kÃª.</div>)}
+            {regionOptions.length === 0 && (<div style={styles.tableEmpty}>Chưa có khu vực hoặc chưa có cụm kỳ vọng để thống kê.</div>)}
           </div>
         </div>
       </div>
@@ -837,17 +837,17 @@ export function SettingsView() {
     try {
       const ok = await updateProfile({ full_name: fullName, date_of_birth: dob ? dob : null, phone: phone ? phone : null });
       if (ok) {
-        setMsg('âœ… ÄÃ£ cáº­p nháº­t thÃ´ng tin cÃ¡ nhÃ¢n!');
+        setMsg('✅ Đã cập nhật thông tin cá nhân!');
         // Update dataStore user names if online
         const currentProjectId = useAuthStore.getState().currentProjectId;
         if (supabase && currentProjectId) {
           useDataStore.getState().init(currentProjectId).catch(console.error);
         }
       } else {
-        setMsg('âŒ Cáº­p nháº­t tháº¥t báº¡i. Vui lÃ²ng thá»­ láº¡i.');
+        setMsg('❌ Cập nhật thất bại. Vui lòng thử lại.');
       }
     } catch (err: any) {
-      setMsg(`âŒ Lá»—i: ${err.message}`);
+      setMsg(`❌ Lỗi: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -855,13 +855,13 @@ export function SettingsView() {
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>âš™ï¸ CÃ i Ä‘áº·t há»‡ thá»‘ng</h3>
+      <h3 style={styles.viewHeader}>⚙️ Cài đặt hệ thống</h3>
 
       <div style={styles.cardContainer}>
-          <h4 style={styles.sectionTitle}>ðŸ‘¤ ThÃ´ng tin cÃ¡ nhÃ¢n</h4>
+          <h4 style={styles.sectionTitle}>👤 Thông tin cá nhân</h4>
           <form onSubmit={handleSaveProfile} style={styles.form}>
             <div style={styles.formGroup}>
-              <label style={styles.formLabel}>Email tÃ i khoáº£n:</label>
+              <label style={styles.formLabel}>Email tài khoản:</label>
               <input
                 type="email"
                 value={profile?.email ?? ''}
@@ -870,17 +870,17 @@ export function SettingsView() {
               />
             </div>
             <div style={styles.formGroup}>
-              <label style={styles.formLabel}>Há» vÃ  tÃªn cá»§a báº¡n:</label>
+              <label style={styles.formLabel}>Họ và tên của bạn:</label>
               <input
                 type="text"
-                placeholder="Nháº­p há» vÃ  tÃªn..."
+                placeholder="Nhập họ và tên..."
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 style={styles.formInput}
               />
             </div>
             <div style={styles.formGroup}>
-              <label style={styles.formLabel}>NgÃ y sinh:</label>
+              <label style={styles.formLabel}>Ngày sinh:</label>
               <input
                 type="date"
                 value={dob}
@@ -889,24 +889,24 @@ export function SettingsView() {
               />
             </div>
             <div style={styles.formGroup}>
-              <label style={styles.formLabel}>SÄT:</label>
+              <label style={styles.formLabel}>SĐT:</label>
               <input
                 type="tel"
-                placeholder="Nháº­p sá»‘ Ä‘iá»‡n thoáº¡i..."
+                placeholder="Nhập số điện thoại..."
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 style={styles.formInput}
               />
             </div>
             <button type="submit" style={styles.submitBtn} disabled={saving}>
-              {saving ? 'â³ Äang lÆ°u...' : 'ðŸ’¾ LÆ°u thÃ´ng tin cÃ¡ nhÃ¢n'}
+              {saving ? '⏳ Đang lưu...' : '💾 Lưu thông tin cá nhân'}
             </button>
-          {msg && <div style={{ fontSize: '13px', marginTop: '8px', color: msg.startsWith('âœ…') ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>{msg}</div>}
+          {msg && <div style={{ fontSize: '13px', marginTop: '8px', color: msg.startsWith('✅') ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>{msg}</div>}
         </form>
       </div>
 
       <div style={{ ...styles.cardContainer, marginTop: '20px' }}>
-        <h4 style={styles.sectionTitle}>ðŸŽ¨ Chá»§ Ä‘á» hiá»ƒn thá»‹ (Theme)</h4>
+        <h4 style={styles.sectionTitle}>🎨 Chủ đề hiển thị (Theme)</h4>
         <div style={styles.themeOptions}>
           {(['light', 'dark', 'system'] as const).map((t) => {
             const active = theme === t;
@@ -921,7 +921,7 @@ export function SettingsView() {
                   color: active ? 'var(--color-text)' : 'var(--color-text-2)',
                 }}
               >
-                {t === 'light' ? 'â˜€ï¸ SÃ¡ng' : t === 'dark' ? 'ðŸŒ™ Tá»‘i' : 'ðŸ’» Há»‡ thá»‘ng'}
+                {t === 'light' ? '☀️ Sáng' : t === 'dark' ? '🌙 Tối' : '💻 Hệ thống'}
               </button>
             );
           })}
@@ -932,7 +932,7 @@ export function SettingsView() {
   );
 }
 
-// â”€â”€ THá»œI TRANG STYLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── THỜI TRANG STYLE ────────────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   viewContainer: {
     padding: '24px',
