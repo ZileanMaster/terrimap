@@ -1,5 +1,5 @@
-/**
- * src/store/authStore.ts — Auth + Project Zustand store
+﻿/**
+ * src/store/authStore.ts â€” Auth + Project Zustand store
  *
  * Manages:
  * - Supabase Auth session (sign in / sign up / sign out)
@@ -8,10 +8,10 @@
  * - Current project context
  *
  * Flow:
- * 1. User signs in → session established
- * 2. loadProfile() → fetch from profiles table
- * 3. loadProjects() → fetch all projects user belongs to
- * 4. selectProject(id) → load membership (role) for that project
+ * 1. User signs in â†’ session established
+ * 2. loadProfile() â†’ fetch from profiles table
+ * 3. loadProjects() â†’ fetch all projects user belongs to
+ * 4. selectProject(id) â†’ load membership (role) for that project
  */
 
 import { create } from 'zustand'
@@ -77,6 +77,16 @@ interface AuthStore {
   updateProfile: (data: string | { full_name: string; date_of_birth?: string | null; phone?: string | null }) => Promise<boolean>
 }
 
+function normalizeDateInput(value?: string | null): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (match) return `${match[3]}-${match[2]}-${match[1]}`
+  return trimmed.slice(0, 10)
+}
+
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   session: null,
@@ -87,7 +97,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loading: true,
   authError: null,
 
-  // ── Initialize: check existing session ──────────────────────────────────
+  // â”€â”€ Initialize: check existing session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   initialize: async () => {
     if (!supabase) {
       set({ loading: false })
@@ -96,7 +106,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     // 8s hard timeout: if Supabase is slow/down, show login instead of infinite splash
     const timeout = setTimeout(() => {
-      console.warn('[AuthStore] initialize timeout (8s) — showing login')
+      console.warn('[AuthStore] initialize timeout (8s) â€” showing login')
       set({ loading: false })
     }, 8_000)
 
@@ -138,17 +148,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     })
   },
 
-  // ── Sign In ─────────────────────────────────────────────────────────────
+  // â”€â”€ Sign In â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   signIn: async (email, password) => {
     if (!supabase) {
-      set({ authError: 'Supabase chưa được cấu hình' })
+      set({ authError: 'Supabase chÆ°a Ä‘Æ°á»£c cáº¥u hÃ¬nh' })
       return false
     }
     set({ authError: null, loading: true })
 
     // 10s timeout: prevent infinite spinner
     const timeout = setTimeout(() => {
-      set({ authError: 'Đăng nhập quá lâu. Vui lòng thử lại.', loading: false })
+      set({ authError: 'ÄÄƒng nháº­p quÃ¡ lÃ¢u. Vui lÃ²ng thá»­ láº¡i.', loading: false })
     }, 10_000)
 
     try {
@@ -170,15 +180,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return true
     } catch (e: any) {
       clearTimeout(timeout)
-      set({ authError: e?.message || 'Lỗi đăng nhập', loading: false })
+      set({ authError: e?.message || 'Lá»—i Ä‘Äƒng nháº­p', loading: false })
       return false
     }
   },
 
-  // ── Sign Up ─────────────────────────────────────────────────────────────
+  // â”€â”€ Sign Up â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   signUp: async (email, password, fullName) => {
     if (!supabase) {
-      set({ authError: 'Supabase chưa được cấu hình' })
+      set({ authError: 'Supabase chÆ°a Ä‘Æ°á»£c cáº¥u hÃ¬nh' })
       return false
     }
     set({ authError: null, loading: true })
@@ -196,7 +206,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // If session is null, email confirmation is required
     if (!data.session) {
       set({
-        authError: 'Tài khoản đã được tạo. Vui lòng kiểm tra email và xác nhận tài khoản, sau đó đăng nhập lại.',
+        authError: 'TÃ i khoáº£n Ä‘Ã£ Ä‘Æ°á»£c táº¡o. Vui lÃ²ng kiá»ƒm tra email vÃ  xÃ¡c nháº­n tÃ i khoáº£n, sau Ä‘Ã³ Ä‘Äƒng nháº­p láº¡i.',
         loading: false,
       })
       return false
@@ -215,7 +225,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Sign Out ────────────────────────────────────────────────────────────
+  // â”€â”€ Sign Out â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   signOut: async () => {
     if (!supabase) return
     await supabase.auth.signOut()
@@ -232,7 +242,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   clearError: () => set({ authError: null }),
 
-  // ── Load Profile ────────────────────────────────────────────────────────
+  // â”€â”€ Load Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   loadProfile: async () => {
     if (!supabase) return
     const user = get().user
@@ -249,7 +259,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // ── Load Projects (user is member of) ───────────────────────────────────
+  // â”€â”€ Load Projects (user is member of) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   loadProjects: async () => {
     if (!supabase) return
     const user = get().user
@@ -287,7 +297,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ projects: [...owned, ...memberProjects] })
   },
 
-  // ── Select Project ──────────────────────────────────────────────────────
+  // â”€â”€ Select Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   selectProject: async (projectId) => {
     if (!supabase) return
     const user = get().user
@@ -325,7 +335,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // ── Create Project ──────────────────────────────────────────────────────
+  // â”€â”€ Create Project â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   createProject: async (name, description = '') => {
     if (!supabase) return null
     const user = get().user
@@ -359,12 +369,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return project.id
   },
 
-  // ── Invite Member ───────────────────────────────────────────────────────
+  // â”€â”€ Invite Member â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   inviteMember: async (email, role, regionId) => {
-    if (!supabase) { set({ authError: 'Không có kết nối cơ sở dữ liệu' }); return false }
+    if (!supabase) { set({ authError: 'KhÃ´ng cÃ³ káº¿t ná»‘i cÆ¡ sá»Ÿ dá»¯ liá»‡u' }); return false }
     const client = supabase
     const projectId = get().currentProjectId
-    if (!projectId) { set({ authError: 'Chưa chọn dự án' }); return false }
+    if (!projectId) { set({ authError: 'ChÆ°a chá»n dá»± Ã¡n' }); return false }
 
     try {
       // 8s timeout for all DB operations
@@ -373,7 +383,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       )
 
       const doInvite = async (): Promise<boolean> => {
-        // Find user by email — try direct query first, fallback to RPC
+        // Find user by email â€” try direct query first, fallback to RPC
         let profileId: string | null = null
 
         const { data: profile } = await client
@@ -394,7 +404,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
 
         if (!profileId) {
-          set({ authError: `Không tìm thấy tài khoản với email: ${email}` })
+          set({ authError: `KhÃ´ng tÃ¬m tháº¥y tÃ i khoáº£n vá»›i email: ${email}` })
           return false
         }
 
@@ -407,7 +417,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           .single()
 
         if (existing) {
-          set({ authError: 'Người dùng đã là thành viên của dự án' })
+          set({ authError: 'NgÆ°á»i dÃ¹ng Ä‘Ã£ lÃ  thÃ nh viÃªn cá»§a dá»± Ã¡n' })
           return false
         }
 
@@ -431,14 +441,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return await Promise.race([doInvite(), deadline])
     } catch (e: any) {
       const msg = e?.message === 'TIMEOUT'
-        ? 'Thao tác quá lâu (8s). Vui lòng thử lại.'
-        : `Lỗi: ${e?.message ?? 'Không xác định'}`
+        ? 'Thao tÃ¡c quÃ¡ lÃ¢u (8s). Vui lÃ²ng thá»­ láº¡i.'
+        : `Lá»—i: ${e?.message ?? 'KhÃ´ng xÃ¡c Ä‘á»‹nh'}`
       set({ authError: msg })
       return false
     }
   },
 
-  // ── Update Member Role ──────────────────────────────────────────────────
+  // â”€â”€ Update Member Role â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   updateMemberRole: async (memberId, newRole) => {
     if (!supabase) return false
     const projectId = get().currentProjectId
@@ -459,7 +469,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .eq('role', 'admin')
 
       if ((count ?? 0) <= 1) {
-        set({ authError: 'Phải có ít nhất 1 quản trị viên trong dự án' })
+        set({ authError: 'Pháº£i cÃ³ Ã­t nháº¥t 1 quáº£n trá»‹ viÃªn trong dá»± Ã¡n' })
         return false
       }
     }
@@ -476,7 +486,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Remove Member ──────────────────────────────────────────────────────
+  // â”€â”€ Remove Member â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   removeMember: async (memberId) => {
     if (!supabase) return false
     const projectId = get().currentProjectId
@@ -497,7 +507,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         .eq('role', 'admin')
 
       if ((count ?? 0) <= 1) {
-        set({ authError: 'Không thể xóa quản trị viên duy nhất' })
+        set({ authError: 'KhÃ´ng thá»ƒ xÃ³a quáº£n trá»‹ viÃªn duy nháº¥t' })
         return false
       }
     }
@@ -514,7 +524,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Load Members ───────────────────────────────────────────────────────
+  // â”€â”€ Load Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   loadMembers: async () => {
     if (!supabase) return []
     const projectId = get().currentProjectId
@@ -529,13 +539,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return (data ?? []) as ProjectMember[]
   },
 
-  // ── Update Profile ───────────────────────────────────────────────────────
+  // â”€â”€ Update Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   updateProfile: async (data) => {
     const payload = typeof data === 'string'
       ? { full_name: data }
       : {
           full_name: data.full_name,
-          date_of_birth: data.date_of_birth ?? null,
+          date_of_birth: normalizeDateInput(data.date_of_birth),
           phone: data.phone ?? null,
         }
     if (!supabase) {
@@ -560,29 +570,62 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
     const user = get().user
     if (!user) return false
+    const currentProfile = get().profile
+    const profileId = currentProfile?.id ?? user.id
+    const profileEmail = currentProfile?.email ?? user.email ?? ''
+    const profilePatch = {
+      id: profileId,
+      email: profileEmail,
+      full_name: payload.full_name,
+      date_of_birth: payload.date_of_birth ?? null,
+      phone: payload.phone ?? null,
+    }
     // Do not toggle global `loading` for profile edits.
     // `loading` drives the full-page splash in App.tsx and must be reserved for
     // auth/session flows (initialize/signIn/signUp), not ordinary profile updates.
     set({ authError: null })
     try {
-      // Hard timeout to avoid locking the UI if Supabase stalls.
-      const updatePromise = supabase
-        .from('profiles')
-        .update(payload)
-        .eq('id', user.id)
-      const timeoutPromise = new Promise<{ error: { message: string } }>((resolve) => {
-        setTimeout(() => resolve({ error: { message: 'Cập nhật quá lâu. Vui lòng thử lại.' } }), 10_000)
-      })
+      const selectFields = 'id,email,full_name,avatar_url,created_at,date_of_birth,phone'
 
-      const { error } = await Promise.race([updatePromise as any, timeoutPromise])
-      if (error) {
-        set({ authError: error.message })
+      const updateResult = await supabase
+        .from('profiles')
+        .update(profilePatch)
+        .eq('id', profileId)
+        .select(selectFields)
+        .maybeSingle()
+
+      if (!updateResult.error && updateResult.data) {
+        set({ profile: updateResult.data as Profile })
+        return true
+      }
+
+      const upsertResult = await supabase
+        .from('profiles')
+        .upsert(profilePatch, { onConflict: 'id' })
+        .select(selectFields)
+        .maybeSingle()
+
+      if (upsertResult.error) {
+        set({ authError: upsertResult.error.message })
         return false
       }
-      const currentProfile = get().profile
-      if (currentProfile) {
-        set({ profile: { ...currentProfile, ...payload } })
+
+      if (upsertResult.data) {
+        set({ profile: upsertResult.data as Profile })
+        return true
       }
+
+      set({
+        profile: {
+          ...(currentProfile ?? {
+            id: profileId,
+            email: profileEmail,
+            avatar_url: null,
+            created_at: new Date().toISOString(),
+          }),
+          ...profilePatch,
+        } as Profile,
+      })
       return true
     } catch (e: any) {
       set({ authError: e?.message || 'Lỗi cập nhật thông tin' })

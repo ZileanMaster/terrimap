@@ -61,11 +61,13 @@ function mockFromChain(data: unknown, error: unknown = null) {
   chain.select = vi.fn(() => chain)
   chain.insert = vi.fn(() => chain)
   chain.update = vi.fn(() => chain)
+  chain.upsert = vi.fn(() => chain)
   chain.delete = vi.fn(() => chain)
   chain.eq = vi.fn(() => chain)
   chain.in = vi.fn(() => chain)
   chain.order = vi.fn(() => chain)
   chain.single = vi.fn(() => Promise.resolve({ data, error }))
+  chain.maybeSingle = vi.fn(() => Promise.resolve({ data, error }))
   // For non-single queries (array return)
   Object.defineProperty(chain, 'then', {
     value: (resolve: (v: unknown) => void) => resolve({ data, error }),
@@ -203,6 +205,52 @@ describe('authStore', () => {
 
       expect(result).toBe(false)
       expect(useAuthStore.getState().authError).toBe('User already registered')
+    })
+  })
+
+  describe('Update profile', () => {
+    it('[AUTH-7] updateProfile → falls back to upsert when update returns no row', async () => {
+      useAuthStore.setState({
+        user: { id: 'u1', email: 'coord.test@terrimap.vn' } as any,
+        profile: {
+          id: 'u1',
+          email: 'coord.test@terrimap.vn',
+          full_name: 'Điều Phối Test',
+          avatar_url: null,
+          created_at: '2026-01-01',
+        } as any,
+      })
+
+      let profileQueryCount = 0
+      const updateChain = mockFromChain(null)
+      const upsertChain = mockFromChain({
+        id: 'u1',
+        email: 'coord.test@terrimap.vn',
+        full_name: 'Điều Phối Mới',
+        avatar_url: null,
+        created_at: '2026-01-01',
+        date_of_birth: '2026-06-04',
+        phone: '0123456789',
+      })
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          profileQueryCount += 1
+          return profileQueryCount === 1 ? updateChain : upsertChain
+        }
+        return mockFromChain(null)
+      })
+
+      const result = await useAuthStore.getState().updateProfile({
+        full_name: 'Điều Phối Mới',
+        date_of_birth: '04/06/2026',
+        phone: '0123456789',
+      })
+
+      expect(result).toBe(true)
+      expect(useAuthStore.getState().profile?.full_name).toBe('Điều Phối Mới')
+      expect(useAuthStore.getState().profile?.date_of_birth).toBe('2026-06-04')
+      expect(useAuthStore.getState().authError).toBeNull()
     })
   })
 
