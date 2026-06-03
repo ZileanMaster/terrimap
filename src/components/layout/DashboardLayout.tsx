@@ -341,12 +341,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#fff',
     display: 'grid',
     placeItems: 'center',
-    fontWeight: 900,
+    fontWeight: 800,
     letterSpacing: 0,
   },
   brandText: {
     color: 'var(--color-text)',
-    fontWeight: 900,
+    fontWeight: 700,
     fontSize: 16,
   },
   profileSection: {
@@ -373,7 +373,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   profileName: {
     color: 'var(--color-text)',
-    fontWeight: 800,
+    fontWeight: 700,
     fontSize: 14,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -382,7 +382,7 @@ const styles: Record<string, React.CSSProperties> = {
   profileRole: {
     color: 'var(--color-text-2)',
     fontSize: 12,
-    fontWeight: 700,
+    fontWeight: 600,
   },
   searchWrapper: {
     padding: '0 18px 10px',
@@ -425,7 +425,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   menuText: {
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 14,
   },
   sidebarFooter: {
@@ -442,7 +442,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text)',
     padding: '8px 10px',
     cursor: 'pointer',
-    fontWeight: 900,
+    fontWeight: 700,
   },
   mainWrapper: {
     flex: 1,
@@ -472,7 +472,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--color-border)',
     background: 'var(--color-surface)',
     cursor: 'pointer',
-    fontWeight: 900,
+    fontWeight: 700,
   },
   breadcrumbs: {
     display: 'flex',
@@ -483,7 +483,7 @@ const styles: Record<string, React.CSSProperties> = {
   breadcrumbMuted: { color: 'var(--color-text-2)', fontWeight: 700 },
   breadcrumbSeparator: { color: 'var(--color-text-2)' },
   breadcrumbActive: {
-    fontWeight: 900,
+    fontWeight: 700,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -508,7 +508,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--color-surface)',
     padding: '6px 10px',
     borderRadius: 999,
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 12,
     color: 'var(--color-text-2)',
   },
@@ -517,7 +517,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--color-surface)',
     padding: '6px 10px',
     borderRadius: 999,
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: 12,
     display: 'flex',
     alignItems: 'center',
