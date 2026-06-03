@@ -107,7 +107,7 @@ export function OverviewView() {
   const selectedRegion = currentRegionId
     ? regions.find((region) => region.id === currentRegionId) ?? null
     : null;
-  const selectedRegionLabel = selectedRegion?.name ?? 'T?t c? khu v?c';
+  const selectedRegionLabel = selectedRegion?.name ?? 'Tất cả khu vực';
   const filteredReports = useMemo(
     () => currentRegionId
       ? districtReports.filter((report: any) => (report.regionId ?? report.region_id) === currentRegionId)
@@ -159,21 +159,21 @@ export function OverviewView() {
 
   return (
     <div style={styles.viewContainer}>
-      <h3 style={styles.viewHeader}>T?ng quan d? ?n</h3>
+      <h3 style={styles.viewHeader}>Tổng quan dự án</h3>
       <div style={styles.overviewRegionBar}>
-        <span style={styles.overviewRegionLabel}>Khu v?c ?ang xem</span>
+        <span style={styles.overviewRegionLabel}>Khu vực đang xem</span>
         <select
           value={currentRegionId && regionOptionIds.has(currentRegionId) ? currentRegionId : '__all__'}
           onChange={(e) => setCurrentRegion(e.target.value === '__all__' ? null : e.target.value)}
           style={styles.overviewRegionSelect}
         >
-          <option value="__all__">T?t c? khu v?c</option>
+          <option value="__all__">Tất cả khu vực</option>
           {regionOptions.map((region) => (
             <option key={region.id} value={region.id}>{region.name}</option>
           ))}
         </select>
         <span style={styles.overviewRegionHint}>
-          {selectedRegion ? `?ang xem b?o c?o c?a ${selectedRegionLabel}` : '?ang xem to?n b? khu v?c c?a d? ?n'}
+          {selectedRegion ? `Đang xem báo cáo của ${selectedRegionLabel}` : 'Đang xem toàn bộ khu vực của dự án'}
         </span>
       </div>
 
@@ -182,7 +182,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8' }}>R</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{regions.length}</span>
-            <span style={styles.cardLbl}>Khu v?c ??a l?</span>
+            <span style={styles.cardLbl}>Khu vực địa lý</span>
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(52, 211, 153, 0.12)', color: '#34d399' }}>S</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{agents.length}</span>
-            <span style={styles.cardLbl}>Nh?n vi?n Sales</span>
+            <span style={styles.cardLbl}>Nhân viên Sales</span>
           </div>
         </div>
 
@@ -198,7 +198,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24' }}>K</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{reportStats.totalCustomers}</span>
-            <span style={styles.cardLbl}>Kh?ch h?ng b?o c?o</span>
+            <span style={styles.cardLbl}>Khách hàng báo cáo</span>
           </div>
         </div>
 
@@ -206,7 +206,7 @@ export function OverviewView() {
           <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(129, 140, 248, 0.12)', color: '#818cf8' }}>O</div>
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{reportStats.totalOrders}</span>
-            <span style={styles.cardLbl}>??n h?ng b?o c?o</span>
+            <span style={styles.cardLbl}>Đơn hàng báo cáo</span>
           </div>
         </div>
       </div>
@@ -214,26 +214,26 @@ export function OverviewView() {
       <div style={styles.section}>
         <div style={styles.sectionHeader}>
           <div>
-            <h4 style={styles.sectionTitle}>?? Hi?u qu? kinh doanh theo khu v?c</h4>
-            <div style={styles.sectionMeta}>Th?ng {reportPeriod} ? {selectedRegion ? `khu v?c ${selectedRegionLabel}` : 't?ng h?p theo to?n b? khu v?c c?a d? ?n'}</div>
+            <h4 style={styles.sectionTitle}>📍 Hiệu quả kinh doanh theo khu vực</h4>
+            <div style={styles.sectionMeta}>Tháng {reportPeriod} · {selectedRegion ? `khu vực ${selectedRegionLabel}` : 'tổng hợp theo toàn bộ khu vực của dự án'}</div>
           </div>
-          <div style={styles.sectionPill}>{reportStats.reportCount} d?ng b?o c?o</div>
+          <div style={styles.sectionPill}>{reportStats.reportCount} dòng báo cáo</div>
         </div>
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Khu v?c</th>
-                <th style={styles.th}>Kh?ch h?ng</th>
-                <th style={styles.th}>??n h?ng</th>
-                <th style={styles.th}>S? b?o c?o</th>
-                <th style={styles.th}>?? ph? b?o c?o</th>
-                <th style={styles.th}>Nh?n x?t</th>
+                <th style={styles.th}>Khu vực</th>
+                <th style={styles.th}>Khách hàng</th>
+                <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Số báo cáo</th>
+                <th style={styles.th}>Độ phủ báo cáo</th>
+                <th style={styles.th}>Nhận xét</th>
               </tr>
             </thead>
             <tbody>
               {loadingReports && (
-                <tr><td colSpan={6} style={styles.tableEmpty}>?ang t?i d? li?u kinh doanh...</td></tr>
+                <tr><td colSpan={6} style={styles.tableEmpty}>Đang tải dữ liệu kinh doanh...</td></tr>
               )}
               {!loadingReports && businessRegionStats.map((stat) => (
                 <tr key={stat.regionId} style={styles.tr}>
@@ -244,17 +244,17 @@ export function OverviewView() {
                   <td style={styles.td}>{stat.coveragePercent}%</td>
                   <td style={styles.td}>
                     {stat.reportCount === 0
-                      ? 'Ch?a c? d? li?u'
+                      ? 'Chưa có dữ liệu'
                       : stat.coveragePercent >= 80
-                        ? 'Ph? b?o c?o t?t'
-                        : 'C?n c?i thi?n ?? ph?'}
+                        ? 'Phủ báo cáo tốt'
+                        : 'Cần cải thiện độ phủ'}
                   </td>
                 </tr>
               ))}
               {!loadingReports && businessRegionStats.length === 0 && (
                 <tr>
                   <td colSpan={6} style={styles.tableEmpty}>
-                    ?? {selectedRegion ? `Khu v?c ${selectedRegionLabel} ch?a c? d? li?u kinh doanh.` : 'Ch?a c? d? li?u kinh doanh theo khu v?c.'}
+                    📭 {selectedRegion ? `Khu vực ${selectedRegionLabel} chưa có dữ liệu kinh doanh.` : 'Chưa có dữ liệu kinh doanh theo khu vực.'}
                   </td>
                 </tr>
               )}
