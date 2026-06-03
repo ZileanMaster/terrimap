@@ -291,14 +291,14 @@ export default function RegionSelector() {
               </div>
 
               <div style={styles.metrics}>
-                <Metric label="Zones" value={regionZones.length} />
-                <Metric label="Sales" value={regionAgents.length} />
-                <Metric label="Topology" value={topologyErrors} warn={topologyErrors > 0} />
-                <Metric label="Components" value={components} warn={components > 1} />
+                <Metric label="Vùng" value={regionZones.length} />
+                <Metric label="Nhân sự" value={regionAgents.length} />
+                <Metric label="Liên thông" value={topologyErrors} warn={topologyErrors > 0} />
+                <Metric label="Cụm liên thông" value={components} warn={components > 1} />
               </div>
 
               <div style={styles.cardFooter}>
-                <span>{islandCount} zone cô lập</span>
+                <span>{islandCount} vùng cô lập</span>
                 <strong>Mở khu vực</strong>
               </div>
             </button>
