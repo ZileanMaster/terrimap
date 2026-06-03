@@ -23,12 +23,35 @@ import AlgorithmComparator from './components/algorithm/AlgorithmComparator.js'
 import RegionSelector from './components/layout/RegionSelector.js'
 import ToastViewport from './components/ui/Toast.js'
 
+function lazyRetry<T extends React.ComponentType<any>>(
+  importer: () => Promise<{ default: T }>,
+) {
+  return React.lazy(async () => {
+    try {
+      return await importer()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isChunkLoadError = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk/i.test(message)
+
+      if (isChunkLoadError && typeof window !== 'undefined') {
+        const flag = 'terrimap_chunk_reload_once'
+        if (sessionStorage.getItem(flag) !== '1') {
+          sessionStorage.setItem(flag, '1')
+          window.location.reload()
+        }
+      }
+
+      throw error
+    }
+  })
+}
+
 // ── Lazy-loaded pages (code splitting) ───────────────────────────────────────
-const AdminPage       = React.lazy(() => import('./pages/AdminPage.js'))
-const CoordinatorPage = React.lazy(() => import('./pages/CoordinatorPage.js'))
-const SalesPage       = React.lazy(() => import('./pages/SalesPage.js'))
-const LoginPage       = React.lazy(() => import('./pages/LoginPage.js'))
-const ProjectSelectPage = React.lazy(() => import('./pages/ProjectSelectPage.js'))
+const AdminPage       = lazyRetry(() => import('./pages/AdminPage.js'))
+const CoordinatorPage = lazyRetry(() => import('./pages/CoordinatorPage.js'))
+const SalesPage       = lazyRetry(() => import('./pages/SalesPage.js'))
+const LoginPage       = lazyRetry(() => import('./pages/LoginPage.js'))
+const ProjectSelectPage = lazyRetry(() => import('./pages/ProjectSelectPage.js'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
