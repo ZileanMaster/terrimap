@@ -228,8 +228,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // ── Sign Out ────────────────────────────────────────────────────────────
   signOut: async () => {
-    if (!supabase) return
-    await supabase.auth.signOut()
     localStorage.removeItem('terrimap_project')
     set({
       user: null,
@@ -238,7 +236,25 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       projects: [],
       currentProjectId: null,
       membership: null,
+      authError: null,
     })
+
+    if (!supabase) return
+
+    const timeout = setTimeout(() => {
+      console.warn('[AuthStore] signOut timeout — local state already cleared')
+    }, 5_000)
+
+    try {
+      void supabase.auth.signOut()
+        .catch((error) => {
+          console.warn('[AuthStore] signOut background error:', error)
+        })
+        .finally(() => clearTimeout(timeout))
+    } catch (error) {
+      clearTimeout(timeout)
+      console.warn('[AuthStore] signOut unexpected error:', error)
+    }
   },
 
   deselectProject: () => {
