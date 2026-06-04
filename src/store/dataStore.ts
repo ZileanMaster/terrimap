@@ -31,7 +31,7 @@ interface DataStore {
   agents:          SalesAgent[]
   regions:         Region[]       // danh sách regions
   currentRegionId: string | null  // region đang xem/filter
-  currentProjectId?: string       // project đang load data
+  currentProjectId: string | undefined       // project đang load data
   loading:         boolean
   initialized:     boolean  // true after first successful load
   saving:          boolean  // true while awaiting DB write

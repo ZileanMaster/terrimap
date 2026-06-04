@@ -17,6 +17,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase.js'
 import type { User, Session } from '@supabase/supabase-js'
+import { useDataStore } from './dataStore.js'
 
 export interface Profile {
   id: string
@@ -328,6 +329,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return
 
+    useDataStore.getState().setCurrentRegion(null)
     set({ currentProjectId: projectId })
     localStorage.setItem('terrimap_project', projectId)
 
@@ -407,6 +409,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     localStorage.setItem('terrimap_project', project.id)
+    useDataStore.getState().setCurrentRegion(null)
     set((state) => ({
       projects: state.projects.some((p) => p.id === project.id)
         ? state.projects
