@@ -286,6 +286,25 @@ export function UsersView() {
   const [editRole, setEditRole] = useState<string>('sales');
   const [editRegionId, setEditRegionId] = useState<string>('');
 
+  const runWithTimeout = <T,>(task: Promise<T>, timeoutMs: number, fallback: T) => {
+    let finished = false;
+    const timeout = new Promise<T>((resolve) =>
+      setTimeout(() => {
+        if (!finished) {
+          console.warn(`[UsersView] load timeout after ${timeoutMs}ms`);
+          resolve(fallback);
+        }
+      }, timeoutMs),
+    );
+
+    return Promise.race([
+      task.finally(() => {
+        finished = true;
+      }),
+      timeout,
+    ]);
+  };
+
   const reloadMembers = async () => {
     if (!supabase || !currentProjectId) {
       // In online mode, data must be project-scoped. No demo fallback here.
@@ -294,12 +313,17 @@ export function UsersView() {
     }
     setLoading(true);
     try {
-      const { data: rawMembers, error } = await supabase
-        .from('project_members')
-        .select('id,user_id,role,region_id,joined_at')
-        .eq('project_id', currentProjectId)
-        .order('joined_at', { ascending: true });
+      const membersResult = await runWithTimeout(
+        supabase
+          .from('project_members')
+          .select('id,user_id,role,region_id,joined_at')
+          .eq('project_id', currentProjectId)
+          .order('joined_at', { ascending: true }),
+        6000,
+        { data: null, error: new Error('timeout') } as any,
+      );
 
+      const { data: rawMembers, error } = membersResult;
       if (error) {
         console.error('[UsersView] load project members error:', error.message);
         return;
@@ -310,10 +334,14 @@ export function UsersView() {
       }
 
         const userIds = rawMembers.map((m: any) => m.user_id);
-        const profilesRes = await supabase
-          .from('profiles')
-          .select('id, email, full_name, date_of_birth, phone')
-          .in('id', userIds);
+        const profilesRes = await runWithTimeout(
+          supabase
+            .from('profiles')
+            .select('id, email, full_name, date_of_birth, phone')
+            .in('id', userIds),
+          6000,
+          { data: null, error: new Error('timeout') } as any,
+        );
         const profiles = profilesRes.data;
         if (profilesRes.error) {
           console.error('[UsersView] load profiles error:', profilesRes.error.message);
