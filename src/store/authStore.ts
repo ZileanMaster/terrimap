@@ -368,44 +368,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return null
 
-    const insertPayload = { name, description, owner_id: user.id }
-
-    const { data, error } = await supabase
-      .from('projects')
-      .insert(insertPayload)
-      .select('id,name,description,owner_id,created_at')
-      .maybeSingle()
-
-    if (error) {
-      console.error('[AuthStore] createProject error:', error)
-      set({ authError: error.message })
-      return null
-    }
-
-    let project = data as Project | null
-
-    if (!project) {
-      const { data: fallbackProject, error: fallbackError } = await supabase
-        .from('projects')
-        .select('id,name,description,owner_id,created_at')
-        .eq('owner_id', user.id)
-        .eq('name', name)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (fallbackError) {
-        console.error('[AuthStore] createProject fallback error:', fallbackError)
-        set({ authError: fallbackError.message })
-        return null
-      }
-
-      project = fallbackProject as Project | null
-    }
-
-    if (!project?.id) {
-      set({ authError: 'Không thể tạo dự án. Vui lòng thử lại.' })
-      return null
+    const projectId = globalThis.crypto?.randomUUID?.() ?? `project-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const project: Project = {
+      id: projectId,
+      name,
+      description,
+      owner_id: user.id,
+      created_at: new Date().toISOString(),
     }
 
     localStorage.setItem('terrimap_project', project.id)
@@ -428,6 +397,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     void (async () => {
       try {
+        const { error: projectError } = await supabase
+          .from('projects')
+          .upsert(project, { onConflict: 'id' })
+
+        if (projectError) {
+          console.warn('[AuthStore] createProject project sync warning:', projectError)
+          return
+        }
+
         const { error: memberError } = await supabase
           .from('project_members')
           .upsert({
@@ -442,9 +420,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       } catch (error) {
         console.warn('[AuthStore] createProject member sync unexpected:', error)
       }
-      get().loadProjects().catch((error) => {
-        console.warn('[AuthStore] createProject loadProjects background error:', error)
-      })
     })()
 
     return project.id
