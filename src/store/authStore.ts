@@ -406,21 +406,44 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return null
     }
 
-    // Auto-add owner as admin member
-    const { error: memberError } = await supabase
-      .from('project_members')
-      .insert({
+    localStorage.setItem('terrimap_project', project.id)
+    set((state) => ({
+      projects: state.projects.some((p) => p.id === project.id)
+        ? state.projects
+        : [...state.projects, project],
+      currentProjectId: project.id,
+      membership: {
+        id: 'owner',
         project_id: project.id,
         user_id: user.id,
         role: 'admin',
+        region_id: null,
+        joined_at: new Date().toISOString(),
+      },
+      authError: null,
+    }))
+
+    void (async () => {
+      try {
+        const { error: memberError } = await supabase
+          .from('project_members')
+          .upsert({
+            project_id: project.id,
+            user_id: user.id,
+            role: 'admin',
+          }, { onConflict: 'project_id,user_id' })
+
+        if (memberError) {
+          console.warn('[AuthStore] createProject member sync warning:', memberError)
+        }
+      } catch (error) {
+        console.warn('[AuthStore] createProject member sync unexpected:', error)
+      }
+      get().loadProjects().catch((error) => {
+        console.warn('[AuthStore] createProject loadProjects background error:', error)
       })
+    })()
 
-    if (memberError) {
-      console.warn('[AuthStore] createProject member insert warning:', memberError)
-    }
-
-    await get().loadProjects()
-    await get().selectProject(project.id)
     return project.id
   },
 

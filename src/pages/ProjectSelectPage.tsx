@@ -1,9 +1,47 @@
 import React, { useState } from 'react'
 import { useAuthStore, type Project } from '../store/authStore.js'
-import Button from '../components/ui/Button.js'
+import Button, { IconButton } from '../components/ui/Button.js'
 import Input, { Textarea } from '../components/ui/Input.js'
 import Modal from '../components/ui/Modal.js'
 import { useToast } from '../components/ui/Toast.js'
+import { useUIStore } from '../store/uiStore.js'
+
+function ThemeIcon({ theme }: { theme: 'light' | 'dark' | 'system' }) {
+  const common: React.SVGProps<SVGSVGElement> = {
+    width: 16,
+    height: 16,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+  }
+
+  if (theme === 'dark') {
+    return <svg {...common} aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>
+  }
+  if (theme === 'light') {
+    return (
+      <svg {...common} aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2" />
+        <path d="M12 20v2" />
+        <path d="M4.93 4.93l1.41 1.41" />
+        <path d="M17.66 17.66l1.41 1.41" />
+        <path d="M2 12h2" />
+        <path d="M20 12h2" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...common} aria-hidden="true">
+      <rect x="3" y="4" width="18" height="14" rx="2" />
+      <path d="M8 20h8" />
+      <path d="M12 18v2" />
+    </svg>
+  )
+}
 
 export default function ProjectSelectPage() {
   const projects = useAuthStore((s) => s.projects)
@@ -12,6 +50,8 @@ export default function ProjectSelectPage() {
   const createProject = useAuthStore((s) => s.createProject)
   const signOut = useAuthStore((s) => s.signOut)
   const authError = useAuthStore((s) => s.authError)
+  const theme = useUIStore((s) => s.theme)
+  const setTheme = useUIStore((s) => s.setTheme)
 
   const { push } = useToast()
 
@@ -19,24 +59,46 @@ export default function ProjectSelectPage() {
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [creating, setCreating] = useState(false)
+  const [pendingProject, setPendingProject] = useState<{
+    id: string
+    name: string
+    description: string
+  } | null>(null)
+
+  const cycleTheme = () => {
+    const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
+    setTheme(next)
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newName.trim()) return
+    if (creating) return
+
+    const projectName = newName.trim()
+    const projectDesc = newDesc.trim()
+    const pendingId = `pending-${Date.now()}`
+
     setCreating(true)
-    try {
-      const id = await createProject(newName.trim(), newDesc.trim())
+    setPendingProject({ id: pendingId, name: projectName, description: projectDesc })
+    setShowCreate(false)
+    setNewName('')
+    setNewDesc('')
+
+    void (async () => {
+      const id = await createProject(projectName, projectDesc)
       if (id) {
-        push({ kind: 'success', title: 'Đã tạo dự án', message: newName.trim() })
-        setShowCreate(false)
-        setNewName('')
-        setNewDesc('')
+        push({ kind: 'success', title: 'Đã tạo dự án', message: projectName })
+        setPendingProject(null)
       } else {
         push({ kind: 'error', title: 'Không tạo được dự án', message: useAuthStore.getState().authError || 'Vui lòng thử lại.' })
+        setPendingProject(null)
+        setShowCreate(true)
+        setNewName(projectName)
+        setNewDesc(projectDesc)
       }
-    } finally {
       setCreating(false)
-    }
+    })()
   }
 
   const handleSelect = async (project: Project) => {
@@ -64,6 +126,9 @@ export default function ProjectSelectPage() {
               <div style={styles.userName}>{profile?.full_name || 'Tài khoản'}</div>
               <div style={styles.userEmail}>{profile?.email}</div>
             </div>
+            <IconButton onClick={cycleTheme} title="Giao diện (Light/Dark/System)" style={styles.themeBtn}>
+              <ThemeIcon theme={theme} />
+            </IconButton>
             <Button onClick={signOut} variant="ghost" style={styles.signOutBtn}>
               Đăng xuất
             </Button>
@@ -77,6 +142,28 @@ export default function ProjectSelectPage() {
         )}
 
         <div style={styles.grid}>
+          {pendingProject && (
+            <button
+              type="button"
+              disabled
+              style={{
+                ...styles.projectCard,
+                ...styles.projectCardPending,
+              }}
+            >
+              <div style={styles.projectTop}>
+                <div style={styles.projectIcon}>⏳</div>
+                <span style={styles.projectChip}>Đang tạo</span>
+              </div>
+              <div style={styles.projectName}>{pendingProject.name}</div>
+              {pendingProject.description && <div style={styles.projectDesc}>{pendingProject.description}</div>}
+              <div style={styles.projectMeta}>
+                <span>Vui lòng chờ</span>
+                <strong>Đang lưu...</strong>
+              </div>
+            </button>
+          )}
+
           {projects.map((project, index) => (
             <button
               key={project.id}
@@ -103,6 +190,7 @@ export default function ProjectSelectPage() {
           <button
             type="button"
             onClick={() => setShowCreate(true)}
+            disabled={creating}
             style={styles.createCard}
           >
             <div style={styles.createIcon}>+</div>
@@ -213,6 +301,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'color-mix(in srgb, var(--color-surface) 94%, transparent)',
     boxShadow: '0 24px 56px rgba(0,0,0,.18)',
     padding: 24,
+    fontFamily: 'Roboto, Segoe UI, system-ui, sans-serif',
   },
   kicker: {
     textTransform: 'uppercase',
@@ -277,6 +366,12 @@ const styles: Record<string, React.CSSProperties> = {
   signOutBtn: {
     marginLeft: 4,
   },
+  themeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
   error: {
     border: '1px solid rgba(220,38,38,.25)',
     background: 'rgba(220,38,38,.10)',
@@ -306,6 +401,11 @@ const styles: Record<string, React.CSSProperties> = {
   projectCardFeatured: {
     borderColor: 'color-mix(in srgb, var(--color-accent) 35%, var(--color-border))',
     boxShadow: '0 18px 36px rgba(0,0,0,.12)',
+  },
+  projectCardPending: {
+    opacity: 0.9,
+    borderStyle: 'dashed',
+    cursor: 'default',
   },
   projectTop: {
     display: 'flex',

@@ -103,6 +103,10 @@
 /* ── Base reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+button, input, textarea, select {
+  font: inherit;
+}
+
 html, body, #root {
   height: 100%;
   font-family: 'Roboto', 'Segoe UI', system-ui, sans-serif;
