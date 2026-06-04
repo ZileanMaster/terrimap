@@ -1,107 +1,10 @@
 /**
- * RegionSelector - workflow entry for choosing or creating an operating region.
+ * RegionSelector - workflow entry for choosing an operating region.
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
-import { useUIStore } from '../../store/uiStore.js'
 import { findPolygonTopologyViolations, buildAdjacencyMatrix } from '../../../lib/geometry.js'
-
-const cityPresets = [
-  { name: 'Hà Nội', center: { lat: 21.03, lng: 105.83 }, zoom: 12 },
-  { name: 'TP. Hồ Chí Minh', center: { lat: 10.82, lng: 106.63 }, zoom: 12 },
-  { name: 'Đà Nẵng', center: { lat: 16.06, lng: 108.22 }, zoom: 12 },
-  { name: 'Huế', center: { lat: 16.46, lng: 107.59 }, zoom: 13 },
-]
-
-// Full Vietnam province/city list for region creation (63).
-// Centers are resolved at creation time via OSM Nominatim (no hardcoded coordinates needed).
-const vnProvinces = [
-  'An Giang',
-  'Bà Rịa - Vũng Tàu',
-  'Bắc Giang',
-  'Bắc Kạn',
-  'Bạc Liêu',
-  'Bắc Ninh',
-  'Bến Tre',
-  'Bình Định',
-  'Bình Dương',
-  'Bình Phước',
-  'Bình Thuận',
-  'Cà Mau',
-  'Cần Thơ',
-  'Cao Bằng',
-  'Đà Nẵng',
-  'Đắk Lắk',
-  'Đắk Nông',
-  'Điện Biên',
-  'Đồng Nai',
-  'Đồng Tháp',
-  'Gia Lai',
-  'Hà Giang',
-  'Hà Nam',
-  'Hà Nội',
-  'Hà Tĩnh',
-  'Hải Dương',
-  'Hải Phòng',
-  'Hậu Giang',
-  'Hòa Bình',
-  'Hưng Yên',
-  'Khánh Hòa',
-  'Kiên Giang',
-  'Kon Tum',
-  'Lai Châu',
-  'Lâm Đồng',
-  'Lạng Sơn',
-  'Lào Cai',
-  'Long An',
-  'Nam Định',
-  'Nghệ An',
-  'Ninh Bình',
-  'Ninh Thuận',
-  'Phú Thọ',
-  'Phú Yên',
-  'Quảng Bình',
-  'Quảng Nam',
-  'Quảng Ngãi',
-  'Quảng Ninh',
-  'Quảng Trị',
-  'Sóc Trăng',
-  'Sơn La',
-  'Tây Ninh',
-  'Thái Bình',
-  'Thái Nguyên',
-  'Thanh Hóa',
-  'Thừa Thiên Huế',
-  'Tiền Giang',
-  'TP. Hồ Chí Minh',
-  'Trà Vinh',
-  'Tuyên Quang',
-  'Vĩnh Long',
-  'Vĩnh Phúc',
-  'Yên Bái',
-]
-
-// Fix mojibake preset labels to real Vietnamese names (so presets work with the full dropdown list).
-const presetNameFix: Record<string, string> = {
-  'Hà Ná»™i': 'Hà Nội',
-  'TP. Hồ Chí Minh': 'TP. Hồ Chí Minh',
-  'Đà Nẵng': 'Đà Nẵng',
-  'Huế': 'Thừa Thiên Huế',
-}
-
-async function resolveCityCenter(city: string): Promise<{ center: { lat: number; lng: number }; zoom: number }> {
-  const preset = cityPresets.find((p) => p.name === city || presetNameFix[p.name] === city)
-  if (preset) return { center: preset.center, zoom: preset.zoom }
-
-  const q = encodeURIComponent(`${city}, Viet Nam`)
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`
-  const res = await fetch(url)
-  const data = (await res.json()) as Array<{ lat: string; lon: string }>
-  const first = data[0]
-  if (!first) throw new Error(`Không tìm thấy toạ độ cho \"${city}\".`)
-  return { center: { lat: Number(first.lat), lng: Number(first.lon) }, zoom: 12 }
-}
 
 function componentCount(zoneIds: string[], adj: Record<string, string[]>): number {
   if (zoneIds.length === 0) return 0
@@ -111,10 +14,10 @@ function componentCount(zoneIds: string[], adj: Record<string, string[]>): numbe
 
   for (const id of zoneIds) {
     if (visited.has(id)) continue
-    count++
+    count += 1
     const queue = [id]
     visited.add(id)
-    for (let head = 0; head < queue.length; head++) {
+    for (let head = 0; head < queue.length; head += 1) {
       const current = queue[head]!
       for (const next of adj[current] ?? []) {
         if (ids.has(next) && !visited.has(next)) {
@@ -133,136 +36,44 @@ export default function RegionSelector() {
   const zones = useDataStore((s) => s.zones)
   const agents = useDataStore((s) => s.agents)
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
-  const addRegion = useDataStore((s) => s.addRegion)
-  const role = useUIStore((s) => s.role)
-
-  const [creating, setCreating] = useState(false)
-  const [city, setCity] = useState(vnProvinces[0] ?? 'Hà Nội')
-  const [name, setName] = useState(vnProvinces[0] ?? 'Hà Nội')
 
   const regionCards = useMemo(
     () =>
       regions.map((region) => {
         const regionZones = zones.filter((z) => (z as any).regionId === region.id)
-        const adj = buildAdjacencyMatrix(regionZones, 50)
+        const adjacency = buildAdjacencyMatrix(regionZones, 50)
         const topologyErrors = findPolygonTopologyViolations(regionZones).length
-        const components = componentCount(
-          regionZones.map((z) => z.id),
-          adj,
-        )
-        const islandCount = regionZones.filter((z) => (adj[z.id] ?? []).length === 0).length
+        const components = componentCount(regionZones.map((z) => z.id), adjacency)
+        const islandCount = regionZones.filter((z) => (adjacency[z.id] ?? []).length === 0).length
         const regionAgents = agents.filter(
-          (a) =>
-            a.activeRegion === region.id ||
-            a.activeRegion === region.name ||
-            (a as any).regionId === region.id ||
-            (a as any).region_id === region.id,
+          (agent) =>
+            agent.activeRegion === region.id ||
+            agent.activeRegion === region.name ||
+            (agent as any).regionId === region.id ||
+            (agent as any).region_id === region.id,
         )
         return { region, regionZones, topologyErrors, components, islandCount, regionAgents }
       }),
     [regions, zones, agents],
   )
 
-  const handlePreset = (preset: (typeof cityPresets)[number]) => {
-    const normalized = presetNameFix[preset.name] ?? preset.name
-    setCity(normalized)
-    setName(normalized)
-    setCreating(true)
-  }
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const resolved = await resolveCityCenter(city)
-    const region = await addRegion(
-      name.trim() || city,
-      { lat: resolved.center.lat, lng: resolved.center.lng },
-      resolved.zoom,
-    )
-    setName('')
-    setCreating(false)
-    setCurrentRegion(region.id)
-  }
-
   return (
     <div style={styles.container}>
       <section style={styles.hero}>
         <div>
-          <h1 style={styles.title}>Chọn khu vực vận hành</h1>
-          <p style={styles.subtitle}>Mọi thao tác vẽ zone, kiểm tra liên thông và chạy thuật toán đều nên bắt đầu từ một khu vực cụ thể.</p>
+          <h1 style={styles.title}>Ch?n khu v?c v?n h?nh</h1>
+          <p style={styles.subtitle}>
+            M?i thao t?c v? zone, ki?m tra li?n th?ng v? ch?y thu?t to?n ??u n?n b?t ??u t? m?t khu v?c c? th?.
+          </p>
         </div>
-        {role === 'admin' && (
-          <button style={styles.primaryBtn} onClick={() => setCreating(true)}>
-            Tạo khu vực
-          </button>
-        )}
       </section>
 
-      {regions.length === 0 && (
+      {regions.length === 0 ? (
         <section style={styles.emptyBand}>
-          <h2 style={styles.emptyTitle}>Dự án chưa có khu vực nào</h2>
-          <p style={styles.emptyText}>Tạo khu vực đầu tiên để bắt đầu nhập zones và phân chia lãnh thổ.</p>
-          <div style={styles.presetRow}>
-            {cityPresets.map((preset) => (
-              <button key={preset.name} style={styles.secondaryBtn} onClick={() => handlePreset(preset)}>
-                {preset.name}
-              </button>
-            ))}
-          </div>
+          <h2 style={styles.emptyTitle}>D? ?n ch?a c? khu v?c n?o</h2>
+          <p style={styles.emptyText}>H?y t?o khu v?c ? m?n qu?n l? khu v?c n?u d? ?n ch?a c? d? li?u.</p>
         </section>
-      )}
-
-      {creating && role === 'admin' && (
-        <form onSubmit={handleCreate} style={styles.form}>
-          <div style={styles.formHeader}>
-            <h2 style={styles.formTitle}>Tạo khu vực mới</h2>
-            <button type="button" style={styles.ghostBtn} onClick={() => setCreating(false)}>
-              Đóng
-            </button>
-          </div>
-
-          <div style={styles.presetRow}>
-            {cityPresets.map((preset) => (
-              <button key={preset.name} type="button" style={styles.secondaryBtn} onClick={() => handlePreset(preset)}>
-                {preset.name}
-              </button>
-            ))}
-          </div>
-
-          <div style={styles.formGrid}>
-            <label style={styles.field}>
-              <span>Tỉnh/Thành phố</span>
-              <select
-                value={city}
-                onChange={(e) => {
-                  const next = e.target.value
-                  setCity(next)
-                  // Auto-fill name to match city unless user already customized.
-                  if (!name || cityPresets.some((p) => p.name === name || presetNameFix[p.name] === name)) {
-                    setName(next)
-                  }
-                }}
-                required
-                style={styles.input}
-              >
-                {vnProvinces.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label style={styles.field}>
-              <span>Tên khu vực</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} required style={styles.input} />
-            </label>
-          </div>
-
-          <button type="submit" style={styles.primaryBtn}>
-            Lưu và mở khu vực
-          </button>
-        </form>
-      )}
+      ) : null}
 
       <section style={styles.grid}>
         {regionCards.map(({ region, regionZones, topologyErrors, components, islandCount, regionAgents }) => {
@@ -271,7 +82,7 @@ export default function RegionSelector() {
             <button key={region.id} style={styles.card} onClick={() => setCurrentRegion(region.id)}>
               <div style={styles.cardTop}>
                 <div>
-                  <span style={styles.kicker}>Khu vực</span>
+                  <span style={styles.kicker}>Khu v?c</span>
                   <h3 style={styles.cardTitle}>{region.name}</h3>
                 </div>
                 <span
@@ -286,20 +97,20 @@ export default function RegionSelector() {
                     color: blocked ? 'var(--color-danger)' : 'var(--color-success)',
                   }}
                 >
-                  {blocked ? 'Cần xử lý' : 'Sẵn sàng'}
+                  {blocked ? 'C?n x? l?' : 'S?n s?ng'}
                 </span>
               </div>
 
               <div style={styles.metrics}>
-                <Metric label="Vùng" value={regionZones.length} />
-                <Metric label="Nhân sự" value={regionAgents.length} />
-                <Metric label="Liên thông" value={topologyErrors} warn={topologyErrors > 0} />
-                <Metric label="Cụm liên thông" value={components} warn={components > 1} />
+                <Metric label="V?ng" value={regionZones.length} />
+                <Metric label="Nh?n s?" value={regionAgents.length} />
+                <Metric label="Li?n th?ng" value={topologyErrors} warn={topologyErrors > 0} />
+                <Metric label="C?m li?n th?ng" value={components} warn={components > 1} />
               </div>
 
               <div style={styles.cardFooter}>
-                <span>{islandCount} vùng cô lập</span>
-                <strong>Mở khu vực</strong>
+                <span>{islandCount} v?ng c? l?p</span>
+                <strong>M? khu v?c</strong>
               </div>
             </button>
           )
@@ -352,31 +163,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-2)',
     fontSize: 15,
   },
-  primaryBtn: {
-    border: 0,
-    borderRadius: 8,
-    background: 'var(--color-accent)',
-    color: '#fff',
-    padding: '10px 14px',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  secondaryBtn: {
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    background: 'var(--color-bg)',
-    color: 'var(--color-text)',
-    padding: '8px 10px',
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-  ghostBtn: {
-    border: 0,
-    background: 'transparent',
-    color: 'var(--color-text-2)',
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
   emptyBand: {
     border: '1px solid var(--color-border)',
     borderRadius: 8,
@@ -389,51 +175,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   emptyText: {
     color: 'var(--color-text-2)',
-    marginBottom: 14,
-  },
-  presetRow: {
-    display: 'flex',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  form: {
-    border: '1px solid var(--color-border)',
-    borderRadius: 8,
-    background: 'var(--color-surface)',
-    padding: 18,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 14,
-  },
-  formHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-  },
-  formTitle: {
-    fontSize: 18,
-  },
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: 12,
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    color: 'var(--color-text-2)',
-    fontWeight: 700,
-    fontSize: 13,
-  },
-  input: {
-    height: 38,
-    border: '1px solid var(--color-border)',
-    borderRadius: 7,
-    padding: '0 10px',
-    background: 'var(--color-bg)',
-    color: 'var(--color-text)',
+    marginBottom: 0,
   },
   grid: {
     display: 'grid',
