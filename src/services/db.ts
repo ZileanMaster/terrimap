@@ -445,19 +445,23 @@ export async function saveSnapshot(
     console.error('[DB] saveSnapshot localStorage error:', e)
   }
 
-  // Nếu online → CŨNG lưu Supabase (with project_id)
+  // If online -> sync to Supabase in background so the UI never waits on network.
   if (isOnline()) {
     try {
       const row: Record<string, unknown> = { id, label, data, period }
       if (_currentProjectId) row.project_id = _currentProjectId
-      const { error } = await supabase!.from('snapshots').upsert(row)
-      if (error) {
-        console.error('[DB] saveSnapshot supabase error:', error)
-        return { ok: true, error: `Đã lưu local, Supabase lỗi: ${error.message}` }
-      }
+      void (async () => {
+        try {
+          const { error } = await supabase!.from('snapshots').upsert(row)
+          if (error) {
+            console.error('[DB] saveSnapshot supabase error:', error)
+          }
+        } catch (e) {
+          console.error('[DB] saveSnapshot unexpected:', e)
+        }
+      })()
     } catch (e) {
       console.error('[DB] saveSnapshot unexpected:', e)
-      return { ok: true, error: 'Đã lưu local, Supabase timeout' }
     }
   }
   return { ok: true }

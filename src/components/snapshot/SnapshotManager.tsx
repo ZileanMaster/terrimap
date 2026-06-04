@@ -70,15 +70,21 @@ export default function SnapshotManager() {
     setSaving(true)
     try {
       const id = `snap-${Date.now()}`
-      const result = await saveSnapshot(id, label.trim(), { zones, assignments }, period)
-      
-      // Reload danh sách (từ localStorage, luôn có)
-      const updated = await loadSnapshots()
-      setSnapshots(updated as SnapshotItem[])
-      
-      if (result.error) {
-        alert(`⚠️ ${result.error}`)
+      const createdAt = new Date().toISOString()
+      const snapshot: SnapshotItem = {
+        id,
+        label: label.trim(),
+        data: { zones, assignments },
+        created_at: createdAt,
+        period,
       }
+
+      setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
+      void loadSnapshots().then((updated) => setSnapshots(updated as SnapshotItem[])).catch(() => {
+        // Keep optimistic local state if refresh fails.
+      })
+
+      void saveSnapshot(id, label.trim(), { zones, assignments }, period)
       // Không cần alert thành công — badge count tăng lên là feedback đủ
     } catch (e) {
       alert('❌ Lưu thất bại: ' + (e as Error).message)
