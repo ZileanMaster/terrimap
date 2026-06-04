@@ -61,17 +61,17 @@ export default function RegionSelector() {
     <div style={styles.container}>
       <section style={styles.hero}>
         <div>
-          <h1 style={styles.title}>Ch?n khu v?c v?n h?nh</h1>
+          <h1 style={styles.title}>Chọn khu vực vận hành</h1>
           <p style={styles.subtitle}>
-            M?i thao t?c v? zone, ki?m tra li?n th?ng v? ch?y thu?t to?n ??u n?n b?t ??u t? m?t khu v?c c? th?.
+            Mọi thao tác vẽ zone, kiểm tra liên thông và chạy thuật toán đều nên bắt đầu từ một khu vực cụ thể.
           </p>
         </div>
       </section>
 
       {regions.length === 0 ? (
         <section style={styles.emptyBand}>
-          <h2 style={styles.emptyTitle}>D? ?n ch?a c? khu v?c n?o</h2>
-          <p style={styles.emptyText}>H?y t?o khu v?c ? m?n qu?n l? khu v?c n?u d? ?n ch?a c? d? li?u.</p>
+          <h2 style={styles.emptyTitle}>Dự án chưa có khu vực nào</h2>
+          <p style={styles.emptyText}>Hãy tạo khu vực ở màn quản lý khu vực nếu dự án chưa có dữ liệu.</p>
         </section>
       ) : null}
 
@@ -82,35 +82,37 @@ export default function RegionSelector() {
             <button key={region.id} style={styles.card} onClick={() => setCurrentRegion(region.id)}>
               <div style={styles.cardTop}>
                 <div>
-                  <span style={styles.kicker}>Khu v?c</span>
+                  <span style={styles.kicker}>Khu vực</span>
                   <h3 style={styles.cardTitle}>{region.name}</h3>
                 </div>
                 <span
                   style={{
                     ...styles.status,
-                    border: `1px solid ${blocked
-                      ? 'color-mix(in srgb, var(--color-danger) 28%, transparent)'
-                      : 'color-mix(in srgb, var(--color-success) 28%, transparent)'}`,
+                    border: `1px solid ${
+                      blocked
+                        ? 'color-mix(in srgb, var(--color-danger) 28%, transparent)'
+                        : 'color-mix(in srgb, var(--color-success) 28%, transparent)'
+                    }`,
                     background: blocked
                       ? 'color-mix(in srgb, var(--color-danger) 12%, var(--color-surface))'
                       : 'color-mix(in srgb, var(--color-success) 12%, var(--color-surface))',
                     color: blocked ? 'var(--color-danger)' : 'var(--color-success)',
                   }}
                 >
-                  {blocked ? 'C?n x? l?' : 'S?n s?ng'}
+                  {blocked ? 'Cần xử lý' : 'Sẵn sàng'}
                 </span>
               </div>
 
               <div style={styles.metrics}>
-                <Metric label="V?ng" value={regionZones.length} />
-                <Metric label="Nh?n s?" value={regionAgents.length} />
-                <Metric label="Li?n th?ng" value={topologyErrors} warn={topologyErrors > 0} />
-                <Metric label="C?m li?n th?ng" value={components} warn={components > 1} />
+                <Metric label="Vùng" value={regionZones.length} />
+                <Metric label="Nhân sự" value={regionAgents.length} />
+                <Metric label="Liên thông" value={topologyErrors} warn={topologyErrors > 0} />
+                <Metric label="Cụm liên thông" value={components} warn={components > 1} />
               </div>
 
               <div style={styles.cardFooter}>
-                <span>{islandCount} v?ng c? l?p</span>
-                <strong>M? khu v?c</strong>
+                <span>{islandCount} vùng cô lập</span>
+                <strong>Mở khu vực</strong>
               </div>
             </button>
           )
