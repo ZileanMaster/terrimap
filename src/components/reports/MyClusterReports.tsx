@@ -107,7 +107,31 @@ export default function MyClusterReports({
 
     setRows((prev) => ({ ...prev, [districtId]: { ...prev[districtId]!, saving: true } }))
     try {
-      await saveDistrictReport({
+      const nextReport: DistrictReport = {
+        id: `dr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        projectId: currentProjectId ?? undefined,
+        regionId: currentRegionId,
+        districtId,
+        userId: currentUserKey,
+        period,
+        customers: row.customers,
+        orders: row.orders,
+        note: row.note,
+        updatedAt: new Date().toISOString(),
+      }
+
+      setReports((prev) => {
+        const key = (r: DistrictReport) => (
+          r.period === nextReport.period
+          && r.userId === nextReport.userId
+          && r.regionId === nextReport.regionId
+          && r.districtId === nextReport.districtId
+        )
+        const filtered = prev.filter((r) => !key(r))
+        return [nextReport, ...filtered]
+      })
+
+      void saveDistrictReport({
         projectId: currentProjectId ?? undefined,
         regionId: currentRegionId,
         districtId,
@@ -117,9 +141,11 @@ export default function MyClusterReports({
         orders: row.orders,
         note: row.note,
       })
-      // Reload for dashboard consistency
-      const rs = await loadDistrictReports(period, currentProjectId ?? undefined)
-      setReports(rs)
+      void loadDistrictReports(period, currentProjectId ?? undefined)
+        .then((rs) => setReports(rs))
+        .catch(() => {
+          // Keep optimistic state if refresh fails.
+        })
     } finally {
       setRows((prev) => ({ ...prev, [districtId]: { ...prev[districtId]!, saving: false } }))
     }

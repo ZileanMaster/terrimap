@@ -85,10 +85,16 @@ export async function saveMonthlyMetrics(
       value:       m.value,
       updated_at:  new Date().toISOString(),
     }))
-    const { error } = await supabase!
-      .from('zone_monthly_metrics')
-      .upsert(rows, { onConflict: 'zone_id,period,metric_type' })
-    if (error) console.error('[MetricsDB] saveMonthlyMetrics error:', error)
+    void (async () => {
+      try {
+        const { error } = await supabase!
+          .from('zone_monthly_metrics')
+          .upsert(rows, { onConflict: 'zone_id,period,metric_type' })
+        if (error) console.error('[MetricsDB] saveMonthlyMetrics error:', error)
+      } catch (e) {
+        console.error('[MetricsDB] saveMonthlyMetrics unexpected:', e)
+      }
+    })()
   } catch (e) {
     console.error('[MetricsDB] saveMonthlyMetrics unexpected:', e)
   }

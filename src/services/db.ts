@@ -312,53 +312,41 @@ export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
   if (!isOnline()) return
 
   try {
-    let existingZones: Zone[] = []
-    let query = supabase!.from('zones').select('*').neq('id', zone.id)
-    if (projectId) query = query.eq('project_id', projectId)
-    const { data: existing, error: existingErr } = await query
-    if (existingErr) {
-      console.error('[DB] saveZone topology lookup error:', existingErr)
-      return
-    }
-    existingZones = ((existing ?? []) as DbZone[]).map((z) => ({
-      id:         z.id,
-      name:       z.name,
-      status:     z.status as Zone['status'],
-      polygon:    z.polygon as Zone['polygon'],
-      centroid:   z.centroid,
-      regionId:   z.region_id ?? undefined,
-      activities: [],
-    } as any))
-    assertNoPolygonTopologyViolations([...existingZones, zone] as any)
+    void (async () => {
+      try {
+        const row: Record<string, unknown> = {
+          id:       zone.id,
+          name:     zone.name,
+          status:   zone.status,
+          polygon:  zone.polygon,
+          centroid: zone.centroid,
+        }
+        if ((zone as any).regionId) row.region_id = (zone as any).regionId
+        if (projectId) row.project_id = projectId
 
-    const row: Record<string, unknown> = {
-      id:       zone.id,
-      name:     zone.name,
-      status:   zone.status,
-      polygon:  zone.polygon,
-      centroid: zone.centroid,
-    }
-    // Persist region_id and project_id when available
-    if ((zone as any).regionId) row.region_id = (zone as any).regionId
-    if (projectId) row.project_id = projectId
+        const { error: zErr } = await supabase!.from('zones').upsert(row)
+        if (zErr) {
+          console.error('[DB] saveZone upsert error:', zErr)
+          return
+        }
 
-    const { error: zErr } = await supabase!.from('zones').upsert(row)
-    if (zErr) { console.error('[DB] saveZone upsert error:', zErr); return }
+        await supabase!.from('activities').delete().eq('zone_id', zone.id)
 
-    // Replace activities: delete all then re-insert
-    await supabase!.from('activities').delete().eq('zone_id', zone.id)
-
-    if (zone.activities.length > 0) {
-      const { error: aErr } = await supabase!.from('activities').insert(
-        zone.activities.map((a) => ({
-          id:      a.id,
-          zone_id: zone.id,
-          type:    a.type,
-          value:   a.value,
-        })),
-      )
-      if (aErr) console.error('[DB] saveZone activities error:', aErr)
-    }
+        if (zone.activities.length > 0) {
+          const { error: aErr } = await supabase!.from('activities').insert(
+            zone.activities.map((a) => ({
+              id:      a.id,
+              zone_id: zone.id,
+              type:    a.type,
+              value:   a.value,
+            })),
+          )
+          if (aErr) console.error('[DB] saveZone activities error:', aErr)
+        }
+      } catch (e) {
+        console.error('[DB] saveZone unexpected error:', e)
+      }
+    })()
   } catch (e) {
     console.error('[DB] saveZone unexpected error:', e)
   }
@@ -403,22 +391,27 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
   if (!isOnline()) return
 
   try {
-    // Delete existing assignments for this project
-    let delQuery = supabase!.from('assignments').delete().neq('zone_id', '')
-    if (projectId) delQuery = delQuery.eq('project_id', projectId)
-    await delQuery
+    void (async () => {
+      try {
+        let delQuery = supabase!.from('assignments').delete().neq('zone_id', '')
+        if (projectId) delQuery = delQuery.eq('project_id', projectId)
+        await delQuery
 
-    if (assignments.length > 0) {
-      const { error } = await supabase!.from('assignments').insert(
-        assignments.map((a) => ({
-          zone_id:        a.zoneId,
-          district_id:    a.districtId,
-          sales_agent_id: a.salesAgentId ?? `sa${a.districtId}`,
-          ...(projectId ? { project_id: projectId } : {}),
-        })),
-      )
-      if (error) console.error('[DB] saveAssignments error:', error)
-    }
+        if (assignments.length > 0) {
+          const { error } = await supabase!.from('assignments').insert(
+            assignments.map((a) => ({
+              zone_id:        a.zoneId,
+              district_id:    a.districtId,
+              sales_agent_id: a.salesAgentId ?? `sa${a.districtId}`,
+              ...(projectId ? { project_id: projectId } : {}),
+            })),
+          )
+          if (error) console.error('[DB] saveAssignments error:', error)
+        }
+      } catch (e) {
+        console.error('[DB] saveAssignments unexpected error:', e)
+      }
+    })()
   } catch (e) {
     console.error('[DB] saveAssignments unexpected error:', e)
   }

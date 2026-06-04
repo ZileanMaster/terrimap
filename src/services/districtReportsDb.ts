@@ -94,13 +94,19 @@ export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'upd
       note: report.note ?? null,
       updated_at: report.updatedAt,
     }
-    const { error } = await supabase!
-      .from('district_reports')
-      .upsert(row, { onConflict: 'project_id,region_id,district_id,user_id,period' })
-    if (error) {
-      // Table may not exist or RLS may block: keep local-only behavior.
-      console.warn('[DistrictReportsDB] saveDistrictReport supabase error:', error)
-    }
+    void (async () => {
+      try {
+        const { error } = await supabase!
+          .from('district_reports')
+          .upsert(row, { onConflict: 'project_id,region_id,district_id,user_id,period' })
+        if (error) {
+          // Table may not exist or RLS may block: keep local-only behavior.
+          console.warn('[DistrictReportsDB] saveDistrictReport supabase error:', error)
+        }
+      } catch (e) {
+        console.warn('[DistrictReportsDB] saveDistrictReport unexpected:', e)
+      }
+    })()
   } catch (e) {
     console.warn('[DistrictReportsDB] saveDistrictReport unexpected:', e)
   }
@@ -153,4 +159,3 @@ export async function loadDistrictReports(period: string, projectId?: string): P
     return local
   }
 }
-
