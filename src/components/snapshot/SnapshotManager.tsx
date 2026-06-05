@@ -60,7 +60,8 @@ export default function SnapshotManager() {
       alert('⚠️ Chưa có vùng nào để lưu. Hãy vẽ hoặc import vùng trước.')
       return
     }
-    const label = window.prompt('Tên bản đồ:')
+    const defaultLabel = snapshots[0]?.label?.trim() || ''
+    const label = window.prompt('Tên bản đồ:', defaultLabel)
     if (!label?.trim()) return
 
     // Get current period from URL or default to current month
@@ -90,7 +91,7 @@ export default function SnapshotManager() {
     } finally {
       setSaving(false)
     }
-  }, [zones, assignments])
+  }, [zones, assignments, snapshots])
 
   const handleRestore = useCallback((snap: SnapshotItem) => {
     if (compareMode) return // In compare mode, clicks are for selection
