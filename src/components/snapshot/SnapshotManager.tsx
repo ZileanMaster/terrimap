@@ -80,11 +80,10 @@ export default function SnapshotManager() {
       }
 
       setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
+      await saveSnapshot(id, label.trim(), { zones, assignments }, period)
       void loadSnapshots().then((updated) => setSnapshots(updated as SnapshotItem[])).catch(() => {
         // Keep optimistic local state if refresh fails.
       })
-
-      void saveSnapshot(id, label.trim(), { zones, assignments }, period)
       // Không cần alert thành công — badge count tăng lên là feedback đủ
     } catch (e) {
       alert('❌ Lưu thất bại: ' + (e as Error).message)
