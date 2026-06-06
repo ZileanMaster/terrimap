@@ -287,7 +287,7 @@ export function UsersView() {
   const [editRole, setEditRole] = useState<string>('sales');
   const [editRegionId, setEditRegionId] = useState<string>('');
 
-  const runWithTimeout = <T,>(task: Promise<T>, timeoutMs: number, fallback: T) => {
+  const runWithTimeout = <T,>(task: PromiseLike<T>, timeoutMs: number, fallback: T) => {
     let finished = false;
     const timeout = new Promise<T>((resolve) =>
       setTimeout(() => {
@@ -299,7 +299,7 @@ export function UsersView() {
     );
 
     return Promise.race([
-      task.finally(() => {
+      Promise.resolve(task).finally(() => {
         finished = true;
       }),
       timeout,
