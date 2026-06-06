@@ -76,16 +76,16 @@ export interface PartitionOpts {
   initialTemp?: number;
   /** Hệ số làm nguội (0 < cooling < 1). Default: 0.997. */
   cooling?: number;
-  /** Trọng số cho thành phần dispersion trong objective. Default: 0.5. */
+  /** Trọng số cho thành phần dispersion trong objective. Default: 0.35. */
   alpha?: number;
-  /** Trọng số cho thành phần imbalance trong objective. Default: 0.5. */
+  /** Trọng số cho thành phần imbalance trong objective. Default: 0.65. */
   beta?: number;
   /**
    * Gap threshold (km) để bổ sung adjacency khi polygon có khe hở nhỏ.
    * Default: 0.12 km (~120m). Giá trị lớn dễ "nối tắt" qua vùng khác → làm sai liên thông.
    */
   adjThresholdKm?: number;
-  /** Balance weights — default: { customers: 1.0, orders: 0.0 } */
+  /** Balance weights — default: { customers: 1.0, orders: 1.0 } */
   balanceWeights?: { customers: number; orders: number };
   /** Objective function: 'p-median' (minimize tổng distance — recommended, Salazar-Aguilar et al. 2011) hoặc 'p-center' (minimize max diameter). Default: 'p-median'. */
   objective?: 'p-center' | 'p-median';
@@ -247,7 +247,7 @@ function computeCost(
   balanceWeights?: { customers: number; orders: number },
   objective?: 'p-center' | 'p-median',
 ): number {
-  const weights = balanceWeights ?? { customers: 1.0, orders: 0.0 };
+  const weights = balanceWeights ?? { customers: 1.0, orders: 1.0 };
   const obj = objective ?? 'p-median'; // p-median được khâyến nghị theo Salazar-Aguilar et al. (2011)
 
   // Nhóm các zones theo district
@@ -399,6 +399,114 @@ function bfsShortestPathToAssigned(
 
   // No path found — zone is truly isolated in graph G
   return null;
+}
+
+// ==========================================
+// QUALITY-FIRST REFINE HELPERS
+// ==========================================
+
+/**
+ * Best-improvement refinement: qu?t to?n b? move h?p l? v? ch?n move t?t nh?t
+ * ? m?i v?ng l?p. ?u ti?n ch?t l??ng h?n t?c ??.
+ */
+function refineByBestImprovement(
+  zones: Zone[],
+  initialAssignment: number[] | Int32Array,
+  m: number,
+  adjMatrix: AdjacencyMatrix,
+  idToIdx: Map<string, number>,
+  alpha: number,
+  beta: number,
+  balanceWeights?: { customers: number; orders: number },
+  objective?: 'p-center' | 'p-median',
+  maxIter = 500,
+  onProgress?: ProgressCallback,
+): { assignment: number[]; cost: number } {
+  const assignment = Array.from(initialAssignment, (d) => Number(d));
+  const districtSizes = new Array<number>(m).fill(0);
+  for (const districtId of assignment) {
+    districtSizes[districtId] = (districtSizes[districtId] ?? 0) + 1;
+  }
+
+  let currentCost = computeCost(
+    zones,
+    assignment,
+    m,
+    alpha,
+    beta,
+    adjMatrix,
+    balanceWeights,
+    objective,
+  );
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    let bestMove: null | {
+      idx: number;
+      from: number;
+      to: number;
+      cost: number;
+    } = null;
+
+    for (let i = 0; i < zones.length; i++) {
+      const currentDistrict = assignment[i]!;
+      if ((districtSizes[currentDistrict] ?? 0) <= 1) continue;
+
+      const zoneId = zones[i]!.id;
+      const neighborDistricts = new Set<number>();
+      for (const neighborId of (adjMatrix[zoneId] ?? [])) {
+        const nIdx = idToIdx.get(neighborId);
+        if (nIdx !== undefined && assignment[nIdx] !== currentDistrict) {
+          neighborDistricts.add(assignment[nIdx]!);
+        }
+      }
+      if (neighborDistricts.size === 0) continue;
+
+      for (const targetDistrict of neighborDistricts) {
+        if (targetDistrict === currentDistrict) continue;
+
+        assignment[i] = targetDistrict;
+        const sourceStillConnected = isDistrictConnected(
+          zones,
+          assignment,
+          currentDistrict,
+          adjMatrix,
+          idToIdx,
+        );
+
+        if (!sourceStillConnected) {
+          assignment[i] = currentDistrict;
+          continue;
+        }
+
+        const newCost = computeCost(
+          zones,
+          assignment,
+          m,
+          alpha,
+          beta,
+          adjMatrix,
+          balanceWeights,
+          objective,
+        );
+
+        assignment[i] = currentDistrict;
+
+        if (newCost + 1e-9 < currentCost && (!bestMove || newCost + 1e-9 < bestMove.cost)) {
+          bestMove = { idx: i, from: currentDistrict, to: targetDistrict, cost: newCost };
+        }
+      }
+    }
+
+    if (!bestMove) break;
+
+    assignment[bestMove.idx] = bestMove.to;
+    districtSizes[bestMove.from]!--;
+    districtSizes[bestMove.to] = (districtSizes[bestMove.to] ?? 0) + 1;
+    currentCost = bestMove.cost;
+    onProgress?.(iter + 1, currentCost);
+  }
+
+  return { assignment, cost: currentCost };
 }
 
 // ==========================================
@@ -646,13 +754,13 @@ export function partitionLocalSearch(
   if (m > zones.length)
     throw new PartitionError(`m (${m}) must be <= zones.length (${zones.length})`, 'M_TOO_LARGE');
 
-  const { onProgress, alpha = 0.5, beta = 0.5, adjThresholdKm = 0.12, maxIter = 500, balanceWeights, objective } = opts;
+  const { onProgress, alpha = 0.35, beta = 0.65, adjThresholdKm = 0.12, maxIter = 500, balanceWeights, objective } = opts;
 
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
   ensureConnectedInputGraph(zones, adjMatrix);
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
 
-  // Khởi tạo từ Greedy solution
+  // Kh?i t?o t? Greedy solution
   const greedyResult = partitionGreedy(zones, m, { adjThresholdKm });
   const assignment = new Array<number>(zones.length);
   for (const { zoneId, districtId } of greedyResult) {
@@ -660,79 +768,26 @@ export function partitionLocalSearch(
     if (idx !== undefined) assignment[idx] = districtId;
   }
 
-  let currentCost = computeCost(zones, assignment, m, alpha, beta, adjMatrix, balanceWeights, objective);
-  let improved = true;
-  let iter = 0;
-
-  while (improved && iter < maxIter) {
-    improved = false;
-    iter++;
-
-    for (let i = 0; i < zones.length; i++) {
-      const currentDistrict = assignment[i]!;
-      const zoneId = zones[i]!.id;
-
-      const neighborDistricts = new Set<number>();
-      for (const neighborId of (adjMatrix[zoneId] ?? [])) {
-        const nIdx = idToIdx.get(neighborId);
-        if (nIdx !== undefined && assignment[nIdx] !== currentDistrict) {
-          neighborDistricts.add(assignment[nIdx]!);
-        }
-      }
-      if (neighborDistricts.size === 0) continue;
-
-      const sourceSize = assignment.filter((d) => d === currentDistrict).length;
-      if (sourceSize <= 1) continue;
-
-      for (const targetDistrict of neighborDistricts) {
-        assignment[i] = targetDistrict;
-
-        if (!isDistrictConnected(zones, assignment, currentDistrict, adjMatrix, idToIdx)) {
-          assignment[i] = currentDistrict;
-          continue;
-        }
-
-        const newCost = computeCost(zones, assignment, m, alpha, beta, adjMatrix, balanceWeights, objective);
-        if (newCost < currentCost) {
-          currentCost = newCost;
-          improved = true;
-        } else {
-          assignment[i] = currentDistrict;
-        }
-      }
-    }
-
-    onProgress?.(iter, currentCost);
-  }
+  const refined = refineByBestImprovement(
+    zones,
+    assignment,
+    m,
+    adjMatrix,
+    idToIdx,
+    alpha,
+    beta,
+    balanceWeights,
+    objective,
+    maxIter,
+    onProgress,
+  );
 
   return zones.map((z, i) => ({
     zoneId: z.id,
-    districtId: assignment[i]!,
+    districtId: refined.assignment[i]!,
   }));
 }
 
-// ==========================================
-// THUẬT TOÁN 3 — SIMULATED ANNEALING
-// ==========================================
-
-/**
- * Phân vùng bằng Simulated Annealing, khởi tạo từ Greedy solution.
- *
- * HARD CONSTRAINT: Mỗi swap được BFS verify — district nguồn PHẢI vẫn liên thông.
- * Solution output LUÔN liên thông 100%.
- *
- * Thuật toán:
- * 1. Khởi tạo solution bằng partitionGreedy.
- * 2. Mỗi iteration:
- *    a. Chọn ngẫu nhiên một zone ở biên district.
- *    b. Thử swap sang district lân cận.
- *    c. BFS verify connectivity — reject nếu phá vỡ.
- *    d. Chấp nhận swap nếu cost giảm, hoặc với xác suất exp(-ΔE/T).
- *    e. Hạ nhiệt: T = T0 × cooling^iter.
- * 3. Dừng khi T < 1.
- *
- * @complexity O(maxIter × boundary_size)
- */
 export function partitionSimulatedAnnealing(
   zones: Zone[],
   m: number,
@@ -750,8 +805,8 @@ export function partitionSimulatedAnnealing(
     onProgress,
     initialTemp = 2000,
     cooling = 0.997,
-    alpha = 0.5,
-    beta = 0.5,
+    alpha = 0.35,
+    beta = 0.65,
     adjThresholdKm = 0.12,
     maxIter = 10000,
     balanceWeights,
@@ -767,94 +822,136 @@ export function partitionSimulatedAnnealing(
   ensureConnectedInputGraph(zones, adjMatrix);
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
 
-  // Khởi tạo từ Greedy solution
+  // Kh?i t?o t? Greedy solution r?i refine ch?t l??ng tr??c khi anneal
   const initialResult = partitionGreedy(zones, m, { adjThresholdKm });
-
-  const assignment = new Int32Array(zones.length);
+  const warmupBudget = Math.max(0, Math.min(maxIter, Math.floor(maxIter * 0.1)));
+  const warmupAssignment = new Array<number>(zones.length);
   for (const { zoneId, districtId } of initialResult) {
     const idx = idToIdx.get(zoneId);
-    if (idx !== undefined) assignment[idx] = districtId;
+    if (idx !== undefined) warmupAssignment[idx] = districtId;
   }
 
-  let currentCost = computeCost(zones, Array.from(assignment), m, alpha, beta, adjMatrix, balanceWeights, objective);
+  const warmup = refineByBestImprovement(
+    zones,
+    warmupAssignment,
+    m,
+    adjMatrix,
+    idToIdx,
+    alpha,
+    beta,
+    balanceWeights,
+    objective,
+    warmupBudget,
+    onProgress,
+  );
+
+  const assignment = Int32Array.from(warmup.assignment);
+  let currentCost = warmup.cost;
   let bestAssignment = new Int32Array(assignment);
   let bestCost = currentCost;
   let T = initialTemp;
+  let iter = 0;
+  const remainingIter = Math.max(0, maxIter - warmupBudget);
 
-  for (let iter = 0; iter < maxIter && T >= 1; iter++) {
-    const boundaryZones: number[] = [];
+  const districtSizes = new Array<number>(m).fill(0);
+  for (const districtId of assignment) {
+    districtSizes[districtId] = (districtSizes[districtId] ?? 0) + 1;
+  }
+
+  while (iter < remainingIter && T >= 1) {
+    let bestMove: null | { idx: number; from: number; to: number; cost: number } = null;
+
     for (let i = 0; i < zones.length; i++) {
-      const dId = assignment[i]!;
+      const currentDistrict = assignment[i]!;
+      if ((districtSizes[currentDistrict] ?? 0) <= 1) continue;
+
       const zoneId = zones[i]!.id;
+      const neighborDistricts = new Set<number>();
       for (const neighborId of (adjMatrix[zoneId] ?? [])) {
         const nIdx = idToIdx.get(neighborId);
-        if (nIdx !== undefined && assignment[nIdx] !== dId) {
-          boundaryZones.push(i);
-          break;
+        if (nIdx !== undefined && assignment[nIdx] !== currentDistrict) {
+          neighborDistricts.add(assignment[nIdx]!);
+        }
+      }
+      if (neighborDistricts.size === 0) continue;
+
+      for (const targetDistrict of neighborDistricts) {
+        if (targetDistrict === currentDistrict) continue;
+
+        assignment[i] = targetDistrict;
+        const sourceStillConnected = isDistrictConnected(
+          zones,
+          Array.from(assignment),
+          currentDistrict,
+          adjMatrix,
+          idToIdx,
+        );
+
+        if (!sourceStillConnected) {
+          assignment[i] = currentDistrict;
+          continue;
+        }
+
+        const newCost = computeCost(
+          zones,
+          Array.from(assignment),
+          m,
+          alpha,
+          beta,
+          adjMatrix,
+          balanceWeights,
+          objective,
+        );
+
+        assignment[i] = currentDistrict;
+
+        if (!bestMove || newCost < bestMove.cost) {
+          bestMove = { idx: i, from: currentDistrict, to: targetDistrict, cost: newCost };
         }
       }
     }
 
-    if (boundaryZones.length === 0) break;
+    if (!bestMove) break;
 
-    const zoneIdx = boundaryZones[
-      Math.floor(Math.random() * boundaryZones.length)
-    ]!;
-    const currentDistrict = assignment[zoneIdx]!;
-    const zoneId = zones[zoneIdx]!.id;
+    assignment[bestMove.idx] = bestMove.to;
+    districtSizes[bestMove.from]!--;
+    districtSizes[bestMove.to] = (districtSizes[bestMove.to] ?? 0) + 1;
 
-    const neighborDistricts = new Set<number>();
-    for (const neighborId of (adjMatrix[zoneId] ?? [])) {
-      const nIdx = idToIdx.get(neighborId);
-      if (nIdx !== undefined && assignment[nIdx] !== currentDistrict) {
-        neighborDistricts.add(assignment[nIdx]!);
-      }
-    }
-    if (neighborDistricts.size === 0) continue;
-
-    const candidateDistricts = Array.from(neighborDistricts);
-    const targetDistrict =
-      candidateDistricts[Math.floor(Math.random() * candidateDistricts.length)]!;
-
-    const currentDistrictSize = assignment.reduce(
-      (s, d) => (d === currentDistrict ? s + 1 : s),
-      0,
-    );
-    if (currentDistrictSize <= 1) continue;
-
-    // --- Thử swap ---
-    assignment[zoneIdx] = targetDistrict;
-
-    // ✅ HARD CONSTRAINT: BFS verify — district nguồn vẫn liên thông
-    if (!isDistrictConnected(zones, Array.from(assignment), currentDistrict, adjMatrix, idToIdx)) {
-      assignment[zoneIdx] = currentDistrict; // hoàn tác
-      continue;  // REJECT — phá vỡ connectivity
-    }
-
-    const newCost = computeCost(zones, Array.from(assignment), m, alpha, beta, adjMatrix, balanceWeights, objective);
-    const deltaE = newCost - currentCost;
-
-    // Chấp nhận swap nếu tốt hơn, hoặc với xác suất Boltzmann
-    if (deltaE < 0 || Math.random() < Math.exp(-deltaE / T)) {
-      currentCost = newCost;
+    const deltaE = bestMove.cost - currentCost;
+    if (deltaE <= 0 || Math.random() < Math.exp(-deltaE / T)) {
+      currentCost = bestMove.cost;
       if (currentCost < bestCost) {
         bestCost = currentCost;
         bestAssignment = new Int32Array(assignment);
       }
     } else {
-      // Hoàn tác swap
-      assignment[zoneIdx] = currentDistrict;
+      assignment[bestMove.idx] = bestMove.from;
+      districtSizes[bestMove.from] = (districtSizes[bestMove.from] ?? 0) + 1;
+      districtSizes[bestMove.to] = (districtSizes[bestMove.to] ?? 0) - 1;
     }
 
-    // --- Cooling schedule ---
     T *= cooling;
-
+    iter++;
     onProgress?.(iter, currentCost);
   }
 
+  const finalRefine = refineByBestImprovement(
+    zones,
+    bestAssignment,
+    m,
+    adjMatrix,
+    idToIdx,
+    alpha,
+    beta,
+    balanceWeights,
+    objective,
+    Math.max(0, Math.floor(maxIter * 0.2)),
+    onProgress,
+  );
+
   return zones.map((z, i) => ({
     zoneId: z.id,
-    districtId: bestAssignment[i]!,
+    districtId: finalRefine.assignment[i]!,
   }));
 }
 

@@ -180,11 +180,12 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
       }
 
       if (algo === 'sa') {
+        const saOpts = { maxIter: 12000, initialTemp: 1500, cooling: 0.9965 }
         const startTime = performance.now()
         try {
           const saAssignments = await runSA(
             displayZones, m,
-            { maxIter: 5000, initialTemp: 1000, cooling: 0.995 },
+            saOpts,
             (iter, cost, total) => {
               setProgress(Math.round((iter / total) * 100))
               setCurrentCost(cost)
@@ -194,7 +195,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
           partResult = ctx.facade.wrapAssignmentsAsResult('sa', displayZones, saAssignments, displayAgents, durationMs)
         } catch {
           console.warn('[AdminPage] SA Worker failed, falling back to main thread')
-          partResult = await ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
+          partResult = await ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents, saOpts)
         }
       } else {
         partResult = await ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)

@@ -130,7 +130,7 @@
       },
       {
         "zoneId": "z10",
-        "districtId": 3
+        "districtId": 1
       },
       {
         "zoneId": "z11",
@@ -146,7 +146,7 @@
       },
       {
         "zoneId": "z14",
-        "districtId": 3
+        "districtId": 1
       },
       {
         "zoneId": "z15",
@@ -158,11 +158,11 @@
       },
       {
         "zoneId": "z17",
-        "districtId": 1
+        "districtId": 3
       },
       {
         "zoneId": "z18",
-        "districtId": 1
+        "districtId": 3
       },
       {
         "zoneId": "z19",
