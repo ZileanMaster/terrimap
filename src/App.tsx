@@ -75,11 +75,16 @@ export default function App() {
   const authLoading    = useAuthStore((s) => s.loading)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const membership     = useAuthStore((s) => s.membership)
+  const projects       = useAuthStore((s) => s.projects)
   const initAuth       = useAuthStore((s) => s.initialize)
 
   // Role from membership (or view-as override)
   const viewAsRole     = useUIStore((s) => s.role)
-  const effectiveRole  = membership?.role === 'admin' ? viewAsRole : (membership?.role ?? 'sales')
+  const currentProject  = projects.find((project) => project.id === currentProjectId)
+  const activeMembership = membership?.project_id === currentProjectId ? membership : null
+  const effectiveRole  = activeMembership?.role === 'admin'
+    ? viewAsRole
+    : (activeMembership?.role ?? (currentProject?.owner_id === authUser?.id ? 'admin' : 'sales'))
 
   // Data store
   const initData       = useDataStore((s) => s.init)
@@ -97,14 +102,21 @@ export default function App() {
 
   // Sync effective role to uiStore (for components that read from uiStore)
   React.useEffect(() => {
-    if (membership && membership.role !== 'admin') {
-      useUIStore.getState().setRole(membership.role as any)
+    const nextRole = activeMembership?.role === 'admin'
+      ? viewAsRole
+      : (activeMembership?.role ?? (currentProject?.owner_id === authUser?.id ? 'admin' : 'sales'))
+
+    if (activeMembership?.role === 'admin') {
+      // Keep admin view-as mode intact once the membership is confirmed.
+    } else {
+      useUIStore.getState().setRole(nextRole as any)
     }
+
     // Auto-select assigned region for non-admin roles
-    if (membership?.role && membership.role !== 'admin' && membership.region_id) {
-      useDataStore.getState().setCurrentRegion(membership.region_id)
+    if (activeMembership?.role && activeMembership.role !== 'admin' && activeMembership.region_id) {
+      useDataStore.getState().setCurrentRegion(activeMembership.region_id)
     }
-  }, [membership])
+  }, [activeMembership, authUser?.id, currentProject?.owner_id, viewAsRole])
 
   // ── Offline mode (no Supabase) — skip auth entirely ──────────────────────
   if (!isOnline()) {

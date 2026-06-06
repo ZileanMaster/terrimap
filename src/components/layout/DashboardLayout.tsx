@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
-import { useDataStore } from '../../store/dataStore.js'
 import { useUIStore } from '../../store/uiStore.js'
 import { isOnline } from '../../lib/supabase.js'
 import { IconButton } from '../ui/Button.js'
@@ -159,17 +158,21 @@ function ThemeIcon({ theme }: { theme: 'light' | 'dark' | 'system' }) {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const profile = useAuthStore((s) => s.profile)
+  const user = useAuthStore((s) => s.user)
+  const projects = useAuthStore((s) => s.projects)
   const membership = useAuthStore((s) => s.membership)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const deselectProject = useAuthStore((s) => s.deselectProject)
   const signOut = useAuthStore((s) => s.signOut)
-  const dataLoading = useDataStore((s) => s.loading)
-  const regions = useDataStore((s) => s.regions)
   const role = useUIStore((s) => s.role)
   const theme = useUIStore((s) => s.theme)
   const setTheme = useUIStore((s) => s.setTheme)
 
-  const effectiveRole = isOnline() ? (membership?.role ?? 'sales') : role
+  const currentProject = projects.find((project) => project.id === currentProjectId)
+  const activeMembership = membership?.project_id === currentProjectId ? membership : null
+  const effectiveRole = isOnline()
+    ? (activeMembership?.role ?? (currentProject?.owner_id === user?.id ? 'admin' : 'sales'))
+    : role
   const currentRoleLabel =
     effectiveRole === 'admin' ? 'Quản trị viên' : effectiveRole === 'coordinator' ? 'Điều phối viên' : 'Nhân sự'
 
@@ -178,7 +181,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const previousProjectIdRef = useRef<string | null>(null)
 
   const cycleTheme = () => {
     const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
@@ -214,16 +216,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const activeItem = (navItems as any[]).find((item) => item.id === activeTab) ?? (navItems as any[])[0]
 
-  useEffect(() => {
-    if (!currentProjectId || dataLoading) return
-
-    const projectChanged = previousProjectIdRef.current !== currentProjectId
-    previousProjectIdRef.current = currentProjectId
-    if (!projectChanged) return
-
-    const shouldStartInRegions = regions.length === 0 && navItems.some((item) => item.id === 'regions')
-    setActiveTab(shouldStartInRegions ? 'regions' : 'overview')
-  }, [currentProjectId, dataLoading, navItems, regions.length])
 
   const expanded = isMobile ? sidebarOpen : !sidebarCollapsed
   const sidebarWidth = expanded ? 280 : 72

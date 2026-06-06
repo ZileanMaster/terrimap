@@ -18,6 +18,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase.js'
 import type { User, Session } from '@supabase/supabase-js'
 import { useDataStore } from './dataStore.js'
+import { useUIStore } from './uiStore.js'
 
 export interface Profile {
   id: string
@@ -330,7 +331,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!user) return
 
     useDataStore.getState().setCurrentRegion(null)
-    set({ currentProjectId: projectId })
+    set({ currentProjectId: projectId, membership: null })
+    const project = get().projects.find((p) => p.id === projectId)
+    if (project?.owner_id === user.id) {
+      useUIStore.getState().setRole('admin')
+    }
     localStorage.setItem('terrimap_project', projectId)
 
     // Load membership (role)
@@ -379,6 +384,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     localStorage.setItem('terrimap_project', project.id)
     useDataStore.getState().setCurrentRegion(null)
+    useUIStore.getState().setRole('admin')
     set((state) => ({
       projects: state.projects.some((p) => p.id === project.id)
         ? state.projects
