@@ -2,7 +2,7 @@
  * AlgorithmComparator - side-by-side scenario runner with explicit data gates.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
 import TerritoryMap from '../map/TerritoryMap.js'
@@ -134,33 +134,10 @@ function componentCount(zones: Zone[]): number {
       }
     }
 
-  // Auto-run when scenario config changes (debounced).
-  const lastRunKeyRef = useRef<string>('')
   useEffect(() => {
-    if (!canRun) return
-
-    const key = `${selectedRegionId}|${algoA}|${numDistrictsA}|${showScenarioB ? algoB : '-'}|${showScenarioB ? numDistrictsB : 0}`
-    if (key === lastRunKeyRef.current && hasRun) return
-
-    const t = window.setTimeout(() => {
-      if (blockers.length > 0) return
-      if (isRunning) return
-      void handleRun().then(() => { lastRunKeyRef.current = key })
-    }, 350)
-
-    return () => window.clearTimeout(t)
-  }, [
-    selectedRegionId,
-    algoA,
-    numDistrictsA,
-    algoB,
-    numDistrictsB,
-    showScenarioB,
-    canRun,
-    blockers.length,
-    isRunning,
-    hasRun,
-  ])
+    setHasRun(false)
+    setError(null)
+  }, [selectedRegionId, algoA, numDistrictsA, algoB, numDistrictsB, showScenarioB])
 
   const handleApply = async (side: 'A' | 'B') => {
     const chosen = side === 'A' ? assignmentsA : assignmentsB
@@ -182,9 +159,9 @@ function componentCount(zones: Zone[]): number {
     <div style={styles.container}>
         <section style={styles.header}>
           <div>
-            <h1 style={styles.title}>Phân chia tự động</h1>
+            <h1 style={styles.title}>Phân chia thuật toán</h1>
             <p style={styles.subtitle}>
-              Chọn khu vực, chọn thuật toán và số cụm. Hệ thống sẽ tự chạy khi bạn thay đổi cấu hình; bạn có thể thêm kịch bản B để so sánh.
+              Chọn khu vực, chọn thuật toán và số cụm. Hệ thống chỉ chạy khi bạn bấm nút Chạy phân chia; ưu tiên chất lượng cân bằng, liên thông và độ ổn định của phương án.
             </p>
           </div>
           <button style={{ ...styles.primaryBtn, opacity: canRun ? 1 : .55 }} disabled={!canRun} onClick={handleRun}>
@@ -357,7 +334,6 @@ function ResultPanel({
         <Metric label="Balance" value={Math.round(metrics?.balanceScore ?? 0)} />
         <Metric label="Violations" value={metrics?.violationCount ?? 0} />
         <Metric label="Max diameter" value={Math.round(metrics?.maxDiameter ?? 0)} />
-        <Metric label="Runtime ms" value={Math.round(metrics?.durationMs ?? 0)} />
       </div>
     </div>
   )

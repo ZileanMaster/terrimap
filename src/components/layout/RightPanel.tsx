@@ -24,13 +24,12 @@ interface RightPanelProps {
   snapshots?:    Snapshot[]
   matrixData?:   { adj: AdjMatrix; dist: DistMatrix } | null
   zones?:        Zone[]
-  onRunSA?:      () => void
   report?:       ReportData | null   // L4b-5: export report data
   assignments?:  Assignment[]        // L4b-5: for export panel
 }
 
 export default function RightPanel({
-  result, onRun, progress, currentCost, snapshots = [], matrixData, zones, onRunSA,
+  result, onRun, progress, currentCost, snapshots = [], matrixData, zones,
   report, assignments,
 }: RightPanelProps) {
   const role               = useUIStore((s) => s.role)
@@ -91,7 +90,7 @@ export default function RightPanel({
 
         {result && !isRunning && (
           <div data-testid="result-metrics">
-            <ResultMetrics result={result} onRunSA={onRunSA} />
+            <ResultMetrics result={result} />
           </div>
         )}
 

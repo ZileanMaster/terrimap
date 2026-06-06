@@ -30,19 +30,19 @@ export default function AlgorithmSelector({
       id:   'greedy',
       label: t('algo.greedy'),
       icon: '⚡',
-      desc: 'Nhanh nhất. Phù hợp khởi tạo.',
+      desc: 'Khởi tạo nhanh, làm nền cho bước tinh chỉnh.',
     },
     {
       id:   'local-search',
       label: 'Tìm kiếm cục bộ',
       icon: '🔄',
-      desc: 'Cải thiện từ Greedy. Đảm bảo liên thông 100%.',
+      desc: 'Tinh chỉnh để tăng cân bằng và giữ liên thông tốt.',
     },
     {
       id:   'sa',
       label: t('algo.sa'),
       icon: '🔥',
-      desc: 'Cân bằng tốt nhất. Chậm hơn, đổi lấy chất lượng.',
+      desc: 'Tối ưu sâu hơn để cải thiện chất lượng phân chia.',
     },
   ]
 

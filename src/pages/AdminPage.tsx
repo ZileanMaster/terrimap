@@ -219,13 +219,6 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     }
   }, [ctx, displayZones, displayAgents, currentRegionId, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])
 
-  // ── Auto-suggest SA ────────────────────────────────────────────────────────
-
-  const handleRunSA = useCallback(() => {
-    const m = new Set(assignments.map((a) => a.districtId)).size
-    handleRun('sa', m || 4)
-  }, [handleRun, assignments])
-
   // ── Snapshot ───────────────────────────────────────────────────────────────
 
   const handleSnapshot = useCallback(async () => {

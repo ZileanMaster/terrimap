@@ -202,7 +202,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         { id: 'users', label: 'Nhân sự', icon: 'users' as const, roles: ['admin'] },
         { id: 'assignments', label: 'Phân chia lãnh thổ', icon: 'assignments' as const, roles: ['admin', 'coordinator', 'sales'] },
         { id: 'ops', label: 'Vận hành', icon: 'ops' as const, roles: ['admin', 'coordinator'] },
-        { id: 'algorithms', label: 'Phân chia tự động', icon: 'algorithms' as const, roles: ['admin', 'coordinator'] },
+        { id: 'algorithms', label: 'Phân chia thuật toán', icon: 'algorithms' as const, roles: ['admin', 'coordinator'] },
         { id: 'settings', label: 'Cài đặt', icon: 'settings' as const, roles: ['admin', 'coordinator', 'sales'] },
       ] as const).filter((x) => (x.roles as any).includes(effectiveRole)),
     [effectiveRole],
