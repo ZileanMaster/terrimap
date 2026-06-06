@@ -7,7 +7,7 @@ import { useDataStore } from '../store/dataStore.js';
 import { useUIStore } from '../store/uiStore.js';
 import { useAuthStore } from '../store/authStore.js';
 import { isOnline, supabase } from '../lib/supabase.js';
-import { loadDistrictReports, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
+import { loadDistrictReports, saveDistrictReport, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
 
 // Clean email-based mock members for offline mode
 const MOCK_MEMBERS = [
@@ -610,6 +610,7 @@ export function OperationsView() {
   const [districtReports, setDistrictReports] = useState<any[]>([]);
   const [regionFilter, setRegionFilter] = useState<string>('__all__');
   const [query, setQuery] = useState('');
+  const [seedingDemo, setSeedingDemo] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -699,6 +700,78 @@ export function OperationsView() {
     return { byRegion, total };
   }, [rows, expectedDistrictsByRegion, regions]);
 
+  const seedDemoReports = async () => {
+    if (seedingDemo) return;
+    if (!window.confirm('Tạo dữ liệu báo cáo mẫu cho kỳ hiện tại? Dữ liệu demo sẽ dùng user demo@terrimap.vn và giúp hiển thị nhanh khi trình bày.')) {
+      return;
+    }
+
+    const notes = [
+      'Demo: chốt đơn với khách hàng mới',
+      'Demo: cập nhật chăm sóc khách hàng',
+      'Demo: tăng số đơn trong kỳ',
+      'Demo: báo cáo cho buổi trình bày',
+    ];
+
+    const zoneRegion = new Map<string, string | null>();
+    for (const z of zones) zoneRegion.set(z.id, (z as any).regionId ?? (z as any).region_id ?? null);
+
+    const generated: any[] = [];
+    let noteIndex = 0;
+
+    setSeedingDemo(true);
+    try {
+      for (const region of regionOptions) {
+        const districtIds = Array.from(expectedDistrictsByRegion.get(region.id) ?? []).sort((a, b) => a - b);
+        for (const districtId of districtIds) {
+          const assignment = assignments.find((a) => a.districtId === districtId && zoneRegion.get(a.zoneId) === region.id);
+          const customers = 18 + ((districtId * 7 + region.name.length) % 36);
+          const orders = Math.max(1, Math.round(customers * (0.22 + ((districtId + region.name.length) % 3) * 0.04)));
+          const report = {
+            id: `demo-dr-${currentProjectId ?? 'project'}-${region.id}-${districtId}-${period}`,
+            projectId: currentProjectId ?? undefined,
+            regionId: region.id,
+            districtId,
+            userId: assignment?.salesAgentId || 'demo@terrimap.vn',
+            period,
+            customers,
+            orders,
+            note: notes[noteIndex % notes.length],
+            updatedAt: new Date().toISOString(),
+          };
+          generated.push(report);
+          noteIndex += 1;
+          await saveDistrictReport({
+            projectId: report.projectId,
+            regionId: report.regionId,
+            districtId: report.districtId,
+            userId: report.userId,
+            period: report.period,
+            customers: report.customers,
+            orders: report.orders,
+            note: report.note,
+            id: report.id,
+          });
+        }
+      }
+
+      if (generated.length === 0) {
+        window.alert('Chưa có khu vực hoặc cụm để tạo dữ liệu mẫu.');
+        return;
+      }
+
+      setDistrictReports((prev) => {
+        const key = (r: any) => `${r.period}|${r.userId}|${r.regionId}|${r.districtId}`;
+        const generatedKeys = new Set(generated.map(key));
+        return [...generated, ...prev.filter((r: any) => !generatedKeys.has(key(r)))].sort(
+          (a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime(),
+        );
+      });
+    } finally {
+      setSeedingDemo(false);
+    }
+  };
+
   const downloadCsv = () => {
     const escape = (v: any) => {
       const s = String(v ?? '');
@@ -779,6 +852,9 @@ export function OperationsView() {
             </label>
           </div>
           <div style={styles.opsActions}>
+            <button style={styles.opsBtn} onClick={seedDemoReports} disabled={seedingDemo}>
+              {seedingDemo ? 'Đang tạo...' : 'Tạo báo cáo mẫu'}
+            </button>
             <button style={styles.opsBtn} onClick={downloadCsv} disabled={rows.length === 0}>Tải CSV</button>
           </div>
         </div>
