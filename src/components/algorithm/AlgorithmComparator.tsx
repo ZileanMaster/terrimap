@@ -11,6 +11,16 @@ import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../li
 
 type Algo = 'greedy' | 'local-search' | 'sa'
 
+function waitForPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      resolve()
+      return
+    }
+    window.requestAnimationFrame(() => resolve())
+  })
+}
+
 function componentCount(zones: Zone[]): number {
   if (zones.length === 0) return 0
   const adj = buildAdjacencyMatrix(zones, 50)
@@ -103,36 +113,41 @@ function componentCount(zones: Zone[]): number {
   const runScenario = async (algo: Algo, m: number) =>
     ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
 
-    const handleRun = async () => {
-      if (!canRun) return
-      setError(null)
-      setIsRunning(true)
-      setHasRun(false)
-      try {
-        if (showScenarioB) {
-          const [resultA, resultB] = await Promise.all([
-            runScenario(algoA, numDistrictsA),
-            runScenario(algoB, numDistrictsB),
-          ])
-          setAssignmentsA(resultA.assignments)
-          setAssignmentsB(resultB.assignments)
-          setMetricsA(resultA)
-          setMetricsB(resultB)
-          setHasRun(true)
-        } else {
-          const resultA = await runScenario(algoA, numDistrictsA)
-          setAssignmentsA(resultA.assignments)
-          setMetricsA(resultA)
-          setAssignmentsB([])
-          setMetricsB(null)
-          setHasRun(true)
-        }
+  const handleRun = async () => {
+    if (!canRun) return
+    setError(null)
+    setIsRunning(true)
+    setHasRun(false)
+
+    // Give the browser one paint frame so the running overlay appears
+    // before the algorithm starts its heavier work.
+    await waitForPaint()
+
+    try {
+      if (showScenarioB) {
+        const [resultA, resultB] = await Promise.all([
+          runScenario(algoA, numDistrictsA),
+          runScenario(algoB, numDistrictsB),
+        ])
+        setAssignmentsA(resultA.assignments)
+        setAssignmentsB(resultB.assignments)
+        setMetricsA(resultA)
+        setMetricsB(resultB)
+        setHasRun(true)
+      } else {
+        const resultA = await runScenario(algoA, numDistrictsA)
+        setAssignmentsA(resultA.assignments)
+        setMetricsA(resultA)
+        setAssignmentsB([])
+        setMetricsB(null)
+        setHasRun(true)
+      }
     } catch (err: any) {
       setError(err?.message ?? String(err))
     } finally {
       setIsRunning(false)
-      }
     }
+  }
 
   useEffect(() => {
     setHasRun(false)
@@ -157,6 +172,21 @@ function componentCount(zones: Zone[]): number {
 
   return (
     <div style={styles.container}>
+      {isRunning && (
+        <div style={styles.runningOverlay} aria-live="polite" aria-busy="true">
+          <div style={styles.runningCard}>
+            <div style={styles.runningSpinner} />
+            <div style={styles.runningTextBlock}>
+              <strong style={styles.runningTitle}>
+                Thuật toán đang chạy
+              </strong>
+              <span style={styles.runningSubtitle}>
+                Đang tối ưu phân chia theo tiêu chí cân bằng và liên thông. Vui lòng chờ kết quả.
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
         <section style={styles.header}>
           <div>
             <h1 style={styles.title}>Phân chia thuật toán</h1>
@@ -354,6 +384,53 @@ function Metric({ label, value }: { label: string; value: number }) {
     display: 'flex',
     flexDirection: 'column',
     gap: 18,
+    position: 'relative',
+  },
+  runningOverlay: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 20,
+    display: 'grid',
+    placeItems: 'start center',
+    paddingTop: 80,
+    background: 'color-mix(in srgb, var(--color-bg) 42%, transparent)',
+    backdropFilter: 'blur(2px)',
+  },
+  runningCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    minWidth: 320,
+    maxWidth: 560,
+    margin: '0 20px',
+    padding: '14px 16px',
+    borderRadius: 14,
+    border: '1px solid color-mix(in srgb, var(--color-accent) 22%, var(--color-border))',
+    background: 'color-mix(in srgb, var(--color-surface) 94%, white)',
+    boxShadow: '0 18px 40px rgba(15, 23, 42, 0.18)',
+  },
+  runningSpinner: {
+    width: 24,
+    height: 24,
+    borderRadius: '50%',
+    border: '3px solid color-mix(in srgb, var(--color-accent) 20%, var(--color-border))',
+    borderTopColor: 'var(--color-accent)',
+    animation: 'spin 0.8s linear infinite',
+    flex: '0 0 auto',
+  },
+  runningTextBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  runningTitle: {
+    fontSize: 15,
+    color: 'var(--color-text)',
+  },
+  runningSubtitle: {
+    fontSize: 12,
+    color: 'var(--color-text-2)',
+    lineHeight: 1.4,
   },
   header: {
     display: 'flex',
