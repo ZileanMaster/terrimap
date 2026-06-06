@@ -168,6 +168,32 @@ function zoneOrders(zone: Zone): number {
     .reduce((sum, a) => sum + a.value, 0);
 }
 
+interface ZoneActivityTotals {
+  customers: Float64Array;
+  orders: Float64Array;
+}
+
+function buildZoneActivityTotals(zones: Zone[]): ZoneActivityTotals {
+  const customers = new Float64Array(zones.length);
+  const orders = new Float64Array(zones.length);
+
+  for (let i = 0; i < zones.length; i++) {
+    const zone = zones[i]!;
+    let customerTotal = 0;
+    let orderTotal = 0;
+
+    for (const activity of zone.activities) {
+      if (activity.type === 'CUSTOMER') customerTotal += activity.value;
+      else if (activity.type === 'ORDER') orderTotal += activity.value;
+    }
+
+    customers[i] = customerTotal;
+    orders[i] = orderTotal;
+  }
+
+  return { customers, orders };
+}
+
 /**
  * Chọn m seeds xa nhau nhất bằng greedy farthest-point.
  * Seed đầu tiên = zone index 0 (arbitrary).
@@ -239,110 +265,109 @@ function selectFarthestSeeds(zones: Zone[], m: number): number[] {
  */
 function computeCost(
   zones: Zone[],
-  assignment: number[], // assignment[i] = districtId của zones[i]
+  assignment: ArrayLike<number>, // assignment[i] = districtId c?a zones[i]
   m: number,
   alpha: number,
   beta: number,
-  adjMatrix?: AdjacencyMatrix, // optional — khi có → tính contiguity penalty
+  adjMatrix?: AdjacencyMatrix, // optional ? khi c? ? t?nh contiguity penalty
   balanceWeights?: { customers: number; orders: number },
   objective?: 'p-center' | 'p-median',
+  activityTotals?: ZoneActivityTotals,
 ): number {
-  const weights = balanceWeights ?? { customers: 1.0, orders: 1.0 };
-  const obj = objective ?? 'p-median'; // p-median được khâyến nghị theo Salazar-Aguilar et al. (2011)
+  const weights = balanceWeights ?? { customers: 1.0, orders: 1.0 }
+  const obj = objective ?? 'p-median' // p-median ???c khuy?n ngh? theo Salazar-Aguilar et al. (2011)
 
-  // Nhóm các zones theo district
-  const groups: Zone[][] = Array.from({ length: m }, () => []);
+  // Nh?m c?c zones theo district
+  const groups: Zone[][] = Array.from({ length: m }, () => [])
+  const customerTotals = new Float64Array(m)
+  const orderTotals = new Float64Array(m)
   for (let i = 0; i < zones.length; i++) {
-    const dId = assignment[i]!;
-    if (dId < 0 || dId >= m) continue;  // skip unassigned (dId=-1 mid-BFS)
-    groups[dId]!.push(zones[i]!);
+    const dId = assignment[i]!
+    if (dId < 0 || dId >= m) continue  // skip unassigned (dId=-1 mid-BFS)
+    const zone = zones[i]!
+    groups[dId]!.push(zone)
+    const customerTotal = activityTotals ? activityTotals.customers[i]! : zoneCustomers(zone)
+    const orderTotal = activityTotals ? activityTotals.orders[i]! : zoneOrders(zone)
+    customerTotals[dId] = (customerTotals[dId] ?? 0) + customerTotal
+    orderTotals[dId] = (orderTotals[dId] ?? 0) + orderTotal
   }
 
-  // Tính dispersion theo objective
-  let dispersion: number;
+  // T?nh dispersion theo objective
+  let dispersion: number
   if (obj === 'p-median') {
-    // p-Median: tổng khoảng cách từ mỗi zone đến center district
-    dispersion = 0;
+    // p-Median: t?ng kho?ng c?ch t? m?i zone ??n center district
+    dispersion = 0
     for (let d = 0; d < m; d++) {
-      const group = groups[d]!;
-      if (group.length === 0) continue;
-      const center = meanCoordinate(group.map((z) => z.centroid));
+      const group = groups[d]!
+      if (group.length === 0) continue
+      const center = meanCoordinate(group.map((z) => z.centroid))
       for (const z of group) {
-        dispersion += haversineDistance(z.centroid, center);
+        dispersion += haversineDistance(z.centroid, center)
       }
     }
   } else {
     // p-Center: max diameter (default)
-    dispersion = 0;
+    dispersion = 0
     for (const group of groups) {
-      if (group.length < 2) continue;
+      if (group.length < 2) continue
       for (let a = 0; a < group.length - 1; a++) {
         for (let b = a + 1; b < group.length; b++) {
           const d = haversineDistance(
             group[a]!.centroid,
             group[b]!.centroid,
-          );
-          if (d > dispersion) dispersion = d;
+          )
+          if (d > dispersion) dispersion = d
         }
       }
     }
   }
 
-  // Tính imbalance cho TỪNG activity (weighted)
-  let totalImbalance = 0;
+  // T?nh imbalance cho T?NG activity (weighted)
+  let totalImbalance = 0
 
   if (weights.customers > 0) {
-    const customerCounts = groups.map((g) =>
-      g.reduce((s, z) => s + zoneCustomers(z), 0),
-    );
-    const mean = customerCounts.reduce((s, c) => s + c, 0) / m;
-    const variance = customerCounts.reduce((s, c) => s + (c - mean) ** 2, 0) / m;
-    totalImbalance += weights.customers * Math.sqrt(variance);
+    const mean = customerTotals.reduce((s, c) => s + c, 0) / m
+    const variance = customerTotals.reduce((s, c) => s + (c - mean) ** 2, 0) / m
+    totalImbalance += weights.customers * Math.sqrt(variance)
   }
 
   if (weights.orders > 0) {
-    const orderCounts = groups.map((g) =>
-      g.reduce((s, z) => s + zoneOrders(z), 0),
-    );
-    const mean = orderCounts.reduce((s, c) => s + c, 0) / m;
-    const variance = orderCounts.reduce((s, c) => s + (c - mean) ** 2, 0) / m;
-    totalImbalance += weights.orders * Math.sqrt(variance);
+    const mean = orderTotals.reduce((s, c) => s + c, 0) / m
+    const variance = orderTotals.reduce((s, c) => s + (c - mean) ** 2, 0) / m
+    totalImbalance += weights.orders * Math.sqrt(variance)
   }
 
-  // Contiguity penalty: đếm connected components thừa (BFS)
-  let totalFragments = 0;
+  // Contiguity penalty: ??m connected components th?a (BFS)
+  let totalFragments = 0
   if (adjMatrix) {
-    const idToAssignment = new Map<string, number>();
-    for (let i = 0; i < zones.length; i++) idToAssignment.set(zones[i]!.id, assignment[i]!);
-
     for (let d = 0; d < m; d++) {
-      const groupIds = new Set(groups[d]!.map((z) => z.id));
-      if (groupIds.size <= 1) continue;
+      const groupIds = new Set(groups[d]!.map((z) => z.id))
+      if (groupIds.size <= 1) continue
 
-      const visited = new Set<string>();
-      let components = 0;
+      const visited = new Set<string>()
+      let components = 0
       for (const startId of groupIds) {
-        if (visited.has(startId)) continue;
-        components++;
-        const queue = [startId];
+        if (visited.has(startId)) continue
+        components++
+        const queue = [startId]
         while (queue.length > 0) {
-          const current = queue.pop()!;
-          if (visited.has(current)) continue;
-          visited.add(current);
+          const current = queue.pop()!
+          if (visited.has(current)) continue
+          visited.add(current)
           for (const neighborId of (adjMatrix[current] ?? [])) {
             if (groupIds.has(neighborId) && !visited.has(neighborId)) {
-              queue.push(neighborId);
+              queue.push(neighborId)
             }
           }
         }
       }
-      totalFragments += Math.max(0, components - 1);
+      totalFragments += Math.max(0, components - 1)
     }
   }
 
-  const gamma = 500; // Very heavy penalty per disconnected fragment
+  const gamma = 500 // Very heavy penalty per disconnected fragment
                      // Connectivity is HARD CONSTRAINT per Salazar-Aguilar et al. (2011)
-  return alpha * dispersion + beta * totalImbalance + gamma * totalFragments;
+  return alpha * dispersion + beta * totalImbalance + gamma * totalFragments
 }
 // ==========================================
 // INTERNAL: BFS SHORTEST PATH TO ASSIGNED
@@ -419,6 +444,7 @@ function refineByBestImprovement(
   beta: number,
   balanceWeights?: { customers: number; orders: number },
   objective?: 'p-center' | 'p-median',
+  activityTotals?: ZoneActivityTotals,
   maxIter = 500,
   onProgress?: ProgressCallback,
 ): { assignment: number[]; cost: number } {
@@ -437,6 +463,7 @@ function refineByBestImprovement(
     adjMatrix,
     balanceWeights,
     objective,
+    activityTotals,
   );
 
   for (let iter = 0; iter < maxIter; iter++) {
@@ -487,6 +514,7 @@ function refineByBestImprovement(
           adjMatrix,
           balanceWeights,
           objective,
+          activityTotals,
         );
 
         assignment[i] = currentDistrict;
@@ -545,6 +573,7 @@ export function partitionGreedy(
 
   // Map id → index để tra cứu O(1)
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
+  const activityTotals = buildZoneActivityTotals(zones);
 
   // assignment[i] = districtId (-1 = chưa gán)
   const assignment = new Int32Array(zones.length).fill(-1);
@@ -667,11 +696,14 @@ export function partitionGreedy(
     if (onProgress) {
       const cost = computeCost(
         zones,
-        Array.from(assignment),
+        assignment,
         m,
         0.5,
         0.5,
         adjMatrix,
+        undefined,
+        undefined,
+        activityTotals,
       );
       onProgress(iter, cost);
     }
@@ -693,7 +725,7 @@ export function partitionGreedy(
  */
 export function isDistrictConnected(
   zones: Zone[],
-  assignment: number[],
+  assignment: ArrayLike<number>,
   districtId: number,
   adjMatrix: AdjacencyMatrix,
   idToIdx: Map<string, number>,
@@ -759,6 +791,7 @@ export function partitionLocalSearch(
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
   ensureConnectedInputGraph(zones, adjMatrix);
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
+  const activityTotals = buildZoneActivityTotals(zones);
 
   // Kh?i t?o t? Greedy solution
   const greedyResult = partitionGreedy(zones, m, { adjThresholdKm });
@@ -778,6 +811,7 @@ export function partitionLocalSearch(
     beta,
     balanceWeights,
     objective,
+    activityTotals,
     maxIter,
     onProgress,
   );
@@ -821,6 +855,7 @@ export function partitionSimulatedAnnealing(
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
   ensureConnectedInputGraph(zones, adjMatrix);
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
+  const activityTotals = buildZoneActivityTotals(zones);
 
   // Kh?i t?o t? Greedy solution r?i refine ch?t l??ng tr??c khi anneal
   const initialResult = partitionGreedy(zones, m, { adjThresholdKm });
@@ -841,6 +876,7 @@ export function partitionSimulatedAnnealing(
     beta,
     balanceWeights,
     objective,
+    activityTotals,
     warmupBudget,
     onProgress,
   );
@@ -881,7 +917,7 @@ export function partitionSimulatedAnnealing(
         assignment[i] = targetDistrict;
         const sourceStillConnected = isDistrictConnected(
           zones,
-          Array.from(assignment),
+          assignment,
           currentDistrict,
           adjMatrix,
           idToIdx,
@@ -894,13 +930,14 @@ export function partitionSimulatedAnnealing(
 
         const newCost = computeCost(
           zones,
-          Array.from(assignment),
+          assignment,
           m,
           alpha,
           beta,
           adjMatrix,
           balanceWeights,
           objective,
+          activityTotals,
         );
 
         assignment[i] = currentDistrict;
@@ -945,6 +982,7 @@ export function partitionSimulatedAnnealing(
     beta,
     balanceWeights,
     objective,
+    activityTotals,
     Math.max(0, Math.floor(maxIter * 0.2)),
     onProgress,
   );
