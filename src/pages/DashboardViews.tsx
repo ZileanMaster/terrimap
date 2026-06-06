@@ -7,7 +7,8 @@ import { useDataStore } from '../store/dataStore.js';
 import { useUIStore } from '../store/uiStore.js';
 import { useAuthStore } from '../store/authStore.js';
 import { isOnline, supabase } from '../lib/supabase.js';
-import { loadDistrictReports, saveDistrictReport, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
+import { loadDistrictReports, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
+import type { DistrictReport } from '../../facades/viewmodels.js';
 
 // Clean email-based mock members for offline mode
 const MOCK_MEMBERS = [
@@ -610,7 +611,6 @@ export function OperationsView() {
   const [districtReports, setDistrictReports] = useState<any[]>([]);
   const [regionFilter, setRegionFilter] = useState<string>('__all__');
   const [query, setQuery] = useState('');
-  const [seedingDemo, setSeedingDemo] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -700,77 +700,82 @@ export function OperationsView() {
     return { byRegion, total };
   }, [rows, expectedDistrictsByRegion, regions]);
 
-  const seedDemoReports = async () => {
-    if (seedingDemo) return;
-    if (!window.confirm('Tạo dữ liệu báo cáo mẫu cho kỳ hiện tại? Dữ liệu demo sẽ dùng user demo@terrimap.vn và giúp hiển thị nhanh khi trình bày.')) {
-      return;
+  useEffect(() => {
+    if (currentProjectId !== 'test-project-terrimap') return;
+    if (loading) return;
+    if (districtReports.length > 0) return;
+    if (period !== currentReportPeriod()) return;
+    if (regionOptions.length === 0) return;
+
+    const storageKey = `terrimap_district_reports_${currentProjectId}`;
+    const seedFlagKey = `terrimap_demo_reports_seeded_${currentProjectId}_${period}`;
+    if (localStorage.getItem(seedFlagKey) === '1') return;
+
+    const existingRaw = localStorage.getItem(storageKey) ?? '[]';
+    let existing: DistrictReport[] = [];
+    try {
+      existing = JSON.parse(existingRaw) as DistrictReport[];
+    } catch {
+      existing = [];
     }
 
+    const regionUsers: Record<string, string> = {
+      'test-region-hn': 'coord.test@terrimap.vn',
+      'test-region-hcm': 'sales.test@terrimap.vn',
+    };
+    const fallbackDistricts: Record<string, number[]> = {
+      'test-region-hn': [0, 5, 10],
+      'test-region-hcm': [0, 1, 2],
+    };
     const notes = [
       'Demo: chốt đơn với khách hàng mới',
       'Demo: cập nhật chăm sóc khách hàng',
       'Demo: tăng số đơn trong kỳ',
       'Demo: báo cáo cho buổi trình bày',
+      'Demo: đã hoàn tất xác nhận dữ liệu',
     ];
 
-    const zoneRegion = new Map<string, string | null>();
-    for (const z of zones) zoneRegion.set(z.id, (z as any).regionId ?? (z as any).region_id ?? null);
-
-    const generated: any[] = [];
+    const seeded: DistrictReport[] = [];
     let noteIndex = 0;
+    for (const region of regionOptions) {
+      const districtIds = Array.from(expectedDistrictsByRegion.get(region.id) ?? fallbackDistricts[region.id] ?? [])
+        .slice(0, 3)
+        .sort((a, b) => a - b);
+      const userId = regionUsers[region.id] ?? 'demo@terrimap.vn';
 
-    setSeedingDemo(true);
-    try {
-      for (const region of regionOptions) {
-        const districtIds = Array.from(expectedDistrictsByRegion.get(region.id) ?? []).sort((a, b) => a - b);
-        for (const districtId of districtIds) {
-          const assignment = assignments.find((a) => a.districtId === districtId && zoneRegion.get(a.zoneId) === region.id);
-          const customers = 18 + ((districtId * 7 + region.name.length) % 36);
-          const orders = Math.max(1, Math.round(customers * (0.22 + ((districtId + region.name.length) % 3) * 0.04)));
-          const report = {
-            id: `demo-dr-${currentProjectId ?? 'project'}-${region.id}-${districtId}-${period}`,
-            projectId: currentProjectId ?? undefined,
-            regionId: region.id,
-            districtId,
-            userId: assignment?.salesAgentId || 'demo@terrimap.vn',
-            period,
-            customers,
-            orders,
-            note: notes[noteIndex % notes.length],
-            updatedAt: new Date().toISOString(),
-          };
-          generated.push(report);
-          noteIndex += 1;
-          await saveDistrictReport({
-            projectId: report.projectId,
-            regionId: report.regionId,
-            districtId: report.districtId,
-            userId: report.userId,
-            period: report.period,
-            customers: report.customers,
-            orders: report.orders,
-            note: report.note,
-            id: report.id,
-          });
-        }
+      for (const districtId of districtIds) {
+        const customers = 24 + ((districtId * 7 + region.name.length) % 31);
+        const orders = Math.max(1, Math.round(customers * (0.22 + ((districtId + region.name.length) % 3) * 0.04)));
+        seeded.push({
+          id: `demo-dr-${currentProjectId}-${region.id}-${districtId}-${period}-${userId.replace(/[^a-z0-9]+/gi, '').slice(0, 12)}`,
+          projectId: currentProjectId ?? undefined,
+          regionId: region.id,
+          districtId,
+          userId,
+          period,
+          customers,
+          orders,
+          note: notes[noteIndex % notes.length],
+          updatedAt: new Date().toISOString(),
+        });
+        noteIndex += 1;
       }
-
-      if (generated.length === 0) {
-        window.alert('Chưa có khu vực hoặc cụm để tạo dữ liệu mẫu.');
-        return;
-      }
-
-      setDistrictReports((prev) => {
-        const key = (r: any) => `${r.period}|${r.userId}|${r.regionId}|${r.districtId}`;
-        const generatedKeys = new Set(generated.map(key));
-        return [...generated, ...prev.filter((r: any) => !generatedKeys.has(key(r)))].sort(
-          (a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime(),
-        );
-      });
-    } finally {
-      setSeedingDemo(false);
     }
-  };
+
+    if (seeded.length === 0) return;
+
+    const mergeKey = (r: DistrictReport) => `${r.period}|${r.userId}|${r.regionId}|${r.districtId}`;
+    const mergedMap = new Map<string, DistrictReport>();
+    for (const report of existing) mergedMap.set(mergeKey(report), report);
+    for (const report of seeded) mergedMap.set(mergeKey(report), report);
+    const merged = Array.from(mergedMap.values()).sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+
+    localStorage.setItem(storageKey, JSON.stringify(merged));
+    localStorage.setItem(seedFlagKey, '1');
+    setDistrictReports(merged);
+  }, [currentProjectId, districtReports.length, expectedDistrictsByRegion, loading, period, regionOptions]);
 
   const downloadCsv = () => {
     const escape = (v: any) => {
@@ -852,9 +857,6 @@ export function OperationsView() {
             </label>
           </div>
           <div style={styles.opsActions}>
-            <button style={styles.opsBtn} onClick={seedDemoReports} disabled={seedingDemo}>
-              {seedingDemo ? 'Đang tạo...' : 'Tạo báo cáo mẫu'}
-            </button>
             <button style={styles.opsBtn} onClick={downloadCsv} disabled={rows.length === 0}>Tải CSV</button>
           </div>
         </div>
