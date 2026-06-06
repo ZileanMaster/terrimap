@@ -640,6 +640,11 @@ export function OperationsView() {
     return list;
   }, [regions]);
 
+  const selectedRegionLabel = useMemo(() => {
+    if (regionFilter === '__all__') return 'Tất cả khu vực';
+    return regionOptions.find((region) => region.id === regionFilter)?.name ?? 'Khu vực đã chọn';
+  }, [regionFilter, regionOptions]);
+
   const rows = useMemo(() => {
     const norm = (r: any) => ({
       id: String(r.id),
@@ -719,6 +724,21 @@ export function OperationsView() {
       <h3 style={styles.viewHeader}>🧭 Vận hành</h3>
 
       <div style={{ ...styles.section, padding: 12 }}>
+        <div
+          style={{
+            marginBottom: 12,
+            padding: '10px 12px',
+            borderRadius: 12,
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-surface-2)',
+            color: 'var(--color-text-secondary)',
+            lineHeight: 1.5,
+            fontSize: 13,
+          }}
+        >
+          <strong>Vận hành</strong> dùng để theo dõi dữ liệu báo cáo theo tháng và theo khu vực. Bấm vào từng nút khu vực để lọc nhanh, xem ngay bảng dữ liệu và tỷ lệ hoàn thành tương ứng.
+        </div>
+
         <div style={styles.opsTopRow}>
           <div style={styles.opsFilters}>
             <label style={styles.opsLabel}>
@@ -726,7 +746,7 @@ export function OperationsView() {
               <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} style={styles.opsInput} />
             </label>
             <div style={styles.opsRegionGroup}>
-              <span style={styles.opsLabelTxt}>Khu vá»±c</span>
+              <span style={styles.opsLabelTxt}>Khu vực</span>
               <div style={styles.opsRegionChips} role="tablist" aria-label="Lọc khu vực">
                 <button
                   type="button"
@@ -736,7 +756,7 @@ export function OperationsView() {
                     ...(regionFilter === '__all__' ? styles.opsRegionChipActive : null),
                   }}
                 >
-                  Tất cả
+                  Tất cả khu vực
                 </button>
                 {regionOptions.map((r) => (
                   <button
@@ -755,12 +775,16 @@ export function OperationsView() {
             </div>
             <label style={{ ...styles.opsLabel, flex: 1, minWidth: 180 }}>
               <span style={styles.opsLabelTxt}>Tìm</span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cụm / user / ghi chú..." style={styles.opsInput} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cụm / người dùng / ghi chú..." style={styles.opsInput} />
             </label>
           </div>
           <div style={styles.opsActions}>
             <button style={styles.opsBtn} onClick={downloadCsv} disabled={rows.length === 0}>Tải CSV</button>
           </div>
+        </div>
+
+        <div style={{ marginTop: 10, marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+          Đang xem: <strong>{selectedRegionLabel}</strong> · {rows.length} dòng báo cáo · {completion.total.submitted}/{completion.total.expected} cụm đã có báo cáo
         </div>
 
         <div style={styles.opsKpis}>
@@ -786,9 +810,9 @@ export function OperationsView() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.tableHeaderRow}>
-                <th style={styles.th}>Khu vá»±c</th>
+                <th style={styles.th}>Khu vực</th>
                 <th style={styles.th}>Cụm</th>
-                <th style={styles.th}>User</th>
+                <th style={styles.th}>Người dùng</th>
                 <th style={styles.th}>Khách hàng</th>
                 <th style={styles.th}>Đơn hàng</th>
                 <th style={styles.th}>Ghi chú</th>
@@ -796,13 +820,13 @@ export function OperationsView() {
               </tr>
             </thead>
             <tbody>
-              {loading && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang tải...</td></tr>)}
+              {loading && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang tải dữ liệu...</td></tr>)}
               {!loading && rows.slice(0, 200).map((r) => {
                 const regionName = regions.find((rr) => rr.id === r.regionId)?.name ?? r.regionId
                 return (
                   <tr key={r.id} style={styles.tr}>
                     <td style={styles.td}><strong>{regionName || '-'}</strong></td>
-                    <td style={styles.td}>C{r.districtId}</td>
+                    <td style={styles.td}>Cụm {r.districtId}</td>
                     <td style={styles.td}>{r.userId}</td>
                     <td style={styles.td}>{r.customers}</td>
                     <td style={styles.td}>{r.orders}</td>
