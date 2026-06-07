@@ -92,6 +92,7 @@ Bạn có thể:
 - xem số nhân sự
 - xem tổng khách hàng báo cáo
 - xem tổng đơn hàng báo cáo
+- xem khách hàng trung bình mỗi báo cáo
 - lọc theo toàn bộ khu vực hoặc từng khu vực
 - xem bảng hiệu quả kinh doanh theo khu vực
 
@@ -230,4 +231,3 @@ Nguyên tắc đọc nhanh:
 - Không còn nút đổi ngôn ngữ.
 - Các thao tác save quan trọng đã được tối ưu theo hướng **local-first** để giảm cảm giác chờ.
 - Một số tên kỹ thuật bên trong mã nguồn vẫn có thể dùng từ cũ như `district`, `polygon` để giữ ổn định hệ thống, nhưng giao diện hiển thị đã chuẩn hoá theo tiếng Việt.
-

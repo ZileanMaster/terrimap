@@ -122,9 +122,11 @@ export function OverviewView() {
     const districtKey = (r: any) => `${r.regionId || r.region_id || ''}|${r.districtId || r.district_id || ''}`;
     const districts = new Set(filteredReports.map(districtKey));
     const users = new Set(filteredReports.map((r: any) => String(r.userId || r.user_id || '')));
+    const avgCustomers = filteredReports.length > 0 ? totalCustomers / filteredReports.length : 0;
     return {
       totalCustomers,
       totalOrders,
+      avgCustomers,
       reportCount: filteredReports.length,
       districtCount: districts.size,
       userCount: users.size,
@@ -208,6 +210,14 @@ export function OverviewView() {
           <div style={styles.cardInfo}>
             <span style={styles.cardVal}>{reportStats.totalOrders}</span>
             <span style={styles.cardLbl}>Đơn hàng báo cáo</span>
+          </div>
+        </div>
+
+        <div style={{ ...styles.card, ...styles.cardNarrow }}>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(244, 114, 182, 0.12)', color: '#f472b6' }}>TB</div>
+          <div style={styles.cardInfo}>
+            <span style={styles.cardVal}>{reportStats.avgCustomers.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}</span>
+            <span style={styles.cardLbl}>Khách hàng trung bình / báo cáo</span>
           </div>
         </div>
       </div>
