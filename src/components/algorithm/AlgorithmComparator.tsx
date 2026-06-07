@@ -387,15 +387,16 @@ function ResultPanel({
         <TerritoryMap zones={zones} assignments={assignments} center={center} zoom={zoom} />
       </div>
       <div style={styles.metricGrid}>
-        <Metric label="Balance" value={Math.round(metrics?.balanceScore ?? 0)} />
-        <Metric label="Violations" value={metrics?.violationCount ?? 0} />
-        <Metric label="Max diameter" value={Math.round(metrics?.maxDiameter ?? 0)} />
+        <Metric label="Cân bằng" value={Math.round(metrics?.balanceScore ?? 0)} />
+        <Metric label="KH TB / cụm" value={(metrics?.avgCustomersPerDistrict ?? 0).toFixed(1)} />
+        <Metric label="Vi phạm" value={metrics?.violationCount ?? 0} />
+        <Metric label="Độ rộng tối đa" value={Math.round(metrics?.maxDiameter ?? 0)} />
       </div>
     </div>
   )
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: number | string }) {
   return (
     <div style={styles.metric}>
       <strong>{value}</strong>

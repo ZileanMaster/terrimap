@@ -4,6 +4,7 @@
  */
 
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import type { AlgorithmResultVM } from '../../../facades/viewmodels.js'
 
 export interface ResultMetricsProps {
@@ -12,10 +13,11 @@ export interface ResultMetricsProps {
 
 export default function ResultMetrics({ result }: ResultMetricsProps) {
   const [showViolations, setShowViolations] = React.useState(false)
+  const { t } = useTranslation()
 
   if (!result) return null
 
-  const { balanceScore, maxDiameter, violationCount, algo, suggestSA, violations } = result
+  const { balanceScore, avgCustomersPerDistrict, maxDiameter, violationCount, algo, suggestSA, violations } = result
   const balance = balanceScore ?? 0
 
   const balanceColor =
@@ -55,6 +57,10 @@ export default function ResultMetrics({ result }: ResultMetricsProps) {
       )}
 
       <div style={styles.grid}>
+        <MetricRow
+          label="Khách hàng TB / cụm"
+          value={avgCustomersPerDistrict.toFixed(1)}
+        />
         <MetricRow
           label="Độ rộng cụm tối đa"
           value={`${(maxDiameter ?? 0).toFixed(1)} km`}

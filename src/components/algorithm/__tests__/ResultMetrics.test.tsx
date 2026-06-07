@@ -22,6 +22,7 @@ function makeResult(overrides: Partial<AlgorithmResultVM> = {}): AlgorithmResult
   return {
     assignments: [],
     balanceScore: 75,
+    avgCustomersPerDistrict: 100,
     maxDiameter: 25,
     violationCount: 0,
     algo: 'local-search',
@@ -66,5 +67,11 @@ describe('ResultMetrics', () => {
       (el) => el.textContent === '2',
     )
     expect(strong).toBeTruthy()
+  })
+
+  it('[RM-6] hiển thị khách hàng trung bình mỗi cụm', () => {
+    render(<ResultMetrics result={makeResult({ avgCustomersPerDistrict: 125.4 })} />)
+    expect(screen.getByText('Khách hàng TB / cụm')).toBeInTheDocument()
+    expect(screen.getByText('125.4')).toBeInTheDocument()
   })
 })

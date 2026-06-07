@@ -182,6 +182,7 @@ export class CoordinatorFacade {
     return {
       assignments: result.assignments,
       balanceScore: result.metrics.balanceScore,
+      avgCustomersPerDistrict: result.avgCustomersPerDistrict,
       violationCount: result.violations.length,
       maxDiameter: result.metrics.maxDiameter,
       algo: result.algo,

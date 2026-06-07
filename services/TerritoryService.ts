@@ -59,6 +59,7 @@ export interface PartitionResult {
   violations: ValidationResult['violations'];
   algo: 'greedy' | 'local-search' | 'sa';
   durationMs: number;
+  avgCustomersPerDistrict: number;
   /**
    * true nếu balanceScore < 60 và algo !== 'sa'.
    * Local Search balance thường tốt hơn Greedy nhờ 2-opt improvement.
@@ -168,6 +169,7 @@ export class TerritoryService extends EventEmitter {
       violations: validation.violations,
       algo,
       durationMs,
+      avgCustomersPerDistrict: computeAvgCustomersPerDistrict(zones, assignments),
       suggestSA: validation.metrics.balanceScore < 60 && algo !== 'sa',
     };
 
@@ -259,4 +261,23 @@ export class TerritoryService extends EventEmitter {
     const all = suggestFix(zones, assignments, { adjThresholdKm: 50, maxSuggestions: 5 });
     return all.sort((a, b) => a.deltaBalance - b.deltaBalance);
   }
+}
+
+function computeAvgCustomersPerDistrict(zones: Zone[], assignments: Assignment[]): number {
+  if (assignments.length === 0) return 0;
+  const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
+  const totals = new Map<number, number>();
+
+  for (const assignment of assignments) {
+    const zone = zoneById.get(assignment.zoneId);
+    if (!zone) continue;
+    const customers = zone.activities
+      .filter((activity) => activity.type === 'CUSTOMER')
+      .reduce((sum, activity) => sum + activity.value, 0);
+    totals.set(assignment.districtId, (totals.get(assignment.districtId) ?? 0) + customers);
+  }
+
+  const districtTotals = [...totals.values()];
+  if (districtTotals.length === 0) return 0;
+  return districtTotals.reduce((sum, value) => sum + value, 0) / districtTotals.length;
 }

@@ -77,6 +77,8 @@ export interface AlgorithmResultVM {
   // ── Metrics (flat — không expose PartitionMetrics) ──────────────────────────
   /** Điểm cân bằng workload giữa các districts. 0-100, cao hơn = tốt hơn. */
   balanceScore:   number;
+  /** Khách hàng trung bình trên mỗi cụm sau phân chia. */
+  avgCustomersPerDistrict: number;
   /** Số vi phạm constraint. */
   violationCount: number;
   /** Đường kính tối đa (km) trong tất cả districts. */

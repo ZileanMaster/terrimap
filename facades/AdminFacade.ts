@@ -221,6 +221,7 @@ export class AdminFacade {
     return {
       assignments,
       balanceScore:   validation.metrics.balanceScore,
+      avgCustomersPerDistrict: this.computeAvgCustomersPerDistrict(zones, assignments),
       violationCount: validation.violations.length,
       maxDiameter:    validation.metrics.maxDiameter,
       algo,
@@ -241,6 +242,7 @@ export class AdminFacade {
     return {
       assignments:    result.assignments,
       balanceScore:   result.metrics.balanceScore,
+      avgCustomersPerDistrict: result.avgCustomersPerDistrict,
       violationCount: result.violations.length,
       maxDiameter:    result.metrics.maxDiameter,
       algo:           result.algo,
@@ -248,6 +250,25 @@ export class AdminFacade {
       suggestSA:      result.suggestSA,
       violations:     result.violations.map((v) => this.toViolationVM(v)),
     };
+  }
+
+  private computeAvgCustomersPerDistrict(zones: Zone[], assignments: Assignment[]): number {
+    if (assignments.length === 0) return 0;
+    const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
+    const totals = new Map<number, number>();
+
+    for (const assignment of assignments) {
+      const zone = zoneById.get(assignment.zoneId);
+      if (!zone) continue;
+      const customers = zone.activities
+        .filter((activity) => activity.type === 'CUSTOMER')
+        .reduce((sum, activity) => sum + activity.value, 0);
+      totals.set(assignment.districtId, (totals.get(assignment.districtId) ?? 0) + customers);
+    }
+
+    const districts = [...totals.values()];
+    if (districts.length === 0) return 0;
+    return districts.reduce((sum, value) => sum + value, 0) / districts.length;
   }
 
   /**

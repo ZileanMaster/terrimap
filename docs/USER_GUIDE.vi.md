@@ -205,11 +205,13 @@ Nếu thuật toán chạy lâu, giao diện sẽ hiển thị rõ trạng thái
 Kết quả hiện nay nhấn mạnh ba chỉ số:
 
 - **Cân bằng**: phương án chia đều tới mức nào.
+- **Khách hàng TB / cụm**: số khách hàng trung bình trên mỗi cụm sau khi phân chia.
 - **Vi phạm**: số ràng buộc bị vi phạm; càng thấp càng tốt.
 - **Độ rộng cụm tối đa**: cụm nào trải rộng nhất; càng nhỏ càng tốt.
 
 Nguyên tắc đọc nhanh:
 - `Cân bằng` càng cao càng tốt.
+- `Khách hàng TB / cụm` nên hợp lý và không lệch quá mạnh giữa các phương án.
 - `Vi phạm` nên bằng 0.
 - `Độ rộng cụm tối đa` càng nhỏ càng tốt.
 
