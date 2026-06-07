@@ -10,7 +10,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
-import { saveSnapshot, loadSnapshots } from '../../services/db.js'
+import { saveSnapshot, loadSnapshots, deleteSnapshot } from '../../services/db.js'
+import { supabase, isOnline } from '../../lib/supabase.js'
 import SnapshotCompare from './SnapshotCompare.js'
 
 // Adjust 3: Thêm period field vào SnapshotItem (exported for SnapshotCompare)
@@ -36,13 +37,62 @@ export default function SnapshotManager() {
 
   const zones          = useDataStore((s) => s.zones)
   const assignments    = useDataStore((s) => s.assignments)
+  const currentProjectId = useDataStore((s) => s.currentProjectId)
   const setZones       = useDataStore((s) => s.setZones)
   const setAssignments = useDataStore((s) => s.setAssignments)
 
-  // Load snapshot list on mount
-  useEffect(() => {
-    loadSnapshots().then((data) => setSnapshots(data as SnapshotItem[]))
+  const reloadSnapshots = useCallback(async () => {
+    const data = await loadSnapshots()
+    setSnapshots(data as SnapshotItem[])
   }, [])
+
+  // Load snapshots on mount and whenever project changes.
+  useEffect(() => {
+    void reloadSnapshots().catch((error) => {
+      console.error('[SnapshotManager] load error:', error)
+    })
+  }, [reloadSnapshots, currentProjectId])
+
+  // Live sync: when another admin/coordinator saves a snapshot in the same project,
+  // refresh this dropdown automatically.
+  useEffect(() => {
+    if (!currentProjectId || !isOnline()) return
+
+    const channel = supabase!
+      .channel(`snapshots:${currentProjectId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'snapshots',
+          filter: `project_id=eq.${currentProjectId}`,
+        },
+        () => {
+          void reloadSnapshots().catch((error) => {
+            console.error('[SnapshotManager] realtime refresh error:', error)
+          })
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase!.removeChannel(channel)
+    }
+  }, [currentProjectId, reloadSnapshots])
+
+  // Polling fallback in case Realtime isn't available in the current project.
+  useEffect(() => {
+    if (!currentProjectId) return
+
+    const timer = window.setInterval(() => {
+      void reloadSnapshots().catch((error) => {
+        console.error('[SnapshotManager] polling refresh error:', error)
+      })
+    }, 15_000)
+
+    return () => window.clearInterval(timer)
+  }, [currentProjectId, reloadSnapshots])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -82,7 +132,7 @@ export default function SnapshotManager() {
 
       setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
       await saveSnapshot(id, label.trim(), { zones, assignments }, period)
-      void loadSnapshots().then((updated) => setSnapshots(updated as SnapshotItem[])).catch(() => {
+      void reloadSnapshots().catch(() => {
         // Keep optimistic local state if refresh fails.
       })
       // Không cần alert thành công — badge count tăng lên là feedback đủ
@@ -91,7 +141,7 @@ export default function SnapshotManager() {
     } finally {
       setSaving(false)
     }
-  }, [zones, assignments, snapshots])
+  }, [zones, assignments, snapshots, reloadSnapshots])
 
   const handleRestore = useCallback((snap: SnapshotItem) => {
     if (compareMode) return // In compare mode, clicks are for selection
@@ -121,14 +171,13 @@ export default function SnapshotManager() {
     e.stopPropagation()
     if (!window.confirm('Xóa snapshot này?')) return
     setSnapshots((prev) => prev.filter((s) => s.id !== snapId))
-    // For localStorage mode: also update storage (project-scoped)
-    try {
-      const pid = useDataStore.getState().currentProjectId
-      const key = pid ? `terrimap_snapshots_${pid}` : 'terrimap_snapshots'
-      const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as SnapshotItem[]
-      localStorage.setItem(key, JSON.stringify(existing.filter((s) => s.id !== snapId)))
-    } catch { /* ignore */ }
-  }, [])
+    void (async () => {
+      await deleteSnapshot(snapId, currentProjectId)
+      await reloadSnapshots()
+    })().catch((error) => {
+      console.error('[SnapshotManager] delete error:', error)
+    })
+  }, [currentProjectId, reloadSnapshots])
 
   // Period filter logic
   const availablePeriods = useMemo(() => {

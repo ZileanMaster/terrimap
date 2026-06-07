@@ -506,6 +506,38 @@ export async function loadSnapshots(): Promise<Array<{
 }
 
 /**
+ * Delete a snapshot by id.
+ * Removes localStorage first so the current session updates immediately,
+ * then syncs Supabase in the background when online.
+ */
+export async function deleteSnapshot(id: string, projectId?: string): Promise<void> {
+  const key = scopedKey('terrimap_snapshots', projectId ?? _currentProjectId)
+  try {
+    const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[]
+    const filtered = existing.filter((s: any) => s?.id !== id)
+    localStorage.setItem(key, JSON.stringify(filtered))
+  } catch (e) {
+    console.error('[DB] deleteSnapshot localStorage error:', e)
+  }
+
+  if (!isOnline()) return
+
+  try {
+    let query = supabase!.from('snapshots').delete().eq('id', id)
+    const scopedProjectId = projectId ?? _currentProjectId
+    if (scopedProjectId) {
+      query = query.eq('project_id', scopedProjectId)
+    }
+    const { error } = await query
+    if (error) {
+      console.error('[DB] deleteSnapshot supabase error:', error)
+    }
+  } catch (e) {
+    console.error('[DB] deleteSnapshot unexpected:', e)
+  }
+}
+
+/**
  * Upsert (thêm hoặc cập nhật) một sales agent.
  */
 export async function saveAgent(agent: SalesAgent, projectId?: string): Promise<void> {
