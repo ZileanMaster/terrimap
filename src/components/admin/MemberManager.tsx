@@ -39,6 +39,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   const inviteMember  = useAuthStore((s) => s.inviteMember)
   const updateRole    = useAuthStore((s) => s.updateMemberRole)
   const removeMember  = useAuthStore((s) => s.removeMember)
+  const loadMembers   = useAuthStore((s) => s.loadMembers)
   const clearError    = useAuthStore((s) => s.clearError)
   const authError     = useAuthStore((s) => s.authError)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
@@ -63,17 +64,8 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     setLoading(true)
 
     const doLoad = async (): Promise<MemberWithProfile[]> => {
-      // Step 1: Get raw members (no join — more reliable)
-      const { data: rawMembers, error } = await supabase
-        .from('project_members')
-        .select('*')
-        .eq('project_id', currentProjectId)
-        .order('joined_at', { ascending: true })
-
-      if (error) {
-        console.warn('[MemberManager] query error:', error.message)
-        return []
-      }
+      // Step 1: Get raw members (store helper now repairs missing owner membership)
+      const rawMembers = await loadMembers()
       if (!rawMembers || rawMembers.length === 0) return []
 
       // Step 2: Get profiles for these members
@@ -107,7 +99,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     } finally {
       setLoading(false)
     }
-  }, [currentProjectId])
+  }, [currentProjectId, loadMembers])
 
   useEffect(() => {
     if (open) {

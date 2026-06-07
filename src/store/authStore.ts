@@ -592,13 +592,56 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return []
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('project_members')
       .select('*')
       .eq('project_id', projectId)
       .order('joined_at', { ascending: true })
 
-    return (data ?? []) as ProjectMember[]
+    if (error) {
+      console.warn('[AuthStore] loadMembers error:', error.message)
+      return []
+    }
+
+    let members = (data ?? []) as ProjectMember[]
+    const project = get().projects.find((p) => p.id === projectId)
+
+    if (project?.owner_id) {
+      const ownerExists = members.some((member) => member.user_id === project.owner_id)
+      if (!ownerExists) {
+        const ownerMember = {
+          project_id: projectId,
+          user_id: project.owner_id,
+          role: 'admin' as const,
+          region_id: null,
+          joined_at: project.created_at ?? new Date().toISOString(),
+        }
+
+        const { error: repairError } = await supabase
+          .from('project_members')
+          .upsert(ownerMember, { onConflict: 'project_id,user_id' })
+
+        if (!repairError) {
+          const { data: repaired } = await supabase
+            .from('project_members')
+            .select('*')
+            .eq('project_id', projectId)
+            .order('joined_at', { ascending: true })
+          members = (repaired ?? []) as ProjectMember[]
+        } else {
+          console.warn('[AuthStore] owner membership repair warning:', repairError.message)
+          members = [
+            {
+              id: `owner-${projectId}`,
+              ...ownerMember,
+            },
+            ...members,
+          ] as ProjectMember[]
+        }
+      }
+    }
+
+    return members
   },
 
   // ── Update Profile ───────────────────────────────────────────────────────

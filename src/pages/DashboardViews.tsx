@@ -86,6 +86,7 @@ export function OverviewView() {
   const currentRegionId = useDataStore((s) => s.currentRegionId);
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion);
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
+  const loadMembers = useAuthStore((s) => s.loadMembers);
 
   const [districtReports, setDistrictReports] = useState<any[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
@@ -324,48 +325,39 @@ export function UsersView() {
     }
     setLoading(true);
     try {
-      const membersResult = await runWithTimeout(
-        supabase
-          .from('project_members')
-          .select('id,user_id,role,region_id,joined_at')
-          .eq('project_id', currentProjectId)
-          .order('joined_at', { ascending: true }),
+      const rawMembers = await runWithTimeout(
+        Promise.resolve(loadMembers()),
         6000,
-        { data: null, error: new Error('timeout') } as any,
+        [] as any,
       );
 
-      const { data: rawMembers, error } = membersResult;
-      if (error) {
-        console.error('[UsersView] load project members error:', error.message);
-        return;
-      }
       if (!rawMembers || rawMembers.length === 0) {
         setMembers([]);
         return;
       }
 
-        const userIds = rawMembers.map((m: any) => m.user_id);
-        const profilesRes = await runWithTimeout(
-          supabase
-            .from('profiles')
-            .select('id, email, full_name, date_of_birth, phone')
-            .in('id', userIds),
-          6000,
-          { data: null, error: new Error('timeout') } as any,
-        );
-        const profiles = profilesRes.data;
-        if (profilesRes.error) {
-          console.error('[UsersView] load profiles error:', profilesRes.error.message);
-        }
+      const userIds = rawMembers.map((m: any) => m.user_id);
+      const profilesRes = await runWithTimeout(
+        supabase
+          .from('profiles')
+          .select('id, email, full_name, date_of_birth, phone')
+          .in('id', userIds),
+        6000,
+        { data: null, error: new Error('timeout') } as any,
+      );
+      const profiles = profilesRes.data;
+      if (profilesRes.error) {
+        console.error('[UsersView] load profiles error:', profilesRes.error.message);
+      }
 
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
-        const merged = rawMembers.map((m: any) => ({
-          ...m,
-          profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
-          // Keep capacity in memory for existing flows (algorithms), but don't show/edit it here.
-          capacity: m.capacity ?? 500,
-        }));
+      const merged = rawMembers.map((m: any) => ({
+        ...m,
+        profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
+        // Keep capacity in memory for existing flows (algorithms), but don't show/edit it here.
+        capacity: m.capacity ?? 500,
+      }));
 
       setMembers(merged);
     } catch (e) {
