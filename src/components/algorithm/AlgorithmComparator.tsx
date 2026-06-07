@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
+import { useSAWorker } from '../../hooks/useSAWorker.js'
 import TerritoryMap from '../map/TerritoryMap.js'
 import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
@@ -55,12 +56,15 @@ function componentCount(zones: Zone[]): number {
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
   const ctx = useFacade()
+  const { runSA } = useSAWorker()
 
   const [selectedRegionId, setSelectedRegionId] = useState(currentRegionId || regions[0]?.id || '')
   const [isRunning, setIsRunning] = useState(false)
   const [hasRun, setHasRun] = useState(false)
   const [syncViewport, setSyncViewport] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [currentCost, setCurrentCost] = useState<number | null>(null)
 
     const [algoA, setAlgoA] = useState<Algo>('greedy')
     const [algoB, setAlgoB] = useState<Algo>('sa')
@@ -111,13 +115,31 @@ function componentCount(zones: Zone[]): number {
   const zoom = selectedRegion?.zoom ?? 12
 
   const runScenario = async (algo: Algo, m: number) =>
-    ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
+    (ctx.role === 'admin' && algo === 'sa')
+      ? (async () => {
+          const saOpts = { maxIter: 12000, initialTemp: 1500, cooling: 0.9965 }
+          const startTime = performance.now()
+          const assignments = await runSA(
+            displayZones,
+            m,
+            saOpts,
+            (iter, cost, total) => {
+              setProgress(Math.round((iter / total) * 100))
+              setCurrentCost(cost)
+            },
+          )
+          const durationMs = performance.now() - startTime
+          return ctx.facade.wrapAssignmentsAsResult('sa', displayZones, assignments, displayAgents, durationMs)
+        })()
+      : ctx.facade.runAlgorithm(algo, displayZones, m, displayAgents)
 
   const handleRun = async () => {
     if (!canRun) return
     setError(null)
     setIsRunning(true)
     setHasRun(false)
+    setProgress(0)
+    setCurrentCost(null)
 
     // Give the browser one paint frame so the running overlay appears
     // before the algorithm starts its heavier work.
@@ -183,6 +205,10 @@ function componentCount(zones: Zone[]): number {
               <span style={styles.runningSubtitle}>
                 Đang tối ưu phân chia theo tiêu chí cân bằng và liên thông. Vui lòng chờ kết quả.
               </span>
+              <div style={styles.runningMeta}>
+                <span>{progress > 0 ? `${progress}%` : 'Khởi tạo...'}</span>
+                {currentCost !== null && <span>Cost {currentCost.toFixed(2)}</span>}
+              </div>
             </div>
           </div>
         </div>
@@ -431,6 +457,13 @@ function Metric({ label, value }: { label: string; value: number }) {
     fontSize: 12,
     color: 'var(--color-text-2)',
     lineHeight: 1.4,
+  },
+  runningMeta: {
+    display: 'flex',
+    gap: 12,
+    fontSize: 12,
+    color: 'var(--color-text-2)',
+    marginTop: 2,
   },
   header: {
     display: 'flex',
