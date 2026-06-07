@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Generate comprehensive Word documents (Technical Report and Demo Script)
+Generate Word documents (technical report and demo script)
 for the TerriMap commercial territory design project.
-Version 3.5: Extremely detailed academic & source code walkthrough.
 """
 
 import os
@@ -278,9 +277,9 @@ def build_report():
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_sub.paragraph_format.space_after = Pt(180)
     run_sub = p_sub.add_run(
-        'TerriMap Enterprise System (Version 3.5)\n'
-        'Tài liệu nghiên cứu chuyên sâu về Kiến trúc, Giải thuật, UI/UX và Database\n'
-        'Phục vụ công tác bảo vệ đồ án tốt nghiệp ngành Công nghệ thông tin / Khoa học máy tính'
+        'TerriMap Project Documentation\n'
+        'Technical report and demo script for the current TerriMap application\n'
+        'Used for project review, presentation, and internal handoff'
     )
     run_sub.font.size = Pt(12)
     run_sub.italic = True
@@ -290,10 +289,10 @@ def build_report():
     p_meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_meta.paragraph_format.space_after = Pt(20)
     run_meta = p_meta.add_run(
-        'Tác giả chuyên môn: thiendominh0-star (Senior Technical Architect)\n'
-        'Phạm vi nghiên cứu: Hình học tính toán · Metaheuristics · Lập trình song song trình duyệt · RBAC & RLS Security\n'
-        'Công nghệ triển khai: React 18 · TypeScript · Vite · Zustand · Supabase PostgreSQL · Leaflet Maps\n'
-        'Cấp tài liệu: Mật - Tài liệu kỹ thuật chi tiết nhất'
+        'Project documentation author: TerriMap team\n'
+        'Scope: geometry calculations, optimization, browser-side performance, RBAC and RLS security\n'
+        'Stack: React 18, TypeScript, Vite, Zustand, Supabase PostgreSQL, Leaflet Maps\n'
+        'Document classification: internal'
     )
     run_meta.font.size = Pt(9.5)
     run_meta.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
@@ -980,7 +979,7 @@ def build_demo():
 # ============================================================
 
 if __name__ == '__main__':
-    print('=== Generating Highly Detailed TerriMap Documents (v3.5) ===')
+    print('=== Generating TerriMap documents ===')
     p1 = build_report()
     p2 = build_demo()
     print(f'\nSuccess! Word Files generated and saved to Desktop:')
