@@ -4,7 +4,6 @@
  */
 
 import React from 'react'
-import { useTranslation } from 'react-i18next'
 import type { AlgorithmResultVM } from '../../../facades/viewmodels.js'
 
 export interface ResultMetricsProps {
@@ -12,7 +11,6 @@ export interface ResultMetricsProps {
 }
 
 export default function ResultMetrics({ result }: ResultMetricsProps) {
-  const { t } = useTranslation()
   const [showViolations, setShowViolations] = React.useState(false)
 
   if (!result) return null
@@ -33,7 +31,7 @@ export default function ResultMetrics({ result }: ResultMetricsProps) {
   return (
     <div style={styles.wrapper}>
       <div style={styles.header}>
-        <span style={styles.title}>📊 Kết quả</span>
+        <span style={styles.title}>📊 Kết quả phân chia</span>
         <span style={styles.algo}>{algo.toUpperCase()}</span>
       </div>
 
@@ -41,7 +39,7 @@ export default function ResultMetrics({ result }: ResultMetricsProps) {
         <div style={{ ...styles.scoreNum, color: balanceColor }}>
           {balance.toFixed(1)}
         </div>
-        <div style={styles.scoreLabel}>{t('metrics.balance')}</div>
+        <div style={styles.scoreLabel}>Cân bằng</div>
         <div style={{ ...styles.scoreBadge, color: balanceColor, borderColor: balanceColor }}>
           {balanceLabel}
         </div>
@@ -58,11 +56,11 @@ export default function ResultMetrics({ result }: ResultMetricsProps) {
 
       <div style={styles.grid}>
         <MetricRow
-          label={t('metrics.diameter')}
+          label="Độ rộng cụm tối đa"
           value={`${(maxDiameter ?? 0).toFixed(1)} km`}
         />
         <MetricRow
-          label={t('metrics.violations')}
+          label="Vi phạm"
           value={violationCount}
           valueColor={violationCount > 0 ? 'var(--color-danger)' : 'var(--color-success)'}
         />
