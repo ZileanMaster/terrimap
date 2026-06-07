@@ -1,292 +1,275 @@
-# BÁO CÁO KỸ THUẬT — TerriMap
-## Hệ thống Thiết kế Vùng Thương mại (Commercial Territory Design System)
+# BÁO CÁO ĐỒ ÁN — TerriMap
+## Hệ thống thiết kế và vận hành lãnh thổ kinh doanh theo khu vực
 
-> **Phiên bản**: 3.0 — Finalization Build  
-> **Ngày**: 22/04/2026  
-> **Tác giả**: thiendominh0-star  
-> **Stack**: React 18 · TypeScript · Vite · Zustand · Supabase · Leaflet
-
----
-
-## 1. TỔNG QUAN HỆ THỐNG
-
-TerriMap là ứng dụng web thiết kế và quản lý vùng thương mại (Territory Management System) hỗ trợ phân chia địa bàn cho đội ngũ kinh doanh. Hệ thống cho phép:
-
-- **Admin** quản lý các khu vực địa lý (Region) và gán Coordinator
-- **Coordinator** chạy thuật toán phân vùng, điều chỉnh thủ công, nhập chỉ số tháng
-- **Sales** xem địa bàn được phân công và gửi phản hồi chất lượng
+> **Phiên bản tài liệu**: cập nhật theo trạng thái hiện tại của dự án  
+> **Ngày cập nhật**: 07/06/2026  
+> **Stack chính**: React 18 · TypeScript · Vite · Zustand · Supabase · Leaflet
 
 ---
 
-## 2. KIẾN TRÚC HỆ THỐNG
+## 1. Tổng quan
 
-### 2.1 Phân cấp 5 tầng (5-Layer Architecture)
+TerriMap là ứng dụng web hỗ trợ doanh nghiệp **quản lý lãnh thổ kinh doanh theo khu vực**, theo dõi báo cáo theo tháng và chạy các thuật toán phân chia vùng/cụm để tối ưu chất lượng vận hành.
 
-```
-L0: types/domain.ts          — Domain primitives (Zone, District, SalesAgent, Assignment)
-L1: lib/partition.ts          — Thuật toán phân vùng + geometry
-L1: lib/geometry.ts           — Adjacency matrix, haversine distance
-L2: services/TerritoryService — Business logic (compute cost, validate)
-L3: facades/                  — ViewModels (AdminFacade, CoordFacade, SalesFacade)
-L4: src/                      — React UI (pages, components, store)
-```
+Ứng dụng hiện tại được thiết kế cho 3 nhóm người dùng chính:
 
-**Nguyên tắc**: Chỉ sửa L4 (`src/`) trong Sprint. L0–L3 là stable API.
+- **Quản trị viên**: thiết lập dự án, khu vực, nhân sự và chạy các tác vụ phân chia.
+- **Điều phối viên**: kiểm tra dữ liệu khu vực, chỉnh tay vùng/cụm và theo dõi vận hành.
+- **Nhân sự**: xem dữ liệu được giao, báo cáo theo dự án và làm việc theo quyền hạn.
 
-### 2.2 Phân cấp Role
-
-```
-Admin
- └─ Quản lý Region (Hà Nội, TP.HCM, Huế)
- └─ Gán Coordinator cho từng Region
- └─ Xem tổng quan hệ thống (12 zones, 4 districts, 4 sales)
- └─ CRUD nhân viên Sales (AgentManager)
-
-Coordinator (gắn với 1 Region)
- └─ Chọn Region + Period (tháng)
- └─ Nhập chỉ số (customers, orders, revenue)
- └─ Chạy thuật toán phân vùng
- └─ Điều chỉnh thủ công (manual swap với BFS validation)
- └─ Lưu/tải Snapshot + So sánh lịch sử
-
-Sales (gắn với 1 District)
- └─ Xem địa bàn được phân công
- └─ Xem chỉ số: vùng, KH, đơn hàng
- └─ Gửi đánh giá phân vùng (👍/👎 + comment)
-```
-
-### 2.3 Global State (Zustand)
-
-```typescript
-interface DataStore {
-  zones:          Zone[]
-  assignments:    Assignment[]
-  agents:         SalesAgent[]
-  regions:        Region[]
-  currentRegionId: string | null
-  
-  // Actions
-  init()           // Load từ Supabase → fallback mock data
-  setZones()
-  setAssignments()
-  addAgent() / updateAgent() / removeAgent()
-  setCurrentRegion()
-}
-```
+Giao diện người dùng hiện **chỉ dùng tiếng Việt**.
 
 ---
 
-## 3. THUẬT TOÁN PHÂN VÙNG
+## 2. Mục tiêu sản phẩm
 
-### 3.1 Danh sách thuật toán
+TerriMap được xây dựng để giải quyết các nhu cầu sau:
 
-| Tên | ID | Mô tả | Độ phức tạp |
-|-----|----|-------|-------------|
-| Tham lam | `greedy` | Gán zone gần nhất theo khoảng cách | O(n·k) |
-| **Tìm kiếm cục bộ** | `local-search` | 2-opt swap + BFS validation | O(n²·iter) |
-| Simulated Annealing | `sa` | Chấp nhận nghiệm xấu theo nhiệt độ | O(n·iter·T) |
-
-> **Lưu ý quan trọng**: Hệ thống chỉ hỗ trợ `greedy`, `local-search` và `sa`; các thuật toán phân cụm thuần khoảng cách không còn là API hợp lệ.
-
-### 3.2 Hàm mục tiêu (Objective Function)
-
-#### p-Center (mặc định): Minimize max diameter
-$$\text{cost}_{\text{p-center}} = \alpha \cdot \text{dispersion} + \beta \cdot \text{imbalance}$$
-
-#### p-Median: Minimize tổng khoảng cách đến center
-$$\text{cost}_{\text{p-median}} = \sum_{d} \sum_{z \in D_d} \text{haversine}(\text{centroid}_z, \text{center}_d)$$
-
-#### Multi-metric Balance
-$$\text{imbalance}_d = \left| \frac{\text{metric}_d - \overline{\text{metric}}}{\overline{\text{metric}}} \right|$$
-
-Với `metric` có thể là `customers` hoặc `orders`, có trọng số độc lập:
-```typescript
-balanceWeights?: { customers: number; orders: number }
-```
-
-### 3.3 Ràng buộc Liên thông (Connectivity Constraint)
-
-**Bắt buộc**: Mỗi district sau phân vùng phải là một tập liên thông địa lý.
-
-Thuật toán kiểm tra: **BFS (Breadth-First Search)**
-
-```
-isDistrictConnected(zones, assignment, districtId, adjMatrix, idToIdx):
-  1. Lấy tập S = {zone | assignment[zone] == districtId}
-  2. BFS từ S[0] theo adjMatrix, chỉ duyệt zones trong S
-  3. Nếu visited.size == S.size → liên thông ✅
-  4. Ngược lại → phá liên thông ❌ → reject
-```
-
-**Áp dụng**:
-- **Local Search**: sau mỗi swap thử — reject nếu BFS fail
-- **Simulated Annealing**: sau mỗi swap thử — reject nếu BFS fail  
-- **Manual swap (Coordinator)**: kiểm tra source district sau khi chuyển zone
-
-### 3.4 Local Search — Chi tiết (Phase 1, Ríos-Mercado 2009)
-
-```
-Khởi tạo: assignment = partitionGreedy(zones, k)
-Lặp (maxIter lần):
-  Chọn ngẫu nhiên zone z nằm ở biên giữa 2 districts
-  Thử swap z → district mới
-  Kiểm tra BFS(source_district) → reject nếu mất liên thông
-  Tính cost mới
-  Nếu cost mới tốt hơn → chấp nhận
-  Nếu không cải thiện qua tolerance → dừng sớm
-Trả về assignment tốt nhất
-```
-
-**Tham chiếu**: Ríos-Mercado, R.Z., Fernández, E. (2009). *A reactive GRASP for a commercial territory design problem with multiple balancing requirements.* Computers & Operations Research, 36(3), 755-776.
+1. Tách dữ liệu theo từng **dự án** làm việc riêng.
+2. Quản lý **khu vực** vận hành trên bản đồ.
+3. Quản lý **vùng** và **cụm** phục vụ chia lãnh thổ.
+4. Theo dõi **nhân sự**, khách hàng và đơn hàng theo từng khu vực.
+5. Chạy thuật toán phân chia theo hướng **ưu tiên chất lượng**.
+6. Giảm thao tác thủ công lặp lại và giảm cảm giác chờ trong UI.
 
 ---
 
-## 4. TÍNH NĂNG CHI TIẾT
+## 3. Kiến trúc và công nghệ
 
-### 4.1 Quản lý Khu vực (RegionManager)
+### 3.1 Stack
 
-- Hiển thị 3 khu vực: Hà Nội (12 zones), TP.HCM (0), Huế (0)
-- Mỗi region: dropdown gán Coordinator, số zones, nút "Xem khu vực"
-- Click "Xem" → filter displayZones theo `regionId`
+- **React 18**: giao diện người dùng.
+- **TypeScript**: kiểu dữ liệu và kiểm soát logic.
+- **Vite**: bundler và dev server.
+- **Zustand**: quản lý trạng thái UI và dữ liệu.
+- **Supabase**: backend, auth và lưu trữ dữ liệu.
+- **Leaflet**: hiển thị bản đồ và thao tác vùng.
 
-### 4.2 Nhập chỉ số tháng (MetricsInput)
+### 3.2 Nguyên tắc triển khai hiện tại
 
-- Bảng editable: zone × (customers, orders, revenue)
-- Lưu vào `zone_monthly_metrics` (Supabase) hoặc localStorage (offline)
-- Coordinator chọn period (YYYY-MM) → nhập → chạy phân vùng với dữ liệu thực tế
-
-### 4.3 Snapshot & So sánh lịch sử
-
-**Snapshot**: lưu toàn bộ trạng thái `{zones, assignments}` với `label` + `period` (tháng)
-
-**Compare mode (Phase 3)**:
-1. Click "📊 So sánh" trong dropdown
-2. Checkbox xuất hiện trên mỗi snapshot
-3. Chọn 2 → "So sánh A vs B"
-4. Hiển thị `SnapshotCompare`: summary cards + diff table (zones thay đổi district)
-
-### 4.4 Điều chỉnh thủ công + BFS Guard
-
-Coordinator click zone → `ZoneInfoPanel`:
-- Dropdown "Chuyển sang district: District X (N vùng)"
-- Current district bị disabled ("← hiện tại")
-- Sau xác nhận → `handleAssign()` kiểm tra BFS:
-  - Nếu source district còn lại vẫn liên thông → swap thành công
-  - Nếu phá liên thông → `alert()` + `return` (từ chối)
-
-### 4.5 CRUD Nhân viên (AgentManager)
-
-- Thêm/sửa/xóa `SalesAgent`
-- Field "Khu vực phụ trách": `<select>` dropdown từ `store.regions`
-- `regionId` được persist vào Supabase `sales_agents.region_id`
-
-### 4.6 Phân công nhân viên (DistrictAgentAssigner)
-
-- Mỗi district row: color dot + zone count + total customers
-- Dropdown agents lọc theo `regionId` (agents không có region → hiển thị ở mọi nơi)
-- Save → cập nhật `assignments` trong store
-
-### 4.7 Đánh giá phân vùng (PartitionFeedback)
-
-- Sales xem snapshot gần nhất → nút "Đánh giá phân vùng"
-- Modal 👍/👎 + textarea comment
-- Submit → lưu vào `partition_feedback` (Supabase)
+- UI ưu tiên **local-first** cho các thao tác có thể phản hồi nhanh.
+- Các tác vụ nặng như Simulated Annealing được đưa sang **Web Worker** ở màn so sánh thuật toán.
+- Chỉ chạy thuật toán khi người dùng **bấm nút Chạy phân chia**.
+- Kết quả thuật toán ưu tiên **cân bằng**, **liên thông** và **độ ổn định** thay vì chỉ tối ưu thời gian.
 
 ---
 
-## 5. DATABASE SCHEMA (Supabase)
+## 4. Luồng nghiệp vụ hiện tại
 
-```sql
--- Zones (existing)
-zones: id, name, geometry(polygon), customers, orders, revenue, region_id(NEW)
+Luồng sử dụng chính của hệ thống:
 
--- Districts (existing)  
-assignments: id, zone_id, district_id
-
--- Sales Agents (existing + extension)
-sales_agents: id, name, capacity, region_id(NEW)
-
--- NEW: Regions
-regions: id, name, coordinator_id, center(JSONB), zoom, created_at
-
--- NEW: Snapshots (extended)
-snapshots: id, label, data(JSONB), period, created_at
-
--- NEW: Monthly Metrics
-zone_monthly_metrics: id, zone_id, period, metric_type, value, updated_at
-
--- NEW: Partition Feedback
-partition_feedback: id, snapshot_id, agent_id, rating(+1/-1), comment, created_at
-```
-
-**Row Level Security**: Tất cả tables đều enable RLS với policy `Allow all for anon`.
+1. Đăng nhập.
+2. Chọn dự án làm việc.
+3. Xem `Tổng quan` để kiểm tra tình trạng chung.
+4. Vào `Khu vực & bản đồ` để tạo/chọn khu vực và làm việc với bản đồ.
+5. Vào `Nhân sự` để quản lý thành viên dự án.
+6. Vào `Phân chia lãnh thổ` để chỉnh tay vùng/cụm khi cần.
+7. Vào `Vận hành` để theo dõi báo cáo theo tháng và theo khu vực.
+8. Vào `Phân chia thuật toán` để chạy thuật toán phân chia và so sánh kết quả.
+9. Vào `Cài đặt` để cập nhật thông tin cá nhân và cấu hình hệ thống.
 
 ---
 
-## 6. KỊCH BẢN DEMO
+## 5. Các màn hình chính
 
-### Demo Flow (7 bước)
+### 5.1 Màn chọn dự án
 
-1. **Admin**: Mở tab Quản trị → RegionManager hiện Hà Nội (12 vùng), HCM, Huế
-2. **Admin → AgentManager**: Thêm Sales mới, chọn region "Hà Nội" từ dropdown
-3. **Coordinator**: Chuyển tab Điều phối → chọn region Hà Nội → chọn tháng 04/2026
-4. **Coordinator → MetricsInput**: Nhập chỉ số thực tế → Chạy "Tìm kiếm cục bộ"
-5. **Coordinator → Snapshot**: Lưu kết quả "Local Search T4/2026" → Chạy thêm SA → Lưu "SA T4/2026"
-6. **Coordinator → So sánh**: Chọn 2 snapshots → Modal diff: zones thay đổi district có highlight
-7. **Coordinator → Manual swap**: Click zone → Thử chuyển district → nếu phá connectivity → alert cảnh báo
-8. **Sales**: Tab Bán hàng → xem 3 vùng + 410 KH → "Đánh giá" → 👍 "Phân vùng hợp lý"
+Người dùng có thể:
+- chọn dự án đang làm việc,
+- tạo dự án mới,
+- đổi theme sáng/tối,
+- đăng xuất.
+
+Điểm mới hiện tại:
+- tạo dự án được tối ưu theo hướng **optimistic**, phản hồi gần như ngay lập tức,
+- hệ thống vẫn đồng bộ nền với Supabase sau đó.
+
+### 5.2 Tổng quan
+
+Màn `Tổng quan` phục vụ người quản lý cấp cao.
+
+Nội dung chính:
+- số khu vực địa lý,
+- số nhân sự,
+- số khách hàng báo cáo,
+- số đơn hàng báo cáo,
+- bảng hiệu quả kinh doanh theo khu vực,
+- bộ lọc theo khu vực.
+
+Màn này tập trung vào **doanh số, khách hàng và mức độ phủ báo cáo**, không phải thông số kỹ thuật của polygon.
+
+### 5.3 Khu vực & bản đồ
+
+Màn này là nơi:
+- chọn khu vực,
+- tạo khu vực mới,
+- xem vùng trên bản đồ,
+- lưu map,
+- mở/ẩn vùng,
+- chuyển sang khu vực khác.
+
+Nếu dự án mới chưa có dữ liệu, đây là màn khởi đầu quan trọng nhất.
+
+### 5.4 Nhân sự
+
+Màn này dùng để:
+- xem danh sách thành viên dự án,
+- xem email, họ tên, ngày sinh, số điện thoại,
+- xem vai trò và khu vực phụ trách,
+- quản lý thành viên theo quyền.
+
+Luồng tải thành viên đã được bảo vệ để tránh trạng thái treo vô hạn khi Supabase phản hồi chậm.
+
+### 5.5 Phân chia lãnh thổ
+
+Màn này dùng cho chỉnh tay vùng/cụm:
+- xem khu vực đang chọn,
+- chuyển vùng sang cụm khác,
+- kiểm tra liên thông,
+- xem kết quả trên bản đồ.
+
+Mục tiêu là xử lý ngoại lệ sau khi chia tự động hoặc sau khi có dữ liệu mới.
+
+### 5.6 Vận hành
+
+Màn `Vận hành` dùng để:
+- xem báo cáo theo tháng,
+- lọc theo khu vực,
+- tìm theo cụm/user/ghi chú,
+- kiểm tra số khách hàng, số đơn hàng, số báo cáo,
+- theo dõi độ phủ báo cáo.
+
+Màn này dành cho người quản lý muốn biết **khu vực nào đã có dữ liệu, khu vực nào còn thiếu và chất lượng báo cáo ra sao**.
+
+### 5.7 Phân chia thuật toán
+
+Màn này là nơi chạy các thuật toán phân chia.
+
+Đặc điểm hiện tại:
+- chỉ chạy khi bấm nút,
+- không tự chạy theo thay đổi cấu hình,
+- có overlay trạng thái khi đang chạy,
+- SA được chạy qua worker để tránh làm đơ UI,
+- kết quả hiển thị bằng tiếng Việt.
+
+Chỉ số kết quả đang nhấn mạnh:
+- `Cân bằng`
+- `Vi phạm`
+- `Độ rộng cụm tối đa`
+
+### 5.8 Cài đặt
+
+Màn này dùng để:
+- xem/chỉnh thông tin cá nhân,
+- lưu hồ sơ,
+- cấu hình hệ thống cần thiết.
+
+Ứng dụng hiện không còn phần đổi ngôn ngữ vì đã cố định sang tiếng Việt.
 
 ---
 
-## 7. KẾT QUẢ KIỂM TRA
+## 6. Thuật toán phân chia
 
-### Unit & Integration Tests
-- **359 tests pass** / 0 fail (14 test files)
-- Coverage: L0 domain (65), L1 geometry (60), L1 partition (75), L4 UI (159)
+TerriMap hiện hỗ trợ 3 thuật toán:
 
-### Build
-- `vite build`: 231 modules, 282ms, Bundle 800KB (gzip: 224KB)
+| Thuật toán | Mục đích |
+| --- | --- |
+| Greedy Seed Expansion | Tạo nghiệm ban đầu nhanh |
+| Local Search | Tối ưu cục bộ, cải thiện chất lượng |
+| Simulated Annealing | Tối ưu sâu hơn, ưu tiên nghiệm tốt hơn |
 
-### Runtime (Offline mode)
-- Tất cả features hoạt động với mock data + localStorage
-- Console errors: chỉ `[DB] Failed to fetch` (expected — offline)
-- Không có TypeError/ReferenceError
+Định hướng hiện tại:
 
----
-
-## 8. SQL MIGRATION (Chạy trên Supabase)
-
-```sql
--- Xem file: docs/migration-full.sql
--- Chạy 1 lần trên Supabase SQL Editor
-```
+- ưu tiên **chất lượng cân bằng**,
+- giữ **liên thông địa lý**,
+- hạn chế độ rộng cụm quá lớn,
+- chấp nhận thời gian chạy lâu hơn nếu đổi lại phương án tốt hơn,
+- nhưng vẫn bảo đảm UI có trạng thái đang chạy rõ ràng.
 
 ---
 
-## 9. TRIỂN KHAI
+## 7. Dữ liệu và lưu trữ
 
-| Môi trường | URL | Status |
-|-----------|-----|--------|
-| Development | http://localhost:5173 | ✅ |
-| Production | https://[project].vercel.app | Pending SQL migration |
+### 7.1 Supabase
 
-### Biến môi trường (Vercel)
-```
-VITE_SUPABASE_URL=https://bsodtlrpulpmlyrcfdap.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_...
-```
+Supabase hiện được dùng cho:
+- auth,
+- dự án,
+- khu vực,
+- thành viên,
+- báo cáo vận hành,
+- snapshot,
+- dữ liệu liên quan tới phân chia.
+
+### 7.2 Local-first
+
+Các luồng quan trọng đã được tối ưu theo hướng:
+
+- cập nhật local state trước,
+- lưu/đồng bộ Supabase ở nền sau,
+- tránh khóa toàn màn hình nếu không cần thiết.
+
+Các luồng đã được áp dụng:
+- tạo dự án,
+- đăng xuất,
+- lưu map,
+- lưu báo cáo,
+- một số thao tác cập nhật danh sách.
 
 ---
 
-## 10. TÀI LIỆU THAM KHẢO
+## 8. Kiểm thử và chất lượng
 
-1. Ríos-Mercado, R.Z., Fernández, E. (2009). *A reactive GRASP for a commercial territory design problem with multiple balancing requirements.* Computers & Operations Research, 36(3), 755-776. https://doi.org/10.1016/j.cor.2007.10.024
+### 8.1 Kiểm thử
 
-2. Kirkpatrick, S., Gelatt, C.D., Vecchi, M.P. (1983). *Optimization by Simulated Annealing.* Science, 220(4598), 671-680.
+Quy trình kiểm tra đang dùng:
 
-3. Hess, S.W., Samuels, S.A. (1971). *Experiences with a Sales Districting Model: Criteria and Implementation.* Management Science, 18(4), P41-P54.
+- `npm run typecheck`
+- `npm run test`
+- `npm run build`
 
-4. React 18 Docs — https://react.dev
-5. Supabase Docs — https://supabase.com/docs
-6. Leaflet.js — https://leafletjs.com
-7. Zustand State Management — https://zustand-demo.pmnd.rs
+### 8.2 Vấn đề đã được xử lý gần đây
+
+- sửa lỗi font tiếng Việt,
+- sửa lỗi chunk lazy load khi deploy,
+- tối ưu tạo dự án mới,
+- tối ưu lưu map và lưu báo cáo,
+- đưa SA sang worker ở màn so sánh,
+- tối ưu lõi tính cost cho partition engine,
+- đổi nhãn thuật toán và chỉ số sang tiếng Việt.
+
+---
+
+## 9. Kịch bản demo ngắn cho hội đồng
+
+1. Đăng nhập.
+2. Chọn dự án.
+3. Vào `Tổng quan` để xem KPI theo khu vực.
+4. Vào `Khu vực & bản đồ` để chọn vùng và lưu map.
+5. Vào `Nhân sự` để minh hoạ quản lý thành viên.
+6. Vào `Phân chia lãnh thổ` để cho thấy chỉnh tay cụm/vùng.
+7. Vào `Vận hành` để trình bày báo cáo theo tháng.
+8. Vào `Phân chia thuật toán` để chạy Greedy / Local Search / SA và so sánh chất lượng.
+
+Thông điệp chính khi demo:
+
+> TerriMap không chỉ là bản đồ chia vùng, mà là hệ thống giúp lãnh đạo nhìn nhanh tình trạng khu vực, nhân sự, báo cáo và chất lượng phân chia trên cùng một luồng làm việc.
+
+---
+
+## 10. Kết luận
+
+Bản cập nhật hiện tại của TerriMap đã chuyển trọng tâm sang:
+
+- tiếng Việt cố định,
+- ngôn ngữ sản phẩm rõ ràng hơn,
+- trải nghiệm local-first để giảm cảm giác chờ,
+- phân chia thuật toán chú trọng **chất lượng**,
+- luồng sử dụng rõ ràng hơn cho quản lý cấp cao.
+
+Nếu cần tiếp tục phát triển, nên ưu tiên:
+
+1. hoàn thiện dữ liệu demo cho hội đồng,
+2. tăng độ mượt của các màn thao tác nhiều,
+3. tinh chỉnh thêm tiêu chí chất lượng thuật toán theo bài toán thực tế.
+

@@ -1,21 +1,19 @@
-# Partition Engine - Design Notes
+# Ghi Chú Partition Engine
 
-> Tai lieu ky thuat noi bo cho L1b Partition Engine.
-> Cap nhat lan cuoi: 2026-05-26.
+> Tài liệu kỹ thuật nội bộ cho phần phân chia lãnh thổ.
+> Cập nhật theo trạng thái hiện tại của dự án.
 
 ---
 
-## Supported Algorithms
+## Thuật toán đang hỗ trợ
 
-Partition Engine chi ho tro 3 thuat toan:
+TerriMap hiện hỗ trợ 3 thuật toán:
 
-| Algorithm | ID | Vai tro |
-|---|---|---|
-| Greedy Seed Expansion | `greedy` | Tao nghiem ban dau nhanh bang cach mo rong district theo adjacency graph. |
-| Local Search | `local-search` | Mac dinh khuyen nghi; cai thien nghiem Greedy bang boundary swaps co BFS guard. |
-| Simulated Annealing | `sa` | Toi uu nang cao; chap nhan swap xau co xac suat de thoat local optimum. |
-
-Tat ca API public dung union:
+| Thuật toán | ID | Vai trò |
+| --- | --- | --- |
+| Greedy Seed Expansion | `greedy` | Tạo nghiệm ban đầu nhanh bằng cách mở rộng theo kề nhau |
+| Local Search | `local-search` | Tối ưu cục bộ, ưu tiên cải thiện chất lượng phân chia |
+| Simulated Annealing | `sa` | Tối ưu sâu hơn, ưu tiên nghiệm tốt hơn thay vì chỉ nhanh |
 
 ```ts
 type AlgorithmName = 'greedy' | 'local-search' | 'sa'
@@ -23,46 +21,91 @@ type AlgorithmName = 'greedy' | 'local-search' | 'sa'
 
 ---
 
-## Current Tradeoff
+## Định hướng hiện tại
 
-> Fixture tham chieu: `zones20` trong `tests/fixtures/zones20-fixture.ts`, m=4.
+Mục tiêu hiện nay của engine là:
+
+1. **Giữ cụm hợp lệ và liên thông**
+2. **Ưu tiên cân bằng chất lượng** giữa khách hàng và đơn hàng
+3. **Tránh để UI bị đơ** khi chạy thuật toán nặng
+4. **Chỉ chạy khi người dùng bấm nút**
+
+Nói ngắn gọn: **không auto-run**, không tự chạy khi đổi cấu hình, và không ưu tiên tốc độ đến mức hy sinh chất lượng.
+
+---
+
+## Trade-off hiện tại
 
 | Metric | Greedy | Local Search | SA |
-|---|---|---|---|
-| Toc do | Nhanh nhat | Nhanh-vua | Cham hon |
-| Chat luong | Baseline tot | Tot va on dinh | Co the tot nhat |
-| Deterministic | Co | Co | Khong |
-| Connectivity guard | Co | Co | Co |
-| Use case | Preview nhanh / initial solution | Default production | Toi uu khi can chat luong cao |
+| --- | --- | --- | --- |
+| Tốc độ | Nhanh nhất | Trung bình | Chậm hơn |
+| Chất lượng | Tốt cho khởi tạo | Tốt và ổn định | Có thể tốt nhất |
+| Deterministic | Có | Có | Không |
+| Connectivity guard | Có | Có | Có |
+| UI impact | Nhẹ | Nhẹ-vừa | Cần overlay / worker |
 
 ---
 
-## Decision Guide
+## Cách đọc cost và chất lượng
 
-```text
-Yeu cau          ->  Thuat toan khuyen nghi
-Preview nhanh   ->  greedy
-Default an toan  ->  local-search
-Toi uu sau cung  ->  sa
-```
+Hiện engine ưu tiên:
 
-`TerritoryService.runPartition()` tra ve `suggestSA = true` khi balance score thap va algorithm hien tai khong phai `sa`. UI co the dung flag nay de goi y chay toi uu nang cao.
+- cân bằng khách hàng
+- cân bằng đơn hàng
+- độ gọn của cụm
+- số vi phạm bằng 0
 
----
+Nếu cần lựa chọn cho demo hoặc mặc định vận hành:
 
-## Test Thresholds
-
-| Thuat toan | Quality expectation |
-|---|---|
-| `partitionGreedy` | Moi zone duoc assign dung 1 lan, districtId hop le, khong district rong. |
-| `partitionLocalSearch` | Deterministic, cai thien hoac giu nghiem Greedy, khong pha lien thong district nguon. |
-| `partitionSA` | Assignment hop le, cost finite, chap nhan stochastic output. |
+- `greedy` → xem nhanh
+- `local-search` → mặc định an toàn
+- `sa` → khi muốn tìm phương án chất lượng cao hơn
 
 ---
 
-## References
+## Chất lượng thay vì tự động
 
-- Implementation: [`lib/partition.ts`](../lib/partition.ts)
-- Test suite: [`tests/partition.test.ts`](../tests/partition.test.ts)
-- Benchmark script: [`tests/partition-benchmark.ts`](../tests/partition-benchmark.ts)
-- Fixture: [`tests/fixtures/zones20-fixture.ts`](../tests/fixtures/zones20-fixture.ts)
+Hiện tại:
+
+- `Phân chia thuật toán` chỉ chạy khi bấm nút
+- thay đổi thuật toán / số cụm sẽ không tự sinh lại kết quả ngay
+- SA được chạy qua worker ở màn so sánh để tránh chặn main thread
+- overlay “Thuật toán đang chạy” được hiển thị để người dùng biết hệ thống vẫn đang xử lý
+
+Điều này giúp UI có cảm giác tốt hơn mà không đổi lõi thuật toán.
+
+---
+
+## Connectivity guard
+
+Mỗi move phải kiểm tra liên thông theo adjacency graph.
+
+Nếu một move làm cụm nguồn mất liên thông, move đó phải bị reject.
+
+Áp dụng cho:
+
+- local search
+- simulated annealing
+- chỉnh tay trong phần phân chia lãnh thổ
+
+---
+
+## Quy ước kiểm thử
+
+| Hàm | Kỳ vọng |
+| --- | --- |
+| `partitionGreedy` | Mỗi vùng được gán đúng một lần, không có cụm rỗng |
+| `partitionLocalSearch` | Không phá liên thông, cost tốt hơn hoặc bằng greedy |
+| `partitionSimulatedAnnealing` | Kết quả hợp lệ, cost finite, chất lượng có thể tốt hơn greedy/local search |
+
+---
+
+## File tham chiếu
+
+- `lib/partition.ts`
+- `src/hooks/useSAWorker.ts`
+- `src/components/algorithm/AlgorithmComparator.tsx`
+- `src/pages/AdminPage.tsx`
+- `src/components/algorithm/ResultMetrics.tsx`
+- `tests/partition.test.ts`
+

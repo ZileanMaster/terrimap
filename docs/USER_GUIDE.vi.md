@@ -1,624 +1,233 @@
 # Hướng Dẫn Sử Dụng TerriMap
 
-TerriMap là phần mềm thiết kế và quản lý lãnh thổ bán hàng trên bản đồ. Phần mềm giúp doanh nghiệp chia các polygon địa lý thành các **cụm** phụ trách, gán cụm cho nhân viên sales, kiểm tra điều kiện liên thông và theo dõi chất lượng phân chia.
+TerriMap là hệ thống web hỗ trợ **thiết kế, vận hành và theo dõi lãnh thổ kinh doanh** theo khu vực. Ứng dụng hiện tại dùng **tiếng Việt cố định**, không còn nút đổi ngôn ngữ, và được tối ưu theo luồng làm việc thực tế của quản lý cấp cao, admin, điều phối viên và nhân sự.
 
-Tài liệu này dành cho người dùng vận hành phần mềm hằng ngày: quản trị viên, điều phối viên và nhân viên sales.
+---
 
-## 1. Khái Niệm Chính
+## 1) Thuật ngữ chính
+
+### Dự án
+- Mỗi dự án là một không gian làm việc riêng.
+- Dữ liệu khu vực, vùng, nhân sự, báo cáo và kết quả phân chia không trộn với dự án khác.
+- Khi mở lại dự án cũ, hệ thống nên đưa bạn về đúng ngữ cảnh của dự án đó.
 
 ### Khu vực
+- Khu vực là phạm vi vận hành lớn, ví dụ: Hà Nội, TP. Hồ Chí Minh, Huế.
+- Mỗi khu vực có bản đồ, vùng, nhân sự và báo cáo riêng.
+- Khi dự án chưa có dữ liệu, màn `Khu vực & bản đồ` sẽ là nơi bắt đầu tốt nhất.
 
-Khu vực là phạm vi vận hành lớn, ví dụ Hà Nội, TP. Hồ Chí Minh hoặc Huế. Mỗi khu vực có bản đồ, danh sách polygon, danh sách sales và kết quả phân chia riêng.
-
-Bạn nên chọn khu vực trước khi vẽ polygon, kiểm tra dữ liệu hoặc chạy thuật toán.
-
-### Polygon hoặc vùng
-
-Polygon là một vùng địa lý được vẽ trên bản đồ. Mỗi polygon có:
-
-- Tên vùng.
-- Tọa độ ranh giới.
-- Số khách hàng.
-- Số đơn hàng.
-- Cụm hiện tại.
-- Sales phụ trách, nếu đã được gán.
-
-Trong UI, “vùng” thường là cách gọi thân thiện của polygon.
+### Vùng
+- `Vùng` là phần hiển thị thân thiện của polygon trên bản đồ.
+- Mỗi vùng có thể gắn với khách hàng, đơn hàng, cụm và người phụ trách.
+- Trong tài liệu kỹ thuật bên trong, một số tên vẫn có thể dùng từ `polygon` để giữ ổn định mã nguồn, nhưng giao diện người dùng dùng từ **vùng**.
 
 ### Cụm
+- Cụm là nhóm các vùng được phân cho cùng một lãnh thổ bán hàng.
+- Hệ thống luôn kiểm tra **liên thông** của cụm để tránh chia sai địa lý.
 
-Cụm là nhóm các polygon được phân cho cùng một lãnh thổ bán hàng. Trước đây hệ thống dùng thuật ngữ kỹ thuật `district`, nhưng trong giao diện người dùng gọi là **cụm**.
+---
 
-Ví dụ:
+## 2) Cách mở và bắt đầu làm việc
 
-- `C0` là cụm 0.
-- `C1` là cụm 1.
-- Một sales có thể được phân phụ trách một cụm.
+### Bước 1: Đăng nhập
+- Đăng nhập bằng tài khoản được cấp.
+- Nếu đúng, hệ thống chuyển sang màn chọn dự án.
 
-### Liên thông
+### Bước 2: Chọn dự án làm việc
+- Chọn dự án đang cần thao tác.
+- Có thể tạo dự án mới ngay trên màn này.
+- Nút đổi sáng/tối nằm trên chính màn chọn dự án.
 
-Một cụm được coi là liên thông khi từ bất kỳ polygon nào trong cụm đều có thể đi sang các polygon còn lại trong cùng cụm thông qua chuỗi polygon kề nhau.
+### Bước 3: Vào hệ thống
+- Sau khi chọn dự án, hệ thống vào app chính.
+- Thanh điều hướng bên trái sẽ hiển thị các màn phù hợp với vai trò của bạn.
 
-Nếu một cụm bị tách thành nhiều phần rời nhau, phần mềm sẽ coi đó là lỗi liên thông. Khi chuyển polygon thủ công sang cụm khác, TerriMap sẽ kiểm tra lại và chặn thao tác nếu làm cụm mất liên thông.
+---
 
-## 2. Khởi Động Phần Mềm
+## 3) Bố cục giao diện hiện tại
 
-Mở terminal tại thư mục dự án:
-
-```powershell
-cd <thu_muc_du_an_terrimap>
-npm run dev
-```
-
-Sau đó mở trình duyệt tại địa chỉ Vite hiển thị trong terminal, thường là:
-
-```text
-http://127.0.0.1:5173
-```
-
-Nếu chưa cấu hình Supabase hoặc biến môi trường, phần mềm chạy ở chế độ mock/offline để phục vụ demo và kiểm thử.
-
-## 3. Bố Cục Giao Diện
-
-Sau khi vào phần mềm, giao diện chính gồm:
-
-- Thanh điều hướng bên trái.
-- Thanh thông tin phía trên.
-- Khu vực nội dung chính.
-- Bản đồ tương tác ở các màn liên quan đến khu vực và phân chia.
-
-Các mục điều hướng chính:
+Thanh điều hướng chính gồm:
 
 | Mục | Mục đích |
 | --- | --- |
-| Tổng quan | Xem trạng thái tổng thể của dữ liệu và workflow |
-| Khu vực & bản đồ | Chọn khu vực, xem bản đồ, vẽ polygon, chỉnh cụm |
-| Nhân sự Sales | Quản lý nhân viên sales |
-| Phân chia lãnh thổ | Chạy thuật toán phân chia cụm |
-| So sánh thuật toán | So sánh hai kịch bản thuật toán |
-| Cài đặt | Cấu hình tài khoản và hệ thống |
+| Tổng quan | Xem KPI và báo cáo theo khu vực |
+| Khu vực & bản đồ | Chọn khu vực, tạo khu vực, xem và chỉnh vùng trên bản đồ |
+| Nhân sự | Quản lý thành viên dự án |
+| Phân chia lãnh thổ | Chỉnh tay vùng/cụm theo nghiệp vụ |
+| Vận hành | Theo dõi báo cáo theo tháng và theo khu vực |
+| Phân chia thuật toán | Chạy các thuật toán phân chia và so sánh kết quả |
+| Cài đặt | Hồ sơ cá nhân và cấu hình hệ thống |
 
-## 4. Luồng Sử Dụng Khuyến Nghị
+Vai trò được hiển thị theo ba nhóm chính:
+- **Quản trị viên**
+- **Điều phối viên**
+- **Nhân sự**
 
-### 4.0 Quick start (đi đúng workflow)
+---
 
-1. Đăng nhập.
-2. Chọn **Dự án** (hoặc tạo dự án mới).
-3. Trên thanh trên cùng (top bar), bạn có thể:
-   - Đổi **giao diện** (Light/Dark/System).
-   - Dự án hiện cố định **tiếng Việt**.
-4. Đi theo các bước chuẩn bên dưới để đảm bảo dữ liệu “đủ điều kiện” trước khi chạy thuật toán.
+## 4) Quy trình sử dụng khuyến nghị
 
-Luồng chuẩn nên đi theo thứ tự sau:
+Thứ tự nên đi:
 
-1. Chọn hoặc tạo khu vực.
-2. Kiểm tra danh sách polygon trong khu vực.
-3. Kiểm tra dữ liệu khách hàng, đơn hàng.
-4. Kiểm tra topology polygon và liên thông địa lý.
-5. Tạo hoặc kiểm tra danh sách sales.
-6. Chạy thuật toán phân chia.
-7. Xem kết quả trên bản đồ.
-8. Chỉnh tay polygon sang cụm khác nếu cần.
-9. Lưu snapshot hoặc export dữ liệu.
+1. Chọn dự án.
+2. Vào **Tổng quan** để xem bức tranh chung.
+3. Vào **Khu vực & bản đồ** để tạo hoặc chọn khu vực.
+4. Vào **Nhân sự** để kiểm tra thành viên và vai trò.
+5. Vào **Phân chia lãnh thổ** để chỉnh tay vùng/cụm nếu cần.
+6. Vào **Vận hành** để theo dõi báo cáo theo tháng.
+7. Vào **Phân chia thuật toán** để chạy thuật toán khi muốn tối ưu.
+8. Lưu map hoặc snapshot nếu cần quay lại trạng thái trước đó.
 
-Không nên chạy thuật toán khi khu vực chưa có đủ polygon, chưa có sales hoặc dữ liệu polygon đang lỗi topology.
+> Lưu ý: phần thuật toán hiện **chỉ chạy khi bấm nút Chạy phân chia**, không tự chạy khi đổi cấu hình.
 
-### 4.1 Workflow theo vai trò
+---
 
-#### Admin (Quản trị)
-- Thiết lập dự án/khu vực → import/vẽ zones → cấu hình Sales/Users → chạy thuật toán → chốt snapshot → export.
+## 5) Mô tả từng màn hình
 
-#### Coordinator (Điều phối)
-- Chọn khu vực → kiểm tra trạng thái sẵn sàng (Topology/Liên thông) → chạy thuật toán/điều chỉnh → theo dõi lỗi liên thông → chốt snapshot.
-
-#### Sales
-- Xem cụm/vùng được giao → kiểm tra khối lượng (khách hàng/đơn hàng) → gửi đánh giá (feedback) nếu có.
-
-## 5. Màn Tổng Quan
-
-Màn Tổng quan cho biết tình trạng sẵn sàng của dự án.
-
-Bạn sẽ thấy các bước:
-
-- Khu vực.
-- Zones.
-- Sales.
-- Topology.
-- Liên thông.
-
-Ý nghĩa:
-
-- Nếu tất cả bước đều xanh, khu vực đã sẵn sàng để chạy phân chia.
-- Nếu có cảnh báo topology, cần kiểm tra polygon chồng lắp hoặc tự cắt.
-- Nếu có cảnh báo liên thông, dữ liệu polygon có thể đang bị tách rời hoặc không đủ quan hệ kề để đảm bảo cụm liên thông.
-
-Màn này cũng hiển thị thống kê theo khu vực:
-
-- Số zones.
-- Số sales.
-- Tỷ lệ phân công.
-- Trạng thái liên thông.
-- Mức cân bằng tải.
-- Số cụm quá tải hoặc thiếu tải.
-
-## 6. Chọn Và Quản Lý Khu Vực
-
-Vào mục **Khu vực & bản đồ**.
-
-Nếu chưa mở khu vực nào, hệ thống hiển thị các thẻ khu vực. Mỗi thẻ cho biết:
-
-- Tên khu vực.
-- Số zones.
-- Số sales.
-- Số lỗi topology.
-- Số component liên thông.
-- Số zone cô lập.
-
-Để mở khu vực:
-
-1. Chọn thẻ khu vực mong muốn.
-2. Nhấn **Mở khu vực**.
-3. Hệ thống chuyển sang bản đồ của khu vực đó.
-
-Để đổi khu vực khi đang ở bản đồ:
-
-1. Nhấn nút **Đổi khu vực** trên bản đồ.
-2. Chọn khu vực khác từ màn danh sách.
-
-## 7. Sử Dụng Bản Đồ
-
-Màn bản đồ gồm:
-
-- Danh sách khu vực và danh sách vùng ở bên trái.
-- Bản đồ chính ở giữa.
-- Toolbar bản đồ.
-- Chú giải cụm.
-- Popup thông tin polygon khi chọn vùng.
-
-### Chú giải bản đồ
-
-Chú giải hiển thị màu của từng cụm:
-
-- `Cụm 0`, `Cụm 1`, `Cụm 2`, ...
-- Màu xám hoặc viền đứt biểu thị vùng chưa gán.
-- Nếu có cụm mất liên thông, chú giải sẽ cảnh báo cụm có viền đỏ.
-
-### Chọn polygon
-
-Có hai cách chọn polygon:
-
-1. Nhấp trực tiếp vào polygon trên bản đồ.
-2. Nhấp vào tên vùng trong danh sách bên trái.
-
-Khi chọn polygon, popup thông tin xuất hiện trên bản đồ.
-
-## 8. Popup Thông Tin Polygon
-
-Popup polygon hiển thị:
-
-- Tên vùng.
-- ID polygon.
-- Badge cụm hiện tại, ví dụ `C0`.
-- Số khách hàng.
-- Số đơn hàng.
-- Cụm hiện tại.
-- Sales phụ trách.
-
-### Sửa số khách hàng và đơn hàng
-
-Quản trị viên có thể sửa số khách hàng và số đơn hàng ngay trong popup.
-
-Các bước:
-
-1. Chọn polygon.
-2. Nhập số mới vào ô **Số KH** hoặc **Số đơn**.
-3. Nhấn **Lưu**.
-
-Lưu ý:
-
-- Chỉ nhập số không âm.
-- Nếu để trống một ô, giá trị đó không thay đổi.
-- Sau khi lưu, dữ liệu vùng được cập nhật vào store và cơ sở dữ liệu nếu đang online.
-
-### Chuyển polygon sang cụm khác
-
-Đây là thao tác chỉnh tay sau khi đã có kết quả phân chia.
-
-Các bước:
-
-1. Chọn polygon cần chuyển.
-2. Trong popup, tìm mục **Chuyển sang cụm**.
-3. Chọn cụm đích trong dropdown.
-4. Xem preview:
-   - Cụm nguồn còn bao nhiêu vùng.
-   - Cụm đích sẽ có bao nhiêu vùng.
-   - Sales phụ trách sau khi chuyển.
-5. Nhấn **Xác nhận gán**.
-
-Nếu thao tác làm mất liên thông, hệ thống sẽ chặn và hiển thị lỗi ngay trong popup. Khi lỗi xuất hiện, bạn cần chọn cụm khác hoặc chỉnh lại dữ liệu polygon trước.
-
-### Xóa polygon
-
-Quản trị viên có thể xóa polygon:
-
-1. Chọn polygon.
-2. Nhấn **Xóa vùng**.
-3. Xác nhận thao tác.
-
-Khi xóa polygon, assignment liên quan cũng bị loại bỏ.
-
-## 9. Vẽ Polygon Mới
-
-Trong màn bản đồ của khu vực, quản trị viên có thể vẽ polygon mới.
-
-Các bước:
-
-1. Mở khu vực cần thêm polygon.
-2. Chọn công cụ vẽ polygon trên bản đồ.
-3. Nhấp các điểm trên bản đồ để tạo ranh giới.
-4. Hoàn tất polygon.
-5. Nhập tên vùng.
-6. Hệ thống thêm vùng mới vào khu vực hiện tại.
-
-Điều kiện quan trọng:
-
-- Polygon mới không được chồng lắp polygon đã có.
-- Polygon không nên tự cắt.
-- Nếu polygon chồng lắp, hệ thống sẽ từ chối và yêu cầu vẽ lại.
-
-## 10. Quản Lý Sales
-
-Vào mục **Nhân sự Sales** để quản lý đội ngũ bán hàng.
+### 5.1 Tổng quan
+Màn này dành cho người quản lý cấp cao.
 
 Bạn có thể:
+- xem số khu vực địa lý
+- xem số nhân sự
+- xem tổng khách hàng báo cáo
+- xem tổng đơn hàng báo cáo
+- lọc theo toàn bộ khu vực hoặc từng khu vực
+- xem bảng hiệu quả kinh doanh theo khu vực
+
+Màn này không còn tập trung vào thông số kỹ thuật của polygon, mà nhấn mạnh **doanh số, khách hàng và trạng thái báo cáo**.
+
+### 5.2 Khu vực & bản đồ
+Đây là màn làm việc chính với bản đồ.
+
+Bạn có thể:
+- chọn khu vực đang làm việc
+- tạo khu vực mới
+- xem vùng trên bản đồ
+- mở/ẩn phần vùng
+- lưu map
+- chuyển sang khu vực khác
 
-- Thêm nhân viên sales.
-- Sửa thông tin sales.
-- Gán sales vào khu vực.
-- Cấu hình capacity.
-- Xóa sales không còn sử dụng.
+Nếu dự án mới chưa có khu vực, đây là nơi bắt đầu dữ liệu đầu tiên.
+
+### 5.3 Nhân sự
+Màn này dùng để:
+- xem danh sách thành viên dự án
+- kiểm tra email, tên, ngày sinh, số điện thoại
+- kiểm tra vai trò
+- xem khu vực phụ trách nếu có
+- thêm hoặc chỉnh thông tin thành viên theo quyền
 
-Sales dùng để:
+Danh sách thành viên có thể tải dữ liệu từ Supabase hoặc dữ liệu dự phòng cục bộ tùy môi trường.
 
-- Gán phụ trách cụm.
-- Tính tải công việc.
-- Hiển thị thống kê đội ngũ.
-- Xuất báo cáo phân công.
+### 5.4 Phân chia lãnh thổ
+Màn này dùng cho thao tác chỉnh tay vùng và cụm.
 
-## 11. Phân Công Sales Theo Cụm
+Bạn có thể:
+- xem vùng đang chọn
+- chuyển vùng sang cụm khác nếu hợp lệ
+- xem cảnh báo khi làm mất liên thông
+- đối chiếu theo bản đồ
 
-Trong sidebar hoặc phần phân công, mỗi cụm có thể được gán một nhân viên sales.
+Đây là màn giúp điều phối viên và admin xử lý ngoại lệ sau khi chia tự động hoặc sau khi có dữ liệu mới.
 
-Thông tin thường hiển thị:
+### 5.5 Vận hành
+Màn này dùng để theo dõi báo cáo thực tế theo tháng và theo khu vực.
 
-- Cụm.
-- Số vùng trong cụm.
-- Tổng khách hàng.
-- Sales đang phụ trách.
+Bạn có thể:
+- chọn tháng
+- lọc theo khu vực
+- tìm theo cụm, user hoặc ghi chú
+- xem số khách hàng, số đơn hàng, số báo cáo và độ phủ báo cáo
+- xuất CSV nếu cần
 
-Để đổi sales phụ trách:
+Mục tiêu của màn này là cho người quản lý thấy **khu vực nào đã có dữ liệu, khu vực nào còn thiếu, và mức độ phủ báo cáo ra sao**.
 
-1. Tìm cụm cần đổi.
-2. Chọn sales mới trong dropdown.
-3. Hệ thống lưu lại assignment mới.
+### 5.6 Phân chia thuật toán
+Màn này dùng để chạy thuật toán phân chia lãnh thổ.
 
-## 12. Chạy Thuật Toán Phân Chia
+Hiện tại:
+- chỉ chạy khi bấm nút **Chạy phân chia**
+- ưu tiên **chất lượng phương án** thay vì chạy tự động liên tục
+- có overlay báo trạng thái đang chạy
+- có kết quả so sánh và chỉ số chất lượng
 
-Vào mục **Phân chia lãnh thổ**.
+Các thuật toán đang dùng:
+- Greedy Seed Expansion
+- Local Search
+- Simulated Annealing
 
-Trước khi chạy, hãy kiểm tra:
+### 5.7 Cài đặt
+Màn này dùng để:
+- xem/cập nhật thông tin cá nhân
+- lưu thông tin tài khoản
+- kiểm tra cấu hình giao diện và hệ thống
 
-- Đã chọn khu vực.
-- Khu vực có ít nhất 2 polygon.
-- Có đủ sales.
-- Không có lỗi topology.
-- Graph zone trong khu vực liên thông.
+Ứng dụng hiện chỉ dùng tiếng Việt, nên không còn phần chỉnh ngôn ngữ.
 
-### Chọn thuật toán
+---
 
-TerriMap hiện hỗ trợ:
+## 6) Các thao tác chính
 
-| Thuật toán | Mục đích | Đặc điểm |
-| --- | --- | --- |
-| Greedy Seed Expansion | Tạo kết quả nhanh | Mở rộng cụm từ các seed, ưu tiên tốc độ |
-| Local Search Refinement | Cải thiện kết quả greedy | Thử chuyển vùng biên để tăng cân bằng, vẫn kiểm tra liên thông |
-| Simulated Annealing | Tối ưu sâu hơn | Chạy lâu hơn, chấp nhận tìm kiếm rộng hơn để cải thiện cân bằng |
+### Tạo dự án mới
+1. Vào màn chọn dự án.
+2. Bấm **Tạo dự án mới**.
+3. Nhập tên và mô tả.
+4. Lưu.
 
-K-Means đã bị loại bỏ khỏi dự án vì không phù hợp với điều kiện liên thông polygon.
+Hệ thống sẽ tạo dự án theo cách tối ưu để người dùng thấy phản hồi sớm, không phải chờ lâu mới chuyển màn.
 
-### Chọn số cụm
+### Tạo khu vực mới
+1. Vào `Khu vực & bản đồ`.
+2. Bấm **Tạo khu vực mới**.
+3. Nhập tên khu vực.
+4. Lưu.
 
-Nhập hoặc điều chỉnh **Số cụm**.
+### Lưu map
+1. Chỉnh vùng trên bản đồ.
+2. Bấm **Lưu map**.
+3. Hệ thống ghi trạng thái mới và cập nhật ngay danh sách snapshot.
 
-Số cụm nên phù hợp với:
+### Chạy thuật toán
+1. Vào `Phân chia thuật toán`.
+2. Chọn khu vực.
+3. Chọn thuật toán.
+4. Chọn số cụm.
+5. Bấm **Chạy phân chia**.
 
-- Số sales.
-- Quy mô khu vực.
-- Số lượng polygon.
-- Mục tiêu vận hành thực tế.
+Nếu thuật toán chạy lâu, giao diện sẽ hiển thị rõ trạng thái đang chạy để người dùng không tưởng là bị treo.
 
-Ví dụ nếu khu vực có 20 sales chính, bạn thường bắt đầu với 20 cụm.
+---
 
-### Chạy phân chia
+## 7) Cách đọc kết quả thuật toán
 
-1. Chọn thuật toán.
-2. Chọn số cụm.
-3. Nhấn **Chạy phân chia**.
-4. Chờ kết quả.
-5. Xem màu cụm trên bản đồ và các chỉ số đánh giá.
+Kết quả hiện nay nhấn mạnh ba chỉ số:
 
-Nếu thuật toán từ chối chạy vì graph không liên thông, cần sửa dữ liệu polygon hoặc tách khu vực vận hành cho phù hợp.
+- **Cân bằng**: phương án chia đều tới mức nào.
+- **Vi phạm**: số ràng buộc bị vi phạm; càng thấp càng tốt.
+- **Độ rộng cụm tối đa**: cụm nào trải rộng nhất; càng nhỏ càng tốt.
 
-## 13. So Sánh Thuật Toán
+Nguyên tắc đọc nhanh:
+- `Cân bằng` càng cao càng tốt.
+- `Vi phạm` nên bằng 0.
+- `Độ rộng cụm tối đa` càng nhỏ càng tốt.
 
-Vào mục **So sánh thuật toán**.
+---
 
-Mục này cho phép chạy hai kịch bản song song:
+## 8) Lỗi thường gặp và cách xử lý nhanh
 
-- Kịch bản A.
-- Kịch bản B.
+- **Nút bị đứng lâu**: chờ overlay trạng thái, nếu vẫn bất thường thì xem console trình duyệt.
+- **Không thấy dữ liệu đúng dự án**: bấm `Đổi dự án` rồi chọn lại dự án.
+- **Thiếu khu vực**: tạo khu vực mới trong `Khu vực & bản đồ`.
+- **Thuật toán chạy lâu**: đó là do chất lượng phương án đang được ưu tiên, không còn tự chạy ngầm.
+- **Chữ tiếng Việt lỗi font**: hard refresh một lần để bỏ bundle cũ.
 
-Mỗi kịch bản có thể chọn:
+---
 
-- Thuật toán.
-- Số cụm.
+## 9) Ghi chú cho người vận hành
 
-Sau khi chạy, bạn so sánh:
+- Dự án hiện chỉ dùng tiếng Việt.
+- Không còn nút đổi ngôn ngữ.
+- Các thao tác save quan trọng đã được tối ưu theo hướng **local-first** để giảm cảm giác chờ.
+- Một số tên kỹ thuật bên trong mã nguồn vẫn có thể dùng từ cũ như `district`, `polygon` để giữ ổn định hệ thống, nhưng giao diện hiển thị đã chuẩn hoá theo tiếng Việt.
 
-- Điểm cân bằng.
-- Số vi phạm.
-- Thời gian chạy.
-- Bản đồ kết quả.
-
-Khi hài lòng với một kịch bản, bạn có thể áp dụng kết quả đó cho dữ liệu hiện tại.
-
-## 14. Kiểm Tra Liên Thông
-
-TerriMap ưu tiên điều kiện liên thông. Điều này ảnh hưởng cả thuật toán tự động và chỉnh tay.
-
-### Khi nào bị lỗi liên thông?
-
-Lỗi xảy ra khi một cụm có nhiều polygon nhưng các polygon đó không nối được với nhau qua quan hệ kề.
-
-Ví dụ:
-
-- Cụm C0 có 10 polygon.
-- 6 polygon nằm ở phía tây.
-- 4 polygon nằm rời ở phía đông.
-- Không có chuỗi polygon kề nhau nối hai nhóm này.
-
-Khi đó C0 bị coi là mất liên thông.
-
-### Hệ thống xử lý thế nào?
-
-- Thuật toán sẽ cố tạo các cụm liên thông.
-- Nếu dữ liệu đầu vào không thể đảm bảo liên thông, thuật toán có thể từ chối chạy.
-- Khi chuyển polygon thủ công, hệ thống kiểm tra lại và chặn thao tác nếu làm cụm mất liên thông.
-
-### Người dùng cần làm gì?
-
-Nếu gặp lỗi liên thông:
-
-1. Kiểm tra polygon cô lập.
-2. Kiểm tra khoảng cách giữa các polygon.
-3. Kiểm tra polygon có bị vẽ sai hoặc thiếu vùng trung gian không.
-4. Nếu khu vực thực sự bị tách rời, cân nhắc tách thành nhiều khu vực vận hành khác nhau.
-
-## 15. Kiểm Tra Topology Polygon
-
-Topology là tính hợp lệ hình học của polygon.
-
-TerriMap kiểm tra các lỗi quan trọng:
-
-- Polygon chồng lắp nhau.
-- Polygon tự cắt.
-- Polygon trùng nhau.
-- Import dữ liệu có hình học không hợp lệ.
-
-Nếu dữ liệu topology lỗi, thuật toán không nên chạy vì kết quả phân chia có thể sai hoặc không có ý nghĩa.
-
-## 16. Snapshot Và Lịch Sử
-
-Snapshot là bản lưu trạng thái phân chia tại một thời điểm.
-
-Snapshot thường gồm:
-
-- Danh sách zones.
-- Assignments.
-- Thời điểm tạo.
-- Nhãn snapshot.
-
-Khi nào nên tạo snapshot:
-
-- Trước khi chạy thuật toán mới.
-- Sau khi có kết quả phân chia tốt.
-- Trước khi chỉnh tay nhiều polygon.
-- Trước khi export báo cáo.
-
-Snapshot giúp bạn so sánh hoặc quay lại kết quả cũ nếu cần.
-
-## 17. So Sánh Snapshot
-
-Màn so sánh snapshot cho biết:
-
-- Số vùng ở mỗi snapshot.
-- Số cụm ở mỗi snapshot.
-- Các vùng đã thay đổi cụm.
-- Cụm trước và cụm sau.
-
-Thông tin này hữu ích khi bạn muốn biết thuật toán hoặc chỉnh tay đã thay đổi những vùng nào.
-
-## 18. Export Dữ Liệu
-
-TerriMap hỗ trợ export phục vụ báo cáo và tích hợp.
-
-Các dạng export thường có:
-
-- CSV assignments.
-- CSV danh sách zones.
-- CSV ma trận kề.
-- GeoJSON.
-- Báo cáo PDF hoặc trang in.
-
-### CSV assignments
-
-Phù hợp để đưa vào Excel hoặc hệ thống CRM.
-
-Thông tin thường gồm:
-
-- Zone ID.
-- Tên vùng.
-- Cụm.
-- Sales phụ trách.
-- Khách hàng.
-- Đơn hàng.
-
-### GeoJSON
-
-Phù hợp để dùng với:
-
-- QGIS.
-- Mapbox.
-- Các hệ thống GIS.
-- Công cụ phân tích bản đồ khác.
-
-## 19. Vai Trò Người Dùng
-
-### Quản trị viên
-
-Quản trị viên có quyền đầy đủ:
-
-- Chọn và quản lý khu vực.
-- Vẽ polygon.
-- Sửa số khách hàng, số đơn hàng.
-- Xóa polygon.
-- Chạy thuật toán.
-- Chỉnh polygon sang cụm khác.
-- Quản lý sales.
-- Tạo snapshot.
-- Export dữ liệu.
-
-### Điều phối viên
-
-Điều phối viên tập trung vào vận hành:
-
-- Xem khu vực được phân quyền.
-- Xem danh sách vùng.
-- Nhập hoặc kiểm tra chỉ số theo tháng.
-- Chỉnh polygon sang cụm khác nếu được phép.
-- Theo dõi đội sales.
-
-### Sales
-
-Sales chủ yếu xem thông tin:
-
-- Cụm của mình.
-- Các vùng được giao.
-- Tổng khách hàng.
-- Tổng đơn hàng.
-
-Sales không chạy thuật toán và không quản lý dữ liệu hệ thống.
-
-## 20. Các Lỗi Thường Gặp
-
-### Không chạy được thuật toán
-
-Nguyên nhân có thể:
-
-- Chưa chọn khu vực.
-- Khu vực có ít hơn 2 polygon.
-- Số cụm không hợp lệ.
-- Graph zone không liên thông.
-- Có lỗi topology.
-
-Cách xử lý:
-
-1. Vào Tổng quan để xem bước nào chưa đạt.
-2. Kiểm tra khu vực đang chọn.
-3. Kiểm tra danh sách polygon.
-4. Kiểm tra polygon cô lập hoặc topology lỗi.
-5. Chạy lại sau khi sửa dữ liệu.
-
-### Không chuyển được polygon sang cụm khác
-
-Nguyên nhân phổ biến:
-
-- Chuyển polygon làm cụm nguồn bị tách rời.
-- Chuyển polygon làm cụm đích hoặc toàn bộ kết quả có lỗi liên thông.
-- Polygon đang là vùng duy nhất giữ vai trò nối các phần của cụm.
-
-Cách xử lý:
-
-1. Chọn cụm đích khác.
-2. Chuyển một polygon liền kề trước.
-3. Chạy lại thuật toán để tạo kết quả nền tốt hơn.
-4. Kiểm tra dữ liệu polygon nếu cụm bị tách bất thường.
-
-### Polygon mới không được thêm
-
-Nguyên nhân có thể:
-
-- Polygon chồng lắp polygon hiện có.
-- Polygon tự cắt.
-- Polygon không đủ điểm.
-
-Cách xử lý:
-
-- Vẽ lại polygon gọn hơn.
-- Tránh cắt qua vùng đã có.
-- Kiểm tra ranh giới trước khi hoàn tất.
-
-### Bản đồ không hiện dữ liệu
-
-Nguyên nhân có thể:
-
-- Chưa chọn khu vực.
-- Khu vực chưa có zones.
-- Dữ liệu đang tải.
-- Supabase chưa cấu hình và mock data không có khu vực tương ứng.
-
-Cách xử lý:
-
-1. Vào Khu vực & bản đồ.
-2. Chọn khu vực có zones.
-3. Kiểm tra trạng thái dữ liệu mock/offline hoặc online.
-4. Reload trang nếu cần.
-
-## 21. Khuyến Nghị Vận Hành
-
-Để kết quả phân chia tốt và ổn định:
-
-- Luôn kiểm tra topology trước khi chạy thuật toán.
-- Không import polygon chồng lắp.
-- Không cố gộp các vùng địa lý quá xa vào cùng một khu vực.
-- Chọn số cụm phù hợp với số sales.
-- Sau mỗi lần chỉnh tay nhiều polygon, nên tạo snapshot.
-- Khi cần kết quả nhanh, dùng Greedy.
-- Khi cần kết quả cân bằng hơn, dùng Local Search.
-- Khi cần tối ưu sâu và chấp nhận chạy lâu hơn, dùng Simulated Annealing.
-
-## 22. Checklist Trước Khi Chốt Kết Quả
-
-Trước khi export hoặc đưa kết quả vào vận hành, kiểm tra:
-
-- Đã chọn đúng khu vực.
-- Không còn lỗi topology.
-- Không có vùng cô lập bất thường.
-- Không có cụm mất liên thông.
-- Số cụm phù hợp với số sales.
-- Tải khách hàng và đơn hàng giữa các cụm chấp nhận được.
-- Sales phụ trách đã đúng.
-- Đã tạo snapshot lưu trạng thái.
-- Đã export file cần thiết.
-
-## 23. Ghi Chú Kỹ Thuật Cho Người Quản Trị
-
-Trong code và database, thuật ngữ kỹ thuật vẫn có thể là `districtId` để giữ ổn định schema, API và test. Trong giao diện người dùng, thuật ngữ hiển thị là **cụm**.
-
-Không nên đổi tên field kỹ thuật nếu không có kế hoạch migration đầy đủ, vì có thể ảnh hưởng:
-
-- Dữ liệu database.
-- Export CSV.
-- Test suite.
-- Thuật toán phân chia.
-- Các service và facade.

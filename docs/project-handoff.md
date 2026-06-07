@@ -1,198 +1,190 @@
 # TerriMap Project Handoff
 
-This file captures the current project context so the work can be continued from another machine using the same GitHub repository.
+Tài liệu này tóm tắt trạng thái hiện tại của TerriMap để có thể tiếp tục làm việc ngay trên repo này.
 
 ## Repository
 
-- Local path used during the latest work session: `C:\Users\IT-THIEN\terrimap`
+- Local path hiện tại: `C:\Users\Thien\Documents\Terrimap`
 - GitHub remote: `https://github.com/ZileanMaster/terrimap.git`
-- Main branch: `main`
-- Package manager: npm
-- Local dev command: `npm run dev`
-- Verification commands:
+- Branch chính: `main`
+- Package manager: `npm`
+- Lệnh chạy local: `npm run dev`
+- Lệnh kiểm tra chính:
   - `npm run typecheck`
   - `npm run test`
+  - `npm run build`
 
-## Current Product Direction
+---
 
-TerriMap is a web app for designing and operating sales territories on a map. The product workflow is:
+## Mục tiêu sản phẩm hiện tại
 
-1. Choose an operating region.
-2. Review or draw polygon zones.
-3. Validate polygon topology and geographic connectivity.
-4. Manage sales staff.
-5. Run a partition algorithm.
-6. Review the cluster map.
-7. Manually move polygons between clusters if needed.
-8. Save snapshots or export data.
+TerriMap là web app hỗ trợ **quản lý lãnh thổ kinh doanh theo khu vực**. Luồng hiện tại tập trung vào:
 
-User-facing terminology has been changed from the technical word `district` to the Vietnamese term **"cụm"**. The code and database still use technical names such as `districtId` to avoid schema, API, service and test churn.
+1. Chọn dự án làm việc.
+2. Xem tổng quan KPI và báo cáo theo khu vực.
+3. Quản lý khu vực và bản đồ.
+4. Quản lý nhân sự dự án.
+5. Điều phối lãnh thổ thủ công.
+6. Theo dõi báo cáo vận hành theo tháng.
+7. Chạy thuật toán phân chia khi cần tối ưu.
 
-## Important Domain Rules
+Giao diện người dùng hiện **chỉ dùng tiếng Việt**.
+
+---
+
+## Thanh điều hướng hiện tại
+
+Nav chính của app:
+
+- `Tổng quan`
+- `Khu vực & bản đồ`
+- `Nhân sự`
+- `Phân chia lãnh thổ`
+- `Vận hành`
+- `Phân chia thuật toán`
+- `Cài đặt`
+
+Nút:
+- `Đổi dự án` nằm ở top bar để quay về màn chọn dự án.
+- Theme toggle là icon-based và có trên màn chọn dự án cũng như app chính.
+
+---
+
+## Trạng thái sản phẩm quan trọng
+
+### 1. Chọn dự án
+
+- Màn chọn dự án có theme toggle.
+- Tạo dự án mới được tối ưu theo hướng optimistic/local-first để người dùng thấy phản hồi nhanh.
+- Tạo dự án xong sẽ chuyển vào dự án mới ngay, sau đó đồng bộ nền với Supabase.
+
+### 2. Tổng quan
+
+- Màn dành cho quản lý cấp cao.
+- Hiển thị KPI kinh doanh theo khu vực.
+- Có bộ lọc khu vực ở đầu màn.
+- Phần báo cáo tập trung vào khách hàng, đơn hàng, số báo cáo, độ phủ và nhận xét.
+
+### 3. Khu vực & bản đồ
+
+- Có chọn khu vực hiện tại.
+- Có tạo khu vực mới ngay trong màn.
+- Có lưu map/snapshot.
+- Trạng thái khu vực đang xem phải reset đúng khi đổi dự án.
+
+### 4. Nhân sự
+
+- Màn quản lý thành viên dự án.
+- Load dữ liệu thành viên có timeout bảo vệ để không treo vô hạn.
+
+### 5. Phân chia lãnh thổ
+
+- Dùng cho chỉnh tay vùng/cụm.
+- Có kiểm tra liên thông khi chuyển vùng.
+
+### 6. Vận hành
+
+- Theo dõi báo cáo theo tháng/khu vực.
+- Hỗ trợ lọc theo cụm/user/ghi chú.
+- Dữ liệu demo có thể được seed cho project test để demo.
+
+### 7. Phân chia thuật toán
+
+- Đã đổi theo hướng **manual execution**: chỉ chạy khi bấm nút.
+- SA đang chạy trong web worker để tránh làm đơ UI.
+- Có overlay trạng thái đang chạy.
+- Kết quả thuật toán ưu tiên chất lượng cân bằng / liên thông / độ ổn định.
+
+---
+
+## Quy tắc kỹ thuật quan trọng
 
 ### Connectivity
 
-A cluster is valid only when all polygons in that cluster are connected through adjacency relationships.
+- Cụm hợp lệ phải là tập liên thông theo adjacency.
+- Khi chuyển vùng giữa cụm, nếu làm mất liên thông thì thao tác phải bị chặn.
 
-Manual polygon reassignment must not break connectivity. If a move would disconnect a cluster, the UI now reports the error inline in the polygon popup instead of using a browser alert.
+### Topology
 
-### Polygon Topology
+- Không chấp nhận polygon tự cắt, chồng lắp hoặc dữ liệu hình học lỗi.
 
-The project validates polygon topology to reject or guard against:
+### Thuật toán
 
-- Overlapping polygons.
-- Duplicate/coincident polygons.
-- Self-intersecting polygons.
-- Invalid imported/API/database polygon data where topology checks are reached.
+Các thuật toán hiện có:
 
-Shared boundaries are allowed. Overlap and crossing are not allowed.
+- Greedy Seed Expansion
+- Local Search
+- Simulated Annealing
 
-### K-Means
+Hiện tại chúng được dùng với ưu tiên chất lượng hơn là tốc độ.
 
-K-Means has been removed from the project because centroid clustering does not guarantee connected polygon clusters.
+### Local-first UX
 
-## Algorithms
+Các thao tác quan trọng được thiết kế theo hướng:
 
-The project currently exposes these partition algorithms:
+- cập nhật local state trước
+- đồng bộ Supabase ở nền sau
+- không khóa toàn màn hình nếu không cần thiết
 
-- Greedy Seed Expansion.
-- Local Search Refinement.
-- Simulated Annealing.
+Điều này áp dụng rõ cho:
+- logout
+- tạo dự án
+- lưu map/snapshot
+- lưu báo cáo
+- một số thao tác cập nhật danh sách
 
-All partitioning logic should preserve or validate connected clusters. Avoid adding algorithms that assign by centroid alone unless they include strict connectivity repair and validation.
+---
 
-## Recent Completed Work
+## Những file lõi nên đọc khi tiếp tục
 
-### TypeScript and Test Fixes
-
-The project was verified with:
-
-```powershell
-npm install
-npm run typecheck
-npm run test
-```
-
-The latest verification before this handoff passed:
-
-- Typecheck: pass.
-- Tests: 15 files passed.
-- Tests total: 379 passed.
-
-### Connectivity Hardening
-
-The project no longer uses artificial bridge edges such as "Tertiary Bridge". Partitioning uses strict adjacency from geometry rules. If the input graph is disconnected and the algorithm cannot guarantee connected output, it should fail instead of silently producing invalid clusters.
-
-### UI/UX Updates
-
-The dashboard was redesigned around a clearer workflow:
-
-- Tổng quan.
-- Khu vực & bản đồ.
-- Nhân sự Sales.
-- Phân chia lãnh thổ.
-- So sánh thuật toán.
-- Cài đặt.
-
-The polygon popup has been improved:
-
-- Shows polygon name and ID.
-- Shows current cluster badge, for example `C0`.
-- Shows customers and orders.
-- Shows current cluster and sales owner.
-- Supports editing customer/order metrics for admin.
-- Supports moving a polygon to another cluster.
-- Shows a move preview before confirmation.
-- Shows connectivity errors inline.
-- No longer supports moving polygon between regions from this popup.
-
-A map legend component was added:
-
-- `src/components/map/MapLegend.tsx`
-- Shows cluster colors.
-- Shows unassigned state.
-- Warns when disconnected clusters exist.
-
-### Documentation
-
-The Vietnamese user guide was rewritten:
-
-- `docs/USER_GUIDE.vi.md`
-
-It now documents the current UI, cluster terminology, workflow, algorithms, connectivity, topology, snapshots, export and common errors.
-
-## Files Most Recently Touched
-
-UI and terminology:
-
-- `src/components/map/ZoneInfoPanel.tsx`
-- `src/components/map/MapLegend.tsx`
-- `src/components/map/TerritoryMap.tsx`
-- `src/components/layout/Sidebar.tsx`
-- `src/components/layout/RightPanel.tsx`
-- `src/components/assignment/DistrictAgentAssigner.tsx`
-- `src/components/algorithm/AlgorithmComparator.tsx`
-- `src/components/snapshot/SnapshotCompare.tsx`
+- `src/App.tsx`
+- `src/store/authStore.ts`
+- `src/store/uiStore.ts`
+- `src/pages/ProjectSelectPage.tsx`
+- `src/pages/DashboardViews.tsx`
 - `src/pages/AdminPage.tsx`
 - `src/pages/CoordinatorPage.tsx`
-- `src/i18n/vi.json`
-- `src/i18n/en.json`
+- `src/components/layout/DashboardLayout.tsx`
+- `src/components/layout/RegionSelector.tsx`
+- `src/components/algorithm/AlgorithmComparator.tsx`
+- `src/components/algorithm/ResultMetrics.tsx`
+- `src/components/snapshot/SnapshotManager.tsx`
+- `src/services/db.ts`
+- `src/services/districtReportsDb.ts`
+- `src/services/metricsDb.ts`
+- `lib/partition.ts`
+- `src/hooks/useSAWorker.ts`
 
-Documentation:
+---
 
-- `docs/USER_GUIDE.vi.md`
-- `docs/project-handoff.md`
+## Ghi chú về dữ liệu và triển khai
 
-## How To Continue On Another Machine
+- Một số project demo/test có thể được seed dữ liệu mẫu để trình diễn.
+- Vercel đang gắn với GitHub `main`, nên push lên `main` sẽ tự deploy.
+- Supabase có thể chạy trực tuyến hoặc local tuỳ môi trường, nhưng UI hiện đã được tối ưu để tránh phụ thuộc cảm giác chờ quá lâu.
 
-Clone or update the repository:
+---
 
-```powershell
-git clone https://github.com/ZileanMaster/terrimap.git
-cd terrimap
-npm install
-```
+## Lưu ý khi tiếp tục work
 
-Run verification:
+- Không còn menu đổi ngôn ngữ.
+- `Nhân sự Sales` hiện đã là `Nhân sự`.
+- `Phân chia tự động` trước đây đã đổi thành `Phân chia thuật toán`.
+- Tránh làm lại luồng tự chạy thuật toán khi thay đổi cấu hình.
+- Nếu sửa thuật toán, không đổi logic cốt lõi nếu chưa có lý do rõ ràng; ưu tiên tối ưu hiệu năng và trải nghiệm người dùng.
 
-```powershell
-npm run typecheck
-npm run test
-```
+---
 
-Start the app:
+## Kế hoạch kiểm tra nhanh sau mỗi thay đổi
 
-```powershell
-npm run dev
-```
-
-Open the Vite URL shown in the terminal, usually:
-
-```text
-http://127.0.0.1:5173
-```
-
-When continuing work on another machine, start by reading this file and then inspect the current codebase:
-
-```text
-Read docs/project-handoff.md first, then continue with the TerriMap codebase.
-```
-
-## Current Caveats
-
-- The UI uses "cụm", but many internal code symbols still use `district`. This is intentional.
-- Some older source comments may still mention district for technical clarity.
-- Some legacy UI areas still use browser `alert()` for unrelated workflows such as member management or snapshot messages. Polygon cluster reassignment specifically was moved to inline errors.
-- If Vercel is connected to GitHub `main`, a successful push to `main` should trigger deployment automatically.
-
-## Commit Hygiene
-
-Before committing future work:
-
-```powershell
-git status
-npm run typecheck
-npm run test
-```
-
-Avoid committing generated local artifacts such as Playwright reports, screenshots or temporary files unless explicitly needed.
+1. `npm run typecheck`
+2. `npm run test`
+3. `npm run build`
+4. Mở app local bằng `npm run dev`
+5. Kiểm tra các màn:
+   - chọn dự án
+   - tổng quan
+   - khu vực & bản đồ
+   - nhân sự
+   - phân chia thuật toán
+   - vận hành
