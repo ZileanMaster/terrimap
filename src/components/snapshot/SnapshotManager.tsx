@@ -42,9 +42,9 @@ export default function SnapshotManager() {
   const setAssignments = useDataStore((s) => s.setAssignments)
 
   const reloadSnapshots = useCallback(async () => {
-    const data = await loadSnapshots()
+    const data = await loadSnapshots(currentProjectId ?? undefined)
     setSnapshots(data as SnapshotItem[])
-  }, [])
+  }, [currentProjectId])
 
   // Load snapshots on mount and whenever project changes.
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function SnapshotManager() {
       }
 
       setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
-      await saveSnapshot(id, label.trim(), { zones, assignments }, period)
+      await saveSnapshot(id, label.trim(), { zones, assignments }, period, currentProjectId ?? undefined)
       void reloadSnapshots().catch(() => {
         // Keep optimistic local state if refresh fails.
       })
@@ -172,7 +172,7 @@ export default function SnapshotManager() {
     if (!window.confirm('Xóa snapshot này?')) return
     setSnapshots((prev) => prev.filter((s) => s.id !== snapId))
     void (async () => {
-      await deleteSnapshot(snapId, currentProjectId)
+      await deleteSnapshot(snapId, currentProjectId ?? undefined)
       await reloadSnapshots()
     })().catch((error) => {
       console.error('[SnapshotManager] delete error:', error)

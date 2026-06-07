@@ -38,14 +38,14 @@ export default function SalesPage() {
   const [latestSnapshotId, setLatestSnapshotId]    = useState('')
   const [latestSnapshotLabel, setLatestSnapshotLabel] = useState('')
   useEffect(() => {
-    loadSnapshots().then((snaps) => {
+    loadSnapshots(currentProjectId ?? undefined).then((snaps) => {
       const first = snaps[0]
       if (first) {
         setLatestSnapshotId(first.id)
         setLatestSnapshotLabel(first.label)
       }
     })
-  }, [])
+  }, [currentProjectId])
 
   // Filter to this sales agent's district (safe — SalesFacade may throw)
   const { myZones, myAssignments } = useMemo<{

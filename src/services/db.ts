@@ -426,9 +426,11 @@ export async function saveSnapshot(
   label: string,
   data: { zones: Zone[]; assignments: Assignment[] } | object,
   period?: string,  // '2026-04' — optional, gắn tháng với snapshot
+  projectId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
+  const scopedProjectId = projectId ?? _currentProjectId
   // LUÔN lưu localStorage (scoped by project)
-  const key = lsKey('terrimap_snapshots')
+  const key = scopedKey('terrimap_snapshots', scopedProjectId)
   try {
     const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[]
     existing.unshift({ id, label, data, period, created_at: new Date().toISOString() })
@@ -442,7 +444,7 @@ export async function saveSnapshot(
   if (isOnline()) {
     try {
       const row: Record<string, unknown> = { id, label, data, period }
-      if (_currentProjectId) row.project_id = _currentProjectId
+      if (scopedProjectId) row.project_id = scopedProjectId
       void (async () => {
         try {
           const { error } = await supabase!.from('snapshots').upsert(row)
@@ -464,13 +466,22 @@ export async function saveSnapshot(
  * Load snapshots with full data (newest first, max 50).
  * Offline fallback: localStorage.
  */
-export async function loadSnapshots(): Promise<Array<{
+export async function loadSnapshots(projectId?: string): Promise<Array<{
+  id: string; label: string
+  data: { zones: Zone[]; assignments: Assignment[] }
+  created_at: string
+}>> {
+  return loadSnapshotsForProject(projectId ?? _currentProjectId)
+}
+
+export async function loadSnapshotsForProject(projectId?: string): Promise<Array<{
   id: string; label: string
   data: { zones: Zone[]; assignments: Assignment[] }
   created_at: string
 }>> {
   // Read project-scoped localStorage
-  const key = lsKey('terrimap_snapshots')
+  const scopedProjectId = projectId ?? _currentProjectId
+  const key = scopedKey('terrimap_snapshots', scopedProjectId)
   let localSnaps: any[] = []
   try {
     localSnaps = JSON.parse(localStorage.getItem(key) ?? '[]')
@@ -485,7 +496,7 @@ export async function loadSnapshots(): Promise<Array<{
       .select('id, label, data, created_at')
       .order('created_at', { ascending: false })
       .limit(50)
-    if (_currentProjectId) query = query.eq('project_id', _currentProjectId)
+    if (scopedProjectId) query = query.eq('project_id', scopedProjectId)
 
     const { data, error } = await query
 
@@ -511,7 +522,8 @@ export async function loadSnapshots(): Promise<Array<{
  * then syncs Supabase in the background when online.
  */
 export async function deleteSnapshot(id: string, projectId?: string): Promise<void> {
-  const key = scopedKey('terrimap_snapshots', projectId ?? _currentProjectId)
+  const scopedProjectId = projectId ?? _currentProjectId
+  const key = scopedKey('terrimap_snapshots', scopedProjectId)
   try {
     const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[]
     const filtered = existing.filter((s: any) => s?.id !== id)
@@ -524,7 +536,6 @@ export async function deleteSnapshot(id: string, projectId?: string): Promise<vo
 
   try {
     let query = supabase!.from('snapshots').delete().eq('id', id)
-    const scopedProjectId = projectId ?? _currentProjectId
     if (scopedProjectId) {
       query = query.eq('project_id', scopedProjectId)
     }
