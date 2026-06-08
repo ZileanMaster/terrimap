@@ -4,7 +4,6 @@ import { useDataStore } from '../store/dataStore.js'
 import { useFacade } from '../context/FacadeContext.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { getUserIdentityCandidates, resolveUserKey } from '../utils/userIdentity.js'
-import type { Assignment, Zone } from '../../facades/viewmodels.js'
 
 export default function SalesReportView() {
   const zones = useDataStore((s) => s.zones)
@@ -29,11 +28,11 @@ export default function SalesReportView() {
   const reportTargets = useMemo(() => {
     const matchedDistrictIds = new Set<number>()
     const matchedZoneIds = new Set<string>()
-    const matchedRegionIds = new Set<string>()
 
     for (const assignment of assignments) {
-      const isMine = identityCandidates.includes(assignment.salesAgentId)
-        || (currentUserKey && assignment.salesAgentId === currentUserKey)
+      const isMine =
+        identityCandidates.includes(assignment.salesAgentId)
+        || (currentUserKey !== '' && assignment.salesAgentId === currentUserKey)
       if (!isMine) continue
       matchedDistrictIds.add(assignment.districtId)
       matchedZoneIds.add(assignment.zoneId)
@@ -50,7 +49,7 @@ export default function SalesReportView() {
           }
         }
       } catch {
-        // keep empty; the empty state below will explain what to fix.
+        // Giữ trạng thái rỗng để hiển thị hướng dẫn bên dưới.
       }
     }
 
@@ -58,21 +57,21 @@ export default function SalesReportView() {
     const targetZones = zones.filter((zone) => matchedZoneIds.has(zone.id))
     const targetAssignments = assignments.filter((assignment) => matchedZoneIds.has(assignment.zoneId))
 
-    const derivedRegionId =
+    const targetRegionId =
       currentRegionId
       ?? targetZones.find((zone) => (zone as any).regionId ?? (zone as any).region_id ?? null)?.regionId
       ?? targetZones.find((zone) => (zone as any).regionId ?? (zone as any).region_id ?? null)?.region_id
       ?? null
 
-    const regionLabel = derivedRegionId
-      ? regions.find((region) => region.id === derivedRegionId)?.name ?? derivedRegionId
-      : 'chưa xác định'
+    const regionLabel = targetRegionId
+      ? regions.find((region) => region.id === targetRegionId)?.name ?? targetRegionId
+      : 'Chưa xác định'
 
     return {
       districtIds,
       zones: targetZones,
       assignments: targetAssignments,
-      regionId: derivedRegionId,
+      regionId: targetRegionId,
       regionLabel,
     }
   }, [assignments, ctx.facade, currentRegionId, currentUserKey, identityCandidates, regions, zones])
@@ -81,7 +80,7 @@ export default function SalesReportView() {
     return (
       <div style={styles.loading}>
         <div style={styles.loadingSpinner} />
-        <p style={styles.loadingText}>⏳ Đang tải dữ liệu...</p>
+        <p style={styles.loadingText}>Đang tải dữ liệu...</p>
       </div>
     )
   }
@@ -94,14 +93,16 @@ export default function SalesReportView() {
         <div style={styles.kicker}>BÁO CÁO DOANH SỐ</div>
         <h1 style={styles.title}>Nhập báo cáo doanh số</h1>
         <p style={styles.subtitle}>
-          Nhân sự nhập số khách hàng, đơn hàng, doanh thu và ghi chú cho các cụm được giao.
+          Nhân sự nhập số khách hàng, số đơn hàng, doanh thu và ghi chú cho các cụm được giao.
           Điều phối và admin sẽ xem được các báo cáo này trong Vận hành và Tổng quan.
         </p>
 
         <div style={styles.summaryRow}>
           <div style={styles.summaryCard}>
             <div style={styles.summaryLabel}>Khu vực báo cáo</div>
-            <div style={styles.summaryValue}>{reportTargets.regionId ? String(reportTargets.regionLabel) : 'Chưa xác định'}</div>
+            <div style={styles.summaryValue}>
+              {reportTargets.regionId ? String(reportTargets.regionLabel) : 'Chưa xác định'}
+            </div>
           </div>
           <div style={styles.summaryCard}>
             <div style={styles.summaryLabel}>Cụm được giao</div>
@@ -109,7 +110,9 @@ export default function SalesReportView() {
           </div>
           <div style={styles.summaryCard}>
             <div style={styles.summaryLabel}>Trạng thái</div>
-            <div style={styles.summaryValue}>{hasTargets ? 'Sẵn sàng nhập báo cáo' : 'Chưa gán cụm cho nhân sự này'}</div>
+            <div style={styles.summaryValue}>
+              {hasTargets ? 'Sẵn sàng nhập báo cáo' : 'Chưa gán cụm cho nhân sự này'}
+            </div>
           </div>
         </div>
       </div>

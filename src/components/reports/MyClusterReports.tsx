@@ -1,11 +1,11 @@
-﻿/**
- * MyClusterReports â€” Users enter KPIs for clusters (districts) they manage.
+/**
+ * MyClusterReports — nơi nhân sự nhập KPI cho các cụm (district) được giao.
  *
- * "Managed" means: at least one assignment exists with salesAgentId === currentUserKey
- * for the current region. This matches existing districtâ†’agent mapping behavior.
+ * "Được giao" nghĩa là có ít nhất một assignment với salesAgentId === currentUserKey
+ * trong khu vực hiện tại. Cách này khớp với logic ánh xạ district → agent đang dùng.
  *
- * Data is stored in localStorage (project-scoped) and optionally Supabase
- * via district_reports table.
+ * Dữ liệu được lưu theo project trong localStorage và có thể đồng bộ lên Supabase
+ * thông qua bảng district_reports.
  */
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
@@ -22,7 +22,13 @@ interface MyClusterReportsProps {
   districtIds?: number[]
 }
 
-type Row = { customers: number; orders: number; revenue: number; note: string; saving: boolean }
+type Row = {
+  customers: number
+  orders: number
+  revenue: number
+  note: string
+  saving: boolean
+}
 
 export default function MyClusterReports({
   currentUserKey,
@@ -39,49 +45,51 @@ export default function MyClusterReports({
   const [loading, setLoading] = useState(false)
 
   const zoneIdsInRegion = useMemo(() => {
-    if (!currentRegionId) return new Set(zones.map((z) => z.id))
-    return new Set(zones.filter((z) => (z as any).regionId === currentRegionId).map((z) => z.id))
+    if (!currentRegionId) return new Set(zones.map((zone) => zone.id))
+    return new Set(zones.filter((zone) => (zone as any).regionId === currentRegionId).map((zone) => zone.id))
   }, [zones, currentRegionId])
 
   const myDistrictIds = useMemo(() => {
     if (districtIds && districtIds.length > 0) {
       return Array.from(new Set(districtIds)).sort((a, b) => a - b)
     }
-    const dids = new Set<number>()
-    for (const a of assignments) {
-      if (!zoneIdsInRegion.has(a.zoneId)) continue
-      if (a.salesAgentId === currentUserKey) dids.add(a.districtId)
+
+    const districtSet = new Set<number>()
+    for (const assignment of assignments) {
+      if (!zoneIdsInRegion.has(assignment.zoneId)) continue
+      if (assignment.salesAgentId === currentUserKey) districtSet.add(assignment.districtId)
     }
-    return Array.from(dids).sort((a, b) => a - b)
+    return Array.from(districtSet).sort((a, b) => a - b)
   }, [districtIds, assignments, zoneIdsInRegion, currentUserKey])
 
   const myReports = useMemo(() => {
-    return reports
-      .filter((r) =>
-        r.userId === currentUserKey
-        && (!currentRegionId || r.regionId === currentRegionId)
-        && myDistrictIds.includes(r.districtId),
-      )
+    return reports.filter(
+      (report) =>
+        report.userId === currentUserKey
+        && (!currentRegionId || report.regionId === currentRegionId)
+        && myDistrictIds.includes(report.districtId),
+    )
   }, [reports, currentUserKey, currentRegionId, myDistrictIds])
 
-  // Load reports for this period
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    loadDistrictReports(period, currentProjectId ?? undefined)
-      .then((rs) => {
-        if (!mounted) return
-        setReports(rs)
 
-        // Prefill rows for my districts from existing reports
+    loadDistrictReports(period, currentProjectId ?? undefined)
+      .then((nextReports) => {
+        if (!mounted) return
+        setReports(nextReports)
+
         const nextRows: Record<number, Row> = {}
-        for (const did of myDistrictIds) {
-          const existing = rs.find((r) =>
-            r.userId === currentUserKey
-            && r.districtId === did
-            && (!currentRegionId || r.regionId === currentRegionId),
+        for (const districtId of myDistrictIds) {
+          const existing = nextReports.find(
+            (report) =>
+              report.userId === currentUserKey
+              && report.districtId === districtId
+              && (!currentRegionId || report.regionId === currentRegionId),
           )
-          nextRows[did] = {
+
+          nextRows[districtId] = {
             customers: existing?.customers ?? 0,
             orders: existing?.orders ?? 0,
             revenue: existing?.revenue ?? 0,
@@ -94,14 +102,25 @@ export default function MyClusterReports({
       .finally(() => {
         if (mounted) setLoading(false)
       })
+
     return () => { mounted = false }
   }, [period, currentProjectId, currentUserKey, currentRegionId, myDistrictIds])
 
-  const setRowField = (districtId: number, field: 'customers' | 'orders' | 'revenue' | 'note', value: string) => {
+  const setRowField = (
+    districtId: number,
+    field: 'customers' | 'orders' | 'revenue' | 'note',
+    value: string,
+  ) => {
     setRows((prev) => {
-      const cur = prev[districtId] ?? { customers: 0, orders: 0, revenue: 0, note: '', saving: false }
+      const current = prev[districtId] ?? {
+        customers: 0,
+        orders: 0,
+        revenue: 0,
+        note: '',
+        saving: false,
+      }
       const next: Row = {
-        ...cur,
+        ...current,
         [field]: field === 'note' ? value : (Number(value) || 0),
       } as Row
       return { ...prev, [districtId]: next }
@@ -110,10 +129,12 @@ export default function MyClusterReports({
 
   const handleSaveOne = useCallback(async (districtId: number) => {
     if (!currentRegionId) return
+
     const row = rows[districtId]
     if (!row) return
 
     setRows((prev) => ({ ...prev, [districtId]: { ...prev[districtId]!, saving: true } }))
+
     try {
       const nextReport: DistrictReport = {
         id: `dr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -130,13 +151,13 @@ export default function MyClusterReports({
       }
 
       setReports((prev) => {
-        const key = (r: DistrictReport) => (
-          r.period === nextReport.period
-          && r.userId === nextReport.userId
-          && r.regionId === nextReport.regionId
-          && r.districtId === nextReport.districtId
+        const sameKey = (report: DistrictReport) => (
+          report.period === nextReport.period
+          && report.userId === nextReport.userId
+          && report.regionId === nextReport.regionId
+          && report.districtId === nextReport.districtId
         )
-        const filtered = prev.filter((r) => !key(r))
+        const filtered = prev.filter((report) => !sameKey(report))
         return [nextReport, ...filtered]
       })
 
@@ -151,10 +172,11 @@ export default function MyClusterReports({
         revenue: row.revenue,
         note: row.note,
       })
+
       void loadDistrictReports(period, currentProjectId ?? undefined)
-        .then((rs) => setReports(rs))
+        .then((nextReports) => setReports(nextReports))
         .catch(() => {
-          // Keep optimistic state if refresh fails.
+          // Giữ lại trạng thái optimistic nếu tải lại thất bại.
         })
     } finally {
       setRows((prev) => ({ ...prev, [districtId]: { ...prev[districtId]!, saving: false } }))
@@ -175,32 +197,30 @@ export default function MyClusterReports({
     >
       <div style={styles.header}>
         <div style={styles.headerCopy}>
-          <div style={styles.kicker}>BÃ¡o cÃ¡o cá»¥m</div>
-          <div style={styles.title}>Sá»‘ liá»‡u cá»§a báº¡n</div>
+          <div style={styles.kicker}>BÁO CÁO CỤM</div>
+          <div style={styles.title}>Số liệu của bạn</div>
           <div style={styles.subtitle}>
             Nhập số khách hàng, số đơn hàng, doanh thu và ghi chú cho các cụm bạn đang quản lý.
           </div>
           <div style={styles.badgeRow}>
             <span style={styles.badge}>{period}</span>
-            <span style={styles.badge}>{myDistrictIds.length} cá»¥m</span>
-            <span style={styles.badge}>{myReports.length} dÃ²ng Ä‘Ã£ lÆ°u</span>
+            <span style={styles.badge}>{myDistrictIds.length} cụm</span>
+            <span style={styles.badge}>{myReports.length} dòng đã lưu</span>
           </div>
         </div>
         <label style={styles.monthWrap}>
-          <span style={styles.monthLabel}>ThÃ¡ng</span>
+          <span style={styles.monthLabel}>Tháng</span>
           <input
             type="month"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
             style={styles.month}
-            aria-label="Chá»n thÃ¡ng"
+            aria-label="Chọn tháng"
           />
         </label>
       </div>
 
-      {loading && (
-        <div style={styles.loading}>Äang táº£i...</div>
-      )}
+      {loading && <div style={styles.loading}>Đang tải...</div>}
 
       {!loading && (
         <div
@@ -211,47 +231,57 @@ export default function MyClusterReports({
         >
           {myReports.length === 0 && (
             <div style={styles.emptyState}>
-              ChÆ°a cÃ³ bÃ¡o cÃ¡o nÃ o trong thÃ¡ng nÃ y. Nháº­p sá»‘ liá»‡u Ä‘á»ƒ dashboard cáº­p nháº­t ngay.
+              Chưa có báo cáo nào trong tháng này. Nhập số liệu để dashboard cập nhật ngay.
             </div>
           )}
-          {myDistrictIds.map((did) => {
-            const row = rows[did] ?? { customers: 0, orders: 0, revenue: 0, note: '', saving: false }
-            const updatedAt = myReports.find((r) => r.districtId === did)?.updatedAt
+
+          {myDistrictIds.map((districtId) => {
+            const row = rows[districtId] ?? {
+              customers: 0,
+              orders: 0,
+              revenue: 0,
+              note: '',
+              saving: false,
+            }
+            const updatedAt = myReports.find((report) => report.districtId === districtId)?.updatedAt
+
             return (
-              <div key={did} style={styles.card}>
+              <div key={districtId} style={styles.card}>
                 <div style={styles.cardTop}>
-                  <div style={styles.cardTitle}>Cá»¥m {did}</div>
+                  <div style={styles.cardTitle}>Cụm {districtId}</div>
                   <button
                     type="button"
                     style={{ ...styles.saveBtn, opacity: row.saving ? 0.7 : 1 }}
                     disabled={row.saving}
-                    onClick={() => handleSaveOne(did)}
+                    onClick={() => handleSaveOne(districtId)}
                   >
-                    {row.saving ? 'Äang lÆ°u...' : 'LÆ°u'}
+                    {row.saving ? 'Đang lưu...' : 'Lưu'}
                   </button>
                 </div>
+
                 <div style={styles.grid}>
                   <label style={styles.field}>
-                    <span style={styles.label}>KhÃ¡ch hÃ ng</span>
+                    <span style={styles.label}>Khách hàng</span>
                     <input
                       type="number"
                       min={0}
                       value={row.customers}
-                      onChange={(e) => setRowField(did, 'customers', e.target.value)}
+                      onChange={(e) => setRowField(districtId, 'customers', e.target.value)}
                       style={styles.input}
                     />
                   </label>
                   <label style={styles.field}>
-                    <span style={styles.label}>ÄÆ¡n hÃ ng</span>
+                    <span style={styles.label}>Đơn hàng</span>
                     <input
                       type="number"
                       min={0}
                       value={row.orders}
-                      onChange={(e) => setRowField(did, 'orders', e.target.value)}
+                      onChange={(e) => setRowField(districtId, 'orders', e.target.value)}
                       style={styles.input}
                     />
                   </label>
                 </div>
+
                 <label style={styles.fieldWide}>
                   <span style={styles.label}>Doanh thu</span>
                   <input
@@ -259,23 +289,25 @@ export default function MyClusterReports({
                     min={0}
                     step={1000}
                     value={row.revenue}
-                    onChange={(e) => setRowField(did, 'revenue', e.target.value)}
+                    onChange={(e) => setRowField(districtId, 'revenue', e.target.value)}
                     style={styles.input}
-                    placeholder="VNÄ"
+                    placeholder="VNĐ"
                   />
                 </label>
+
                 <label style={styles.fieldWide}>
-                  <span style={styles.label}>Ghi chÃº</span>
+                  <span style={styles.label}>Ghi chú</span>
                   <input
                     type="text"
                     value={row.note}
-                    onChange={(e) => setRowField(did, 'note', e.target.value)}
+                    onChange={(e) => setRowField(districtId, 'note', e.target.value)}
                     style={styles.input}
-                    placeholder="(TÃ¹y chá»n)"
+                    placeholder="(Tùy chọn)"
                   />
                 </label>
+
                 {updatedAt && (
-                  <div style={styles.meta}>Cáº­p nháº­t: {new Date(updatedAt).toLocaleString('vi-VN')}</div>
+                  <div style={styles.meta}>Cập nhật: {new Date(updatedAt).toLocaleString('vi-VN')}</div>
                 )}
               </div>
             )
@@ -475,4 +507,3 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-3)',
   },
 }
-
