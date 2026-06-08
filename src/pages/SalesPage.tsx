@@ -5,15 +5,13 @@
  * State: reads from global useDataStore — no local DB init needed.
  */
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo } from 'react'
 import { useUIStore } from '../store/uiStore.js'
 import { useDataStore } from '../store/dataStore.js'
 import { useFacade } from '../context/FacadeContext.js'
 import Sidebar from '../components/layout/Sidebar.js'
 import TerritoryMap from '../components/map/TerritoryMap.js'
 import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
-import PartitionFeedback from '../components/feedback/PartitionFeedback.js'
-import { loadSnapshots } from '../services/db.js'
 import type { Zone, Assignment } from '../../facades/viewmodels.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
@@ -35,19 +33,6 @@ export default function SalesPage() {
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
   const selectZone     = useUIStore((s) => s.selectZone)
   const ctx            = useFacade()
-
-  // Latest snapshot for feedback link (Adjust 5)
-  const [latestSnapshotId, setLatestSnapshotId]    = useState('')
-  const [latestSnapshotLabel, setLatestSnapshotLabel] = useState('')
-  useEffect(() => {
-    loadSnapshots(currentProjectId ?? undefined).then((snaps) => {
-      const first = snaps[0]
-      if (first) {
-        setLatestSnapshotId(first.id)
-        setLatestSnapshotLabel(first.label)
-      }
-    })
-  }, [currentProjectId])
 
   // Filter to this sales agent's district (safe — SalesFacade may throw)
   const { myZones, myAssignments } = useMemo<{
@@ -116,21 +101,6 @@ export default function SalesPage() {
           // No onAssign — Sales is read-only
         />
 
-        {/* Partition Feedback — Adjust 5: truyền snapshotId */}
-        {latestSnapshotId && (
-          <div style={styles.feedbackBar}>
-            <span style={styles.feedbackLabel}>
-              Phân vùng hiện tại:
-            </span>
-            <PartitionFeedback
-              snapshotId={latestSnapshotId}
-              snapshotLabel={latestSnapshotLabel}
-              agentId={ctx.role === 'sales' ? 'current-sales' : 'anon'}
-              agentName="Thành viên"
-              mode="sales"
-            />
-          </div>
-        )}
       </div>
     </div>
   )
@@ -169,27 +139,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     lineHeight: 1.6,
     color: 'var(--color-text-muted)',
-  },
-  feedbackBar: {
-    position:    'absolute',
-    bottom:      14,
-    left:        '50%',
-    transform:   'translateX(-50%)',
-    zIndex:      1000,
-    display:     'flex',
-    alignItems:  'center',
-    gap:         10,
-    padding:     '8px 16px',
-    borderRadius: 99,
-    background:  'var(--color-surface)',
-    border:      '1.5px solid var(--color-border)',
-    boxShadow:   '0 4px 16px rgba(0,0,0,0.14)',
-    backdropFilter: 'blur(8px)',
-  },
-  feedbackLabel: {
-    fontSize:  12,
-    color:     'var(--color-text-muted)',
-    whiteSpace: 'nowrap',
   },
   loading: {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
