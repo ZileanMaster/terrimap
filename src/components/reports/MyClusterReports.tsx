@@ -11,6 +11,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import type { Assignment, DistrictReport, Zone } from '../../../facades/viewmodels.js'
 import { currentPeriod, loadDistrictReports, saveDistrictReport } from '../../services/districtReportsDb.js'
+import { useToast } from '../ui/Toast.js'
 
 interface MyClusterReportsProps {
   currentUserKey: string
@@ -43,6 +44,7 @@ export default function MyClusterReports({
   const [reports, setReports] = useState<DistrictReport[]>([])
   const [rows, setRows] = useState<Record<number, Row>>({})
   const [loading, setLoading] = useState(false)
+  const { push } = useToast()
 
   const zoneIdsInRegion = useMemo(() => {
     if (!currentRegionId) return new Set(zones.map((zone) => zone.id))
@@ -178,6 +180,12 @@ export default function MyClusterReports({
         .catch(() => {
           // Giữ lại trạng thái optimistic nếu tải lại thất bại.
         })
+
+      push({
+        kind: 'success',
+        title: 'Đã lưu báo cáo',
+        message: `Cụm ${districtId} đã được cập nhật cho tháng ${period}.`,
+      })
     } finally {
       setRows((prev) => ({ ...prev, [districtId]: { ...prev[districtId]!, saving: false } }))
     }
