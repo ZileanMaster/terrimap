@@ -220,100 +220,98 @@ export default function MyClusterReports({
         </label>
       </div>
 
-      {loading && <div style={styles.loading}>Đang tải...</div>}
+      {loading && <div style={styles.loading}>Đang đồng bộ dữ liệu báo cáo...</div>}
 
-      {!loading && (
-        <div
-          style={{
-            ...styles.list,
-            ...(isPage ? styles.pageList : {}),
-          }}
-        >
-          {myReports.length === 0 && (
-            <div style={styles.emptyState}>
-              Chưa có báo cáo nào trong tháng này. Nhập số liệu để dashboard cập nhật ngay.
-            </div>
-          )}
+      <div
+        style={{
+          ...styles.list,
+          ...(isPage ? styles.pageList : {}),
+        }}
+      >
+        {myReports.length === 0 && !loading && (
+          <div style={styles.emptyState}>
+            Chưa có báo cáo nào trong tháng này. Nhập số liệu để dashboard cập nhật ngay.
+          </div>
+        )}
 
-          {myDistrictIds.map((districtId) => {
-            const row = rows[districtId] ?? {
-              customers: 0,
-              orders: 0,
-              revenue: 0,
-              note: '',
-              saving: false,
-            }
-            const updatedAt = myReports.find((report) => report.districtId === districtId)?.updatedAt
+        {myDistrictIds.map((districtId) => {
+          const row = rows[districtId] ?? {
+            customers: 0,
+            orders: 0,
+            revenue: 0,
+            note: '',
+            saving: false,
+          }
+          const updatedAt = myReports.find((report) => report.districtId === districtId)?.updatedAt
 
-            return (
-              <div key={districtId} style={styles.card}>
-                <div style={styles.cardTop}>
-                  <div style={styles.cardTitle}>Cụm {districtId}</div>
-                  <button
-                    type="button"
-                    style={{ ...styles.saveBtn, opacity: row.saving ? 0.7 : 1 }}
-                    disabled={row.saving}
-                    onClick={() => handleSaveOne(districtId)}
-                  >
-                    {row.saving ? 'Đang lưu...' : 'Lưu'}
-                  </button>
-                </div>
+          return (
+            <div key={districtId} style={styles.card}>
+              <div style={styles.cardTop}>
+                <div style={styles.cardTitle}>Cụm {districtId}</div>
+                <button
+                  type="button"
+                  style={{ ...styles.saveBtn, opacity: row.saving ? 0.7 : 1 }}
+                  disabled={row.saving}
+                  onClick={() => handleSaveOne(districtId)}
+                >
+                  {row.saving ? 'Đang lưu...' : 'Lưu'}
+                </button>
+              </div>
 
-                <div style={styles.grid}>
-                  <label style={styles.field}>
-                    <span style={styles.label}>Khách hàng</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={row.customers}
-                      onChange={(e) => setRowField(districtId, 'customers', e.target.value)}
-                      style={styles.input}
-                    />
-                  </label>
-                  <label style={styles.field}>
-                    <span style={styles.label}>Đơn hàng</span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={row.orders}
-                      onChange={(e) => setRowField(districtId, 'orders', e.target.value)}
-                      style={styles.input}
-                    />
-                  </label>
-                </div>
-
-                <label style={styles.fieldWide}>
-                  <span style={styles.label}>Doanh thu</span>
+              <div style={styles.grid}>
+                <label style={styles.field}>
+                  <span style={styles.label}>Khách hàng</span>
                   <input
                     type="number"
                     min={0}
-                    step={1000}
-                    value={row.revenue}
-                    onChange={(e) => setRowField(districtId, 'revenue', e.target.value)}
+                    value={row.customers}
+                    onChange={(e) => setRowField(districtId, 'customers', e.target.value)}
                     style={styles.input}
-                    placeholder="VNĐ"
                   />
                 </label>
-
-                <label style={styles.fieldWide}>
-                  <span style={styles.label}>Ghi chú</span>
+                <label style={styles.field}>
+                  <span style={styles.label}>Đơn hàng</span>
                   <input
-                    type="text"
-                    value={row.note}
-                    onChange={(e) => setRowField(districtId, 'note', e.target.value)}
+                    type="number"
+                    min={0}
+                    value={row.orders}
+                    onChange={(e) => setRowField(districtId, 'orders', e.target.value)}
                     style={styles.input}
-                    placeholder="(Tùy chọn)"
                   />
                 </label>
-
-                {updatedAt && (
-                  <div style={styles.meta}>Cập nhật: {new Date(updatedAt).toLocaleString('vi-VN')}</div>
-                )}
               </div>
-            )
-          })}
-        </div>
-      )}
+
+              <label style={styles.fieldWide}>
+                <span style={styles.label}>Doanh thu</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={row.revenue}
+                  onChange={(e) => setRowField(districtId, 'revenue', e.target.value)}
+                  style={styles.input}
+                  placeholder="VNĐ"
+                />
+              </label>
+
+              <label style={styles.fieldWide}>
+                <span style={styles.label}>Ghi chú</span>
+                <input
+                  type="text"
+                  value={row.note}
+                  onChange={(e) => setRowField(districtId, 'note', e.target.value)}
+                  style={styles.input}
+                  placeholder="(Tùy chọn)"
+                />
+              </label>
+
+              {updatedAt && (
+                <div style={styles.meta}>Cập nhật: {new Date(updatedAt).toLocaleString('vi-VN')}</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
