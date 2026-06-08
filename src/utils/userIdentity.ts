@@ -4,6 +4,18 @@ import type { SalesAgent } from '../../facades/viewmodels.js'
 
 type IdentitySource = Pick<User, 'id' | 'email'> | null | undefined
 
+export function getUserIdentityCandidates(
+  user: IdentitySource,
+  profile: Pick<Profile, 'id' | 'email'> | null | undefined,
+): string[] {
+  return [
+    profile?.email,
+    user?.email,
+    profile?.id,
+    user?.id,
+  ].filter((value): value is string => Boolean(value && value.trim()))
+}
+
 /**
  * Resolve the most likely user key used by project data.
  *
@@ -17,12 +29,7 @@ export function resolveUserKey(
   profile: Pick<Profile, 'id' | 'email'> | null | undefined,
   agents: SalesAgent[] = [],
 ): string {
-  const candidates = [
-    profile?.email,
-    user?.email,
-    profile?.id,
-    user?.id,
-  ].filter((value): value is string => Boolean(value && value.trim()))
+  const candidates = getUserIdentityCandidates(user, profile)
 
   if (candidates.length === 0) return ''
 

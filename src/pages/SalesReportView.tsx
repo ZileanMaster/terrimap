@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/authStore.js'
 import { useDataStore } from '../store/dataStore.js'
 import { useFacade } from '../context/FacadeContext.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
-import { resolveUserKey } from '../utils/userIdentity.js'
+import { getUserIdentityCandidates, resolveUserKey } from '../utils/userIdentity.js'
 import type { Assignment, Zone } from '../../facades/viewmodels.js'
 
 export default function SalesReportView() {
@@ -11,6 +11,7 @@ export default function SalesReportView() {
   const assignments = useDataStore((s) => s.assignments)
   const loading = useDataStore((s) => s.loading)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
+  const regions = useDataStore((s) => s.regions)
 
   const authUser = useAuthStore((s) => s.user)
   const profile = useAuthStore((s) => s.profile)
@@ -20,22 +21,61 @@ export default function SalesReportView() {
 
   const ctx = useFacade()
 
-  const { myZones, myAssignments } = useMemo<{
-    myZones: Zone[]
-    myAssignments: Assignment[]
-  }>(() => {
-    if (ctx.role !== 'sales' || zones.length === 0) return { myZones: [], myAssignments: [] }
-    try {
-      const district = ctx.facade.getMyDistrict()
-      const zoneIds = new Set(district.zones.map((z) => z.id))
-      return {
-        myZones: district.zones,
-        myAssignments: assignments.filter((a) => zoneIds.has(a.zoneId)),
-      }
-    } catch {
-      return { myZones: [], myAssignments: [] }
+  const identityCandidates = useMemo(
+    () => getUserIdentityCandidates(authUser, profile),
+    [authUser, profile],
+  )
+
+  const reportTargets = useMemo(() => {
+    const matchedDistrictIds = new Set<number>()
+    const matchedZoneIds = new Set<string>()
+    const matchedRegionIds = new Set<string>()
+
+    for (const assignment of assignments) {
+      const isMine = identityCandidates.includes(assignment.salesAgentId)
+        || (currentUserKey && assignment.salesAgentId === currentUserKey)
+      if (!isMine) continue
+      matchedDistrictIds.add(assignment.districtId)
+      matchedZoneIds.add(assignment.zoneId)
     }
-  }, [ctx, zones, assignments])
+
+    if (matchedDistrictIds.size === 0) {
+      try {
+        const district = ctx.facade.getMyDistrict()
+        const zoneIds = new Set(district.zones.map((zone) => zone.id))
+        for (const assignment of assignments) {
+          if (zoneIds.has(assignment.zoneId)) {
+            matchedDistrictIds.add(assignment.districtId)
+            matchedZoneIds.add(assignment.zoneId)
+          }
+        }
+      } catch {
+        // keep empty; the empty state below will explain what to fix.
+      }
+    }
+
+    const districtIds = Array.from(matchedDistrictIds).sort((a, b) => a - b)
+    const targetZones = zones.filter((zone) => matchedZoneIds.has(zone.id))
+    const targetAssignments = assignments.filter((assignment) => matchedZoneIds.has(assignment.zoneId))
+
+    const derivedRegionId =
+      currentRegionId
+      ?? targetZones.find((zone) => (zone as any).regionId ?? (zone as any).region_id ?? null)?.regionId
+      ?? targetZones.find((zone) => (zone as any).regionId ?? (zone as any).region_id ?? null)?.region_id
+      ?? null
+
+    const regionLabel = derivedRegionId
+      ? regions.find((region) => region.id === derivedRegionId)?.name ?? derivedRegionId
+      : 'chưa xác định'
+
+    return {
+      districtIds,
+      zones: targetZones,
+      assignments: targetAssignments,
+      regionId: derivedRegionId,
+      regionLabel,
+    }
+  }, [assignments, ctx.facade, currentRegionId, currentUserKey, identityCandidates, regions, zones])
 
   if (loading) {
     return (
@@ -46,7 +86,7 @@ export default function SalesReportView() {
     )
   }
 
-  const hasDistrict = myZones.length > 0 && myAssignments.length > 0
+  const hasTargets = reportTargets.districtIds.length > 0 && reportTargets.regionId !== null
 
   return (
     <div style={styles.page}>
@@ -54,17 +94,32 @@ export default function SalesReportView() {
         <div style={styles.kicker}>BÁO CÁO DOANH SỐ</div>
         <h1 style={styles.title}>Nhập báo cáo doanh số</h1>
         <p style={styles.subtitle}>
-          Nhân sự chỉ nhập số khách hàng, đơn hàng, doanh thu và ghi chú cho cụm được giao.
-          Phần tổng quan dự án không hiển thị với vai trò này.
+          Nhân sự nhập số khách hàng, đơn hàng, doanh thu và ghi chú cho các cụm được giao.
+          Điều phối và admin sẽ xem được các báo cáo này trong Vận hành và Tổng quan.
         </p>
+
+        <div style={styles.summaryRow}>
+          <div style={styles.summaryCard}>
+            <div style={styles.summaryLabel}>Khu vực báo cáo</div>
+            <div style={styles.summaryValue}>{reportTargets.regionId ? String(reportTargets.regionLabel) : 'Chưa xác định'}</div>
+          </div>
+          <div style={styles.summaryCard}>
+            <div style={styles.summaryLabel}>Cụm được giao</div>
+            <div style={styles.summaryValue}>{reportTargets.districtIds.length}</div>
+          </div>
+          <div style={styles.summaryCard}>
+            <div style={styles.summaryLabel}>Trạng thái</div>
+            <div style={styles.summaryValue}>{hasTargets ? 'Sẵn sàng nhập báo cáo' : 'Chưa gán cụm cho nhân sự này'}</div>
+          </div>
+        </div>
       </div>
 
-      {!hasDistrict ? (
+      {!hasTargets ? (
         <div style={styles.emptyState}>
-          <div style={styles.emptyTitle}>Chưa tìm thấy vùng được giao</div>
+          <div style={styles.emptyTitle}>Chưa tìm thấy cụm/vùng được giao</div>
           <div style={styles.emptyText}>
-            Hệ thống chưa xác định được cụm/vùng của tài khoản này trong dự án hiện tại.
-            Vui lòng kiểm tra lại salesAgentId hoặc gán vùng cho nhân sự trước khi nhập báo cáo.
+            Hệ thống chưa xác định được cụm của tài khoản này trong dự án hiện tại.
+            Hãy kiểm tra lại salesAgentId của nhân sự hoặc gán lại cụm trong màn Phân chia lãnh thổ.
           </div>
         </div>
       ) : (
@@ -72,9 +127,10 @@ export default function SalesReportView() {
           variant="page"
           currentUserKey={currentUserKey}
           currentProjectId={currentProjectId}
-          currentRegionId={currentRegionId}
-          zones={myZones}
-          assignments={myAssignments}
+          currentRegionId={reportTargets.regionId}
+          zones={reportTargets.zones}
+          assignments={reportTargets.assignments}
+          districtIds={reportTargets.districtIds}
         />
       )}
     </div>
@@ -117,6 +173,32 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.7,
     color: 'var(--color-text-muted)',
     maxWidth: 760,
+  },
+  summaryRow: {
+    marginTop: 18,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: 12,
+  },
+  summaryCard: {
+    padding: '14px 16px',
+    borderRadius: 18,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: 800,
+    color: 'var(--color-text-muted)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: 6,
+  },
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: 900,
+    color: 'var(--color-text)',
+    lineHeight: 1.4,
   },
   emptyState: {
     maxWidth: 960,

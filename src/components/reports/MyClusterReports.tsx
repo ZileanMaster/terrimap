@@ -19,6 +19,7 @@ interface MyClusterReportsProps {
   zones: Zone[]
   assignments: Assignment[]
   variant?: 'overlay' | 'page'
+  districtIds?: number[]
 }
 
 type Row = { customers: number; orders: number; revenue: number; note: string; saving: boolean }
@@ -30,6 +31,7 @@ export default function MyClusterReports({
   zones,
   assignments,
   variant = 'overlay',
+  districtIds,
 }: MyClusterReportsProps) {
   const [period, setPeriod] = useState(currentPeriod())
   const [reports, setReports] = useState<DistrictReport[]>([])
@@ -42,13 +44,16 @@ export default function MyClusterReports({
   }, [zones, currentRegionId])
 
   const myDistrictIds = useMemo(() => {
+    if (districtIds && districtIds.length > 0) {
+      return Array.from(new Set(districtIds)).sort((a, b) => a - b)
+    }
     const dids = new Set<number>()
     for (const a of assignments) {
       if (!zoneIdsInRegion.has(a.zoneId)) continue
       if (a.salesAgentId === currentUserKey) dids.add(a.districtId)
     }
     return Array.from(dids).sort((a, b) => a - b)
-  }, [assignments, zoneIdsInRegion, currentUserKey])
+  }, [districtIds, assignments, zoneIdsInRegion, currentUserKey])
 
   const myReports = useMemo(() => {
     return reports

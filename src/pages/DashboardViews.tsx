@@ -120,6 +120,7 @@ export function OverviewView() {
   const reportStats = useMemo(() => {
     const totalCustomers = filteredReports.reduce((s, r) => s + (Number(r.customers) || 0), 0);
     const totalOrders = filteredReports.reduce((s, r) => s + (Number(r.orders) || 0), 0);
+    const totalRevenue = filteredReports.reduce((s, r) => s + (Number((r as any).revenue) || 0), 0);
     const districtKey = (r: any) => `${r.regionId || r.region_id || ''}|${r.districtId || r.district_id || ''}`;
     const districts = new Set(filteredReports.map(districtKey));
     const users = new Set(filteredReports.map((r: any) => String(r.userId || r.user_id || '')));
@@ -127,6 +128,7 @@ export function OverviewView() {
     return {
       totalCustomers,
       totalOrders,
+      totalRevenue,
       avgCustomers,
       reportCount: filteredReports.length,
       districtCount: districts.size,
@@ -144,6 +146,7 @@ export function OverviewView() {
       const regionReports = districtReports.filter((report: any) => (report.regionId ?? report.region_id) === region.id);
       const customers = regionReports.reduce((sum: number, report: any) => sum + (Number(report.customers) || 0), 0);
       const orders = regionReports.reduce((sum: number, report: any) => sum + (Number(report.orders) || 0), 0);
+      const revenue = regionReports.reduce((sum: number, report: any) => sum + (Number(report.revenue) || 0), 0);
       const reportedDistricts = new Set(regionReports.map((report: any) => String(report.districtId ?? report.district_id ?? '')));
       const activeUsers = new Set(regionReports.map((report: any) => String(report.userId ?? report.user_id ?? '')));
       const coveragePercent = regionZones.length > 0 ? Math.round((reportedDistricts.size / regionZones.length) * 100) : 0;
@@ -153,12 +156,13 @@ export function OverviewView() {
         regionName: region.name,
         customers,
         orders,
+        revenue,
         reportCount: regionReports.length,
         reportedDistricts: reportedDistricts.size,
         coveragePercent,
         activeUsers: activeUsers.size,
       };
-    }).sort((a, b) => (b.orders * 2 + b.customers) - (a.orders * 2 + a.customers)).slice(0, 4);
+    }).sort((a, b) => (b.revenue * 0.001 + b.orders * 2 + b.customers) - (a.revenue * 0.001 + a.orders * 2 + a.customers)).slice(0, 4);
   }, [currentRegionId, districtReports, regions, zones]);
 
   return (
@@ -221,6 +225,14 @@ export function OverviewView() {
             <span style={styles.cardLbl}>Khách hàng trung bình / báo cáo</span>
           </div>
         </div>
+
+        <div style={{ ...styles.card, ...styles.cardNarrow }}>
+          <div style={{ ...styles.cardBadge, backgroundColor: 'rgba(34, 197, 94, 0.12)', color: '#22c55e' }}>DT</div>
+          <div style={styles.cardInfo}>
+            <span style={styles.cardVal}>{reportStats.totalRevenue.toLocaleString('vi-VN')}</span>
+            <span style={styles.cardLbl}>Doanh thu báo cáo</span>
+          </div>
+        </div>
       </div>
 
       <div style={styles.section}>
@@ -238,6 +250,7 @@ export function OverviewView() {
                 <th style={styles.th}>Khu vực</th>
                 <th style={styles.th}>Khách hàng</th>
                 <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Doanh thu</th>
                 <th style={styles.th}>Số báo cáo</th>
                 <th style={styles.th}>Độ phủ báo cáo</th>
                 <th style={styles.th}>Nhận xét</th>
@@ -245,13 +258,14 @@ export function OverviewView() {
             </thead>
             <tbody>
               {loadingReports && (
-                <tr><td colSpan={6} style={styles.tableEmpty}>Đang tải dữ liệu kinh doanh...</td></tr>
+                <tr><td colSpan={7} style={styles.tableEmpty}>Đang tải dữ liệu kinh doanh...</td></tr>
               )}
               {!loadingReports && businessRegionStats.map((stat) => (
                 <tr key={stat.regionId} style={styles.tr}>
                   <td style={styles.td}><strong>{stat.regionName}</strong></td>
                   <td style={styles.td}>{stat.customers.toLocaleString('vi-VN')}</td>
                   <td style={styles.td}>{stat.orders.toLocaleString('vi-VN')}</td>
+                  <td style={styles.td}>{(stat.revenue ?? 0).toLocaleString('vi-VN')}</td>
                   <td style={styles.td}>{stat.reportCount}</td>
                   <td style={styles.td}>{stat.coveragePercent}%</td>
                   <td style={styles.td}>
@@ -265,7 +279,7 @@ export function OverviewView() {
               ))}
               {!loadingReports && businessRegionStats.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={styles.tableEmpty}>
+                  <td colSpan={7} style={styles.tableEmpty}>
                     📭 {selectedRegion ? `Khu vực ${selectedRegionLabel} chưa có dữ liệu kinh doanh.` : 'Chưa có dữ liệu kinh doanh theo khu vực.'}
                   </td>
                 </tr>
@@ -280,6 +294,7 @@ export function OverviewView() {
 // ── 2. QUẢN LÝ USER (UsersView) ──────────────────────────────────────────────
 export function UsersView() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
+  const loadMembers = useAuthStore((s) => s.loadMembers);
   const regions = useDataStore((s) => s.regions);
 
   const [members, setMembers] = useState<any[]>([]);
@@ -656,6 +671,7 @@ export function OperationsView() {
       userId: String(r.userId ?? r.user_id ?? ''),
       customers: Number(r.customers ?? 0),
       orders: Number(r.orders ?? 0),
+      revenue: Number(r.revenue ?? 0),
       note: r.note ?? '',
       updatedAt: String(r.updatedAt ?? r.updated_at ?? ''),
     });
@@ -748,6 +764,7 @@ export function OperationsView() {
       for (const districtId of districtIds) {
         const customers = 24 + ((districtId * 7 + region.name.length) % 31);
         const orders = Math.max(1, Math.round(customers * (0.22 + ((districtId + region.name.length) % 3) * 0.04)));
+        const revenue = customers * 75000 + orders * 150000;
         seeded.push({
           id: `demo-dr-${currentProjectId}-${region.id}-${districtId}-${period}-${userId.replace(/[^a-z0-9]+/gi, '').slice(0, 12)}`,
           projectId: currentProjectId ?? undefined,
@@ -757,6 +774,7 @@ export function OperationsView() {
           period,
           customers,
           orders,
+          revenue,
           note: notes[noteIndex % notes.length],
           updatedAt: new Date().toISOString(),
         });
@@ -785,10 +803,10 @@ export function OperationsView() {
       if (/[\",\\n]/.test(s)) return `\"${s.replace(/\"/g, '\"\"')}\"`;
       return s;
     };
-    const header = ['period', 'region_id', 'district_id', 'user_id', 'customers', 'orders', 'note', 'updated_at'];
+    const header = ['period', 'region_id', 'district_id', 'user_id', 'customers', 'orders', 'revenue', 'note', 'updated_at'];
     const lines = [header.join(',')];
     for (const r of rows) {
-      lines.push([period, r.regionId, r.districtId, r.userId, r.customers, r.orders, r.note, r.updatedAt].map(escape).join(','));
+      lines.push([period, r.regionId, r.districtId, r.userId, r.customers, r.orders, r.revenue, r.note, r.updatedAt].map(escape).join(','));
     }
     const blob = new Blob([lines.join('\\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -884,6 +902,10 @@ export function OperationsView() {
             <div style={styles.opsKpiValue}>{rows.reduce((s, r) => s + (Number(r.orders) || 0), 0)}</div>
             <div style={styles.opsKpiLabel}>Tổng đơn hàng</div>
           </div>
+          <div style={styles.opsKpiCard}>
+            <div style={styles.opsKpiValue}>{rows.reduce((s, r) => s + (Number(r.revenue) || 0), 0).toLocaleString('vi-VN')}</div>
+            <div style={styles.opsKpiLabel}>Tổng doanh thu</div>
+          </div>
         </div>
 
         <div style={styles.tableWrapper}>
@@ -895,12 +917,13 @@ export function OperationsView() {
                 <th style={styles.th}>Người dùng</th>
                 <th style={styles.th}>Khách hàng</th>
                 <th style={styles.th}>Đơn hàng</th>
+                <th style={styles.th}>Doanh thu</th>
                 <th style={styles.th}>Ghi chú</th>
                 <th style={styles.th}>Cập nhật</th>
               </tr>
             </thead>
             <tbody>
-              {loading && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang tải dữ liệu...</td></tr>)}
+              {loading && (<tr><td colSpan={8} style={styles.tableEmpty}>Đang tải dữ liệu...</td></tr>)}
               {!loading && rows.slice(0, 200).map((r) => {
                 const regionName = regions.find((rr) => rr.id === r.regionId)?.name ?? r.regionId
                 return (
@@ -910,13 +933,14 @@ export function OperationsView() {
                     <td style={styles.td}>{r.userId}</td>
                     <td style={styles.td}>{r.customers}</td>
                     <td style={styles.td}>{r.orders}</td>
+                    <td style={styles.td}>{Number(r.revenue || 0).toLocaleString('vi-VN')}</td>
                     <td style={styles.td}>{String(r.note || '—')}</td>
                     <td style={styles.td}>{r.updatedAt ? new Date(r.updatedAt).toLocaleString('vi-VN') : '—'}</td>
                   </tr>
                 )
               })}
-              {!loading && rows.length === 0 && (<tr><td colSpan={7} style={styles.tableEmpty}>Chưa có báo cáo trong kỳ này.</td></tr>)}
-              {!loading && rows.length > 200 && (<tr><td colSpan={7} style={styles.tableEmpty}>Đang hiển thị 200 dòng đầu tiên (lọc thêm để xem chi tiết).</td></tr>)}
+              {!loading && rows.length === 0 && (<tr><td colSpan={8} style={styles.tableEmpty}>Chưa có báo cáo trong kỳ này.</td></tr>)}
+              {!loading && rows.length > 200 && (<tr><td colSpan={8} style={styles.tableEmpty}>Đang hiển thị 200 dòng đầu tiên (lọc thêm để xem chi tiết).</td></tr>)}
             </tbody>
           </table>
         </div>
