@@ -1,15 +1,3 @@
-/**
- * App.tsx — Root component with Auth Guard
- *
- * Flow:
- * 1. Loading → SplashScreen
- * 2. No user → LoginPage
- * 3. User but no project → ProjectSelectPage
- * 4. User + project → Dashboard (role-based page)
- *
- * Admin can use "view-as" mode to preview other roles.
- */
-
 import React, { Suspense } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FacadeProvider } from './context/FacadeContext.js'
@@ -22,6 +10,7 @@ import { OverviewView, UsersView, OperationsView, SettingsView } from './pages/D
 import AlgorithmComparator from './components/algorithm/AlgorithmComparator.js'
 import RegionSelector from './components/layout/RegionSelector.js'
 import ToastViewport from './components/ui/Toast.js'
+import SalesReportView from './pages/SalesReportView.js'
 
 function lazyRetry<T extends React.ComponentType<any>>(
   importer: () => Promise<{ default: T }>,
@@ -46,7 +35,7 @@ function lazyRetry<T extends React.ComponentType<any>>(
   })
 }
 
-// ── Lazy-loaded pages (code splitting) ───────────────────────────────────────
+// không tải các page khi mở
 const AdminPage       = lazyRetry(() => import('./pages/AdminPage.js'))
 const CoordinatorPage = lazyRetry(() => import('./pages/CoordinatorPage.js'))
 const SalesPage       = lazyRetry(() => import('./pages/SalesPage.js'))
@@ -59,7 +48,7 @@ const queryClient = new QueryClient({
   },
 })
 
-/** Minimal fallback while lazy chunks load */
+/** Load page */
 function PageLoader() {
   return (
     <div style={styles.pageLoader}>
@@ -69,7 +58,7 @@ function PageLoader() {
 }
 
 export default function App() {
-  // Auth state
+  // lấy state
   const authUser       = useAuthStore((s) => s.user)
   const authSession    = useAuthStore((s) => s.session)
   const authLoading    = useAuthStore((s) => s.loading)
@@ -78,7 +67,7 @@ export default function App() {
   const projects       = useAuthStore((s) => s.projects)
   const initAuth       = useAuthStore((s) => s.initialize)
 
-  // Role from membership (or view-as override)
+  // lấy vai trò đang dùng
   const viewAsRole     = useUIStore((s) => s.role)
   const currentProject  = projects.find((project) => project.id === currentProjectId)
   const activeMembership = membership?.project_id === currentProjectId ? membership : null
@@ -86,44 +75,41 @@ export default function App() {
     ? viewAsRole
     : (activeMembership?.role ?? (currentProject?.owner_id === authUser?.id ? 'admin' : 'sales'))
 
-  // Data store
+  // lấy dữ liệu bản đồ
   const initData       = useDataStore((s) => s.init)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
 
-  // Initialize auth on mount
+  // khởi tạo auth khi load
   React.useEffect(() => { initAuth() }, [initAuth])
 
-  // Initialize data store when project is selected (scoped to project)
+  // load data khi có project
   React.useEffect(() => {
     if (authUser && currentProjectId) {
       initData(currentProjectId)
     }
   }, [authUser, currentProjectId, initData])
 
-  // Sync effective role to uiStore (for components that read from uiStore)
+  // sales và điều phối tự chuyển sang vai trò được gán khi vào project
   React.useEffect(() => {
     const nextRole = activeMembership?.role === 'admin'
       ? viewAsRole
       : (activeMembership?.role ?? (currentProject?.owner_id === authUser?.id ? 'admin' : 'sales'))
 
     if (activeMembership?.role === 'admin') {
-      // Keep admin view-as mode intact once the membership is confirmed.
     } else {
       useUIStore.getState().setRole(nextRole as any)
     }
-
-    // Auto-select assigned region for non-admin roles
     if (activeMembership?.role && activeMembership.role !== 'admin' && activeMembership.region_id) {
       useDataStore.getState().setCurrentRegion(activeMembership.region_id)
     }
   }, [activeMembership, authUser?.id, currentProject?.owner_id, viewAsRole])
 
-  // ── Offline mode (no Supabase) — skip auth entirely ──────────────────────
+  //chuyển sang mode offline
   if (!isOnline()) {
     return <OfflineApp />
   }
 
-  // ── Loading splash ──────────────────────────────────────────────────────
+  // Loading
   if (authLoading) {
     return (
       <div style={styles.splash}>
@@ -136,7 +122,7 @@ export default function App() {
     )
   }
 
-  // ── Not logged in or no valid session ───────────────────────────────────
+  // chưa đăng nhập thì show login
   if (!authUser || !authSession) {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -145,7 +131,7 @@ export default function App() {
     )
   }
 
-  // ── Logged in but no project selected ─────────────────────────────────
+  // đăng nhập rồi nhưng chưa chọn project thì show select project
   if (!currentProjectId) {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -154,7 +140,7 @@ export default function App() {
     )
   }
 
-  // ── Dashboard (authenticated + project selected) ──────────────────────
+  // Dashboard
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
@@ -162,7 +148,9 @@ export default function App() {
         <DashboardLayout>
           {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
-              {activeTab === 'overview' && <OverviewView />}
+              {activeTab === 'overview' && (
+                effectiveRole === 'sales' ? <SalesReportView /> : <OverviewView />
+              )}
               {activeTab === 'regions' && (
                 currentRegionId === null ? <RegionSelector /> :
                 effectiveRole === 'admin' ? <AdminPage mode="regions" /> :
@@ -187,10 +175,7 @@ export default function App() {
   )
 }
 
-/**
- * OfflineApp — Used when Supabase is not configured (dev/mock mode)
- * Preserves original behavior with role tabs
- */
+/** Offline */
 function OfflineApp() {
   const role = useUIStore((s) => s.role)
   const init = useDataStore((s) => s.init)
@@ -205,7 +190,9 @@ function OfflineApp() {
         <DashboardLayout>
           {(activeTab) => (
             <Suspense fallback={<PageLoader />}>
-              {activeTab === 'overview' && <OverviewView />}
+              {activeTab === 'overview' && (
+                role === 'sales' ? <SalesReportView /> : <OverviewView />
+              )}
               {activeTab === 'regions' && (
                 currentRegionId === null ? <RegionSelector /> :
                 role === 'admin' ? <AdminPage mode="regions" /> :
@@ -277,8 +264,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
   },
-
-  // Page-level loader (for lazy chunk loading)
   pageLoader: {
     height: '100vh',
     display: 'flex',

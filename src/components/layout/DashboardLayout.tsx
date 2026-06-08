@@ -197,7 +197,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems = useMemo(
     () =>
       ([
-        { id: 'overview', label: 'Tổng quan', icon: 'overview' as const, roles: ['admin', 'coordinator', 'sales'] },
+        {
+          id: 'overview',
+          label: effectiveRole === 'sales' ? 'Báo cáo doanh số' : 'Tổng quan',
+          icon: 'overview' as const,
+          roles: ['admin', 'coordinator', 'sales'],
+        },
         { id: 'regions', label: 'Khu vực & bản đồ', icon: 'regions' as const, roles: ['admin', 'coordinator'] },
         { id: 'users', label: 'Nhân sự', icon: 'users' as const, roles: ['admin'] },
         { id: 'assignments', label: 'Phân chia lãnh thổ', icon: 'assignments' as const, roles: ['admin', 'coordinator', 'sales'] },

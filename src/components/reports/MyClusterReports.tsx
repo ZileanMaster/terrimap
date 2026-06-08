@@ -18,6 +18,7 @@ interface MyClusterReportsProps {
   currentRegionId: string | null
   zones: Zone[]
   assignments: Assignment[]
+  variant?: 'overlay' | 'page'
 }
 
 type Row = { customers: number; orders: number; revenue: number; note: string; saving: boolean }
@@ -28,6 +29,7 @@ export default function MyClusterReports({
   currentRegionId,
   zones,
   assignments,
+  variant = 'overlay',
 }: MyClusterReportsProps) {
   const [period, setPeriod] = useState(currentPeriod())
   const [reports, setReports] = useState<DistrictReport[]>([])
@@ -157,8 +159,15 @@ export default function MyClusterReports({
   if (!currentRegionId) return null
   if (myDistrictIds.length === 0) return null
 
+  const isPage = variant === 'page'
+
   return (
-    <div style={styles.container}>
+    <div
+      style={{
+        ...styles.container,
+        ...(isPage ? styles.pageContainer : {}),
+      }}
+    >
       <div style={styles.header}>
         <div style={styles.headerCopy}>
           <div style={styles.kicker}>BÃ¡o cÃ¡o cá»¥m</div>
@@ -189,7 +198,12 @@ export default function MyClusterReports({
       )}
 
       {!loading && (
-        <div style={styles.list}>
+        <div
+          style={{
+            ...styles.list,
+            ...(isPage ? styles.pageList : {}),
+          }}
+        >
           {myReports.length === 0 && (
             <div style={styles.emptyState}>
               ChÆ°a cÃ³ bÃ¡o cÃ¡o nÃ o trong thÃ¡ng nÃ y. Nháº­p sá»‘ liá»‡u Ä‘á»ƒ dashboard cáº­p nháº­t ngay.
@@ -282,6 +296,15 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     backdropFilter: 'blur(12px)',
   },
+  pageContainer: {
+    position: 'relative',
+    top: 'auto',
+    right: 'auto',
+    zIndex: 1,
+    width: '100%',
+    maxWidth: 960,
+    margin: '0 auto',
+  },
   header: {
     display: 'flex',
     alignItems: 'flex-start',
@@ -366,6 +389,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 12,
+  },
+  pageList: {
+    maxHeight: 'none',
+    overflowY: 'visible',
   },
   emptyState: {
     border: '1px dashed var(--color-border)',
