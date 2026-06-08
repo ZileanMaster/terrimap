@@ -1,9 +1,9 @@
 /**
- * AdminPage — Full admin dashboard
- * Layout: [Sidebar | Map | RightPanel]
+ * AdminPage — Bảng điều khiển admin đầy đủ
+ * Bố cục: [Sidebar | Map | RightPanel]
  *
- * State: reads from global useDataStore (shared with Coordinator/Sales).
- * No local useEffect for DB init — App.tsx handles that exactly once.
+ * State: đọc từ useDataStore toàn cục (dùng chung với Coordinator/Sales).
+ * Không có useEffect local để init DB — App.tsx xử lý đúng một lần.
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
@@ -51,8 +51,8 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const currentUserKey = resolveUserKey(authUser, profile, agents)
 
-  // Filter zones/agents/assignments by currentRegionId — MANDATORY:
-  // The algorithm MUST run on each region independently.
+  // L?c zones/agents/assignments theo currentRegionId ? B?T BU?C:
+  // Thuật toán PHẢI chạy độc lập trên từng region.
   const displayZones = currentRegionId
     ? zones.filter((z) => (z as any).regionId === currentRegionId)
     : zones
@@ -70,7 +70,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     [displayAssignments],
   )
 
-  // Compute map center/zoom from selected region (for flyTo animation)
+  // Tính map center/zoom từ region đã chọn (cho hiệu ứng flyTo)
   const selectedRegion = currentRegionId
     ? regions.find((r) => r.id === currentRegionId)
     : null
@@ -79,7 +79,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     : [21.03, 105.83]
   const mapZoom = selectedRegion?.zoom ?? 12
 
-  // Province search fly-to (overrides region center temporarily)
+  // Fly-to khi t?m t?nh (t?m ghi ?? center c?a region)
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const handleFlyTo = useCallback((lat: number, lng: number, zoom: number) => {
     setFlyTarget({ lat, lng, zoom })
@@ -102,14 +102,14 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
   const isMapTransitioning    = useUIStore((s) => s.isMapTransitioning)
   const setMapTransitioning   = useUIStore((s) => s.setMapTransitioning)
-  // Leaflet.Draw toolbar is always visible for admins; no toggle state needed here.
+  // Thanh Leaflet.Draw lu?n hi?n th? v?i admin; kh?ng c?n state b?t/t?t ? ??y.
   const ctx                   = useFacade()
   const role                  = useUIStore((s) => s.role)
 
   // Default: show draw/edit tools in "Khu vực & bản đồ".
   // No per-mode enable/disable for drawing toolbar.
 
-  // Load version history once (local facade — not DB)
+  // Tải lịch sử version một lần (facade local — không lấy từ DB)
   useEffect(() => {
     if (ctx.role === 'admin') {
       setSnapshots(ctx.facade.getVersionHistory())
@@ -130,7 +130,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     try { return new Set(ctx.facade.getIslandZones(displayZones)) } catch { return new Set<string>() }
   }, [ctx, displayZones])
 
-  // ── Disconnected districts ─────────────────────────────────────────────────
+  // ── Các cụm mất liên thông ────────────────────────────────────────────────
 
   const disconnectedDistrictIds = useMemo(() => {
     if (!result) return new Set<number>()
@@ -326,7 +326,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     const showPolygons = useUIStore((s) => s.showPolygons)
     const togglePolygons = useUIStore((s) => s.togglePolygons)
 
-  // ── Loading state ──────────────────────────────────────────────────────────
+  // ── Trạng thái đang tải ───────────────────────────────────────────────────
 
   if (loading) {
     return (

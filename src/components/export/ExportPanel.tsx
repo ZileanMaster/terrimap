@@ -1,6 +1,6 @@
 /**
- * ExportPanel — Collapsible export section (CSV, GeoJSON, PDF)
- * Admin only. Placed in RightPanel below MatrixViewer.
+ * ExportPanel — Khối xuất dữ liệu có thể thu gọn (CSV, GeoJSON, PDF)
+ * Chỉ dành cho admin. Đặt trong RightPanel bên dưới MatrixViewer.
  */
 
 import React from 'react'

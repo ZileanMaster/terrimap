@@ -1,11 +1,11 @@
 /**
- * MemberManager — Project member management modal
+ * MemberManager — Hộp thoại quản lý thành viên dự án
  *
- * Features:
- * - View all members with their roles
- * - Invite new members by email
- * - Change member roles (with hierarchy enforcement)
- * - Remove members (with last-admin guard)
+ * Tính năng:
+ * - Xem toàn bộ thành viên cùng vai trò
+ * - Mời thành viên mới bằng email
+ * - Đổi vai trò thành viên (có kiểm tra thứ bậc)
+ * - Xóa thành viên (có chặn admin cuối cùng)
  *
  * Role hierarchy: admin > coordinator > sales
  * - Admin can invite/change to any role
@@ -18,7 +18,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import type { ProjectMember, Profile } from '../../store/authStore.js'
 import { supabase } from '../../lib/supabase.js'
 
-// Role display config
+// C?u h?nh hi?n th? vai tr?
 const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string; level: number }> = {
   admin:       { label: 'Quản trị',   color: '#f59e0b', icon: '👑', level: 3 },
   coordinator: { label: 'Điều phối',  color: '#3b82f6', icon: '📋', level: 2 },
@@ -55,7 +55,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   const myRole  = membership?.role ?? 'sales'
   const myLevel = ROLE_CONFIG[myRole]?.level ?? 0
 
-  // Load members with profile info — guaranteed to finish in ≤6s
+  // Tải thành viên kèm hồ sơ — luôn kết thúc trong tối đa 6 giây
   const reload = useCallback(async () => {
     const client = supabase
     if (!client || !currentProjectId) {
@@ -65,11 +65,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     setLoading(true)
 
     const doLoad = async (): Promise<MemberWithProfile[]> => {
-      // Step 1: Get raw members (store helper now repairs missing owner membership)
+      // B??c 1: L?y th?nh vi?n th? (helper c?a store hi?n ?? t? s?a membership ch? d? ?n b? thi?u)
       const rawMembers = await loadMembers()
       if (!rawMembers || rawMembers.length === 0) return []
 
-      // Step 2: Get profiles for these members
+      // B??c 2: L?y h? s? cho c?c th?nh vi?n n?y
       const userIds = rawMembers.map((m: any) => m.user_id)
       const { data: profiles } = await client
         .from('profiles')
@@ -109,11 +109,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
   }, [open, reload, clearError])
 
-  // Count admins
+  // ??m s? admin
   const adminCount = members.filter(m => m.role === 'admin').length
 
-  // Roles that the current user can assign
-  // Admin can assign ALL roles (including admin). Coordinator can assign sales only.
+  // C?c vai tr? m? ng??i d?ng hi?n t?i c? th? g?n
+  // Admin c? th? g?n T?T C? vai tr? (k? c? admin). Coordinator ch? c? th? g?n sales.
   const assignableRoles: string[] = myRole === 'admin'
     ? ['admin', 'coordinator', 'sales']
     : myRole === 'coordinator'
@@ -126,7 +126,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     setSubmitting(true)
     clearError()
     try {
-      // 10s timeout: if Supabase hangs, unlock UI
+      // Timeout 10s: n?u Supabase treo, m? kh?a UI
       let timedOut = false
       const timeoutId = setTimeout(() => {
         timedOut = true
@@ -136,12 +136,12 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
       const ok = await inviteMember(inviteEmail.trim(), inviteRole)
       clearTimeout(timeoutId)
-      if (timedOut) return  // timeout already handled
+      if (timedOut) return  // timeout ?? ???c x? l?
 
       if (ok) {
         setInviteEmail('')
         setInviteOpen(false)
-        reload()  // fire-and-forget, don't await
+        reload()  // fire-and-forget, kh?ng await
       }
     } catch (e) {
       console.error('[MemberManager] invite error:', e)
@@ -206,13 +206,13 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
+        {/* Ph?n ??u */}
         <div style={styles.header}>
           <h2 style={styles.headerTitle}>👥 Quản lý thành viên</h2>
           <button onClick={onClose} style={styles.closeBtn}>×</button>
         </div>
 
-        {/* Error banner */}
+        {/* Banner l?i */}
         {authError && (
           <div style={styles.errorBanner}>
             ⚠️ {authError}
@@ -220,13 +220,13 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
           </div>
         )}
 
-        {/* Member list */}
+        {/* Danh s?ch th?nh vi?n */}
         <div style={styles.listSection}>
           <div style={styles.sectionHeader}>
             <h3 style={styles.sectionTitle}>
               Thành viên ({members.length})
             </h3>
-            {/* Only admin and coordinator can invite */}
+            {/* Ch? admin v? coordinator m?i ???c m?i */}
             {myLevel >= 2 && (
               <button
                 onClick={() => setInviteOpen(!inviteOpen)}
@@ -237,7 +237,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
             )}
           </div>
 
-          {/* Invite form (inline) */}
+          {/* Form m?i (inline) */}
           {inviteOpen && (
             <div style={styles.inviteForm}>
               <input
@@ -291,7 +291,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
                     ...(isSelf ? styles.memberRowSelf : {}),
                   }}
                 >
-                  {/* Avatar + Info */}
+                  {/* Avatar + th?ng tin */}
                   <div style={styles.memberInfo}>
                     <div style={{ ...styles.avatar, background: cfg.color }}>
                       {member.profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
@@ -307,7 +307,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
                     </div>
                   </div>
 
-                  {/* Role badge + Actions */}
+                  {/* Badge vai tr? + thao t?c */}
                   <div style={styles.memberActions}>
                     {canManage ? (
                       <select
@@ -359,7 +359,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
           )}
         </div>
 
-        {/* Role legend */}
+        {/* Ch? gi?i vai tr? */}
         <div style={styles.legend}>
           <div style={styles.legendTitle}>📖 Phân cấp quyền hạn</div>
           <div style={styles.legendItems}>

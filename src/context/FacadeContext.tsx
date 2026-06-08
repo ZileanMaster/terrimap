@@ -1,10 +1,10 @@
 /**
- * FacadeContext — L4 React Context
+ * FacadeContext — React Context cho L4
  *
  * Cung cấp đúng Facade instance theo role hiện tại từ UIStore.
- * Import ONLY từ facades/ (L3). Không import từ lib/, services/, types/ trực tiếp.
+ * Chỉ import từ facades/ (L3). Không import trực tiếp từ lib/, services/, types/.
  *
- * CRITICAL (OPEN-4): Khi role === 'sales', MOCK_AGENTS phải được pass
+ * Quan trọng (OPEN-4): Khi role === 'sales', MOCK_AGENTS phải được truyền
  * theo thứ tự canonical — KHÔNG sort trước khi inject.
  */
 
@@ -37,7 +37,7 @@ type FacadeContextValue =
 
 const FacadeContext = createContext<FacadeContextValue | null>(null)
 
-// ── Create shared services (singleton) ───────────────────────────────────────
+// ?? T?o c?c service d?ng chung (m?i lo?i m?t instance) ?????????????????????
 
 const territorySvc = new TerritoryService()
 const versionSvc   = new VersionService()
@@ -89,7 +89,7 @@ export function FacadeProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// ── Hooks ─────────────────────────────────────────────────────────────────────
+// ?? C?c hook ?????????????????????????????????????????????????????????????????
 
 export function useFacade(): FacadeContextValue {
   const ctx = useContext(FacadeContext)

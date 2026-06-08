@@ -1,12 +1,12 @@
 /**
- * src/store/dataStore.ts — Global Zustand data store
+ * src/store/dataStore.ts — Kho dữ liệu Zustand toàn cục
  *
  * Single source of truth cho zones, assignments, agents.
- * Shared giữa AdminPage, CoordinatorPage, SalesPage — không bị mất
+ * Dùng chung giữa AdminPage, CoordinatorPage, SalesPage — không bị mất
  * khi chuyển tab vì Zustand store sống ngoài React component tree.
  *
- * Init chỉ chạy 1 lần (guarded by `initialized` flag).
- * Save operations await DB completion để đảm bảo data integrity.
+ * Init chỉ chạy 1 lần (được chặn bằng cờ `initialized`).
+ * Các thao tác lưu sẽ chờ DB hoàn tất để đảm bảo tính toàn vẹn dữ liệu.
  */
 
 import { create } from 'zustand'
@@ -29,16 +29,16 @@ interface DataStore {
   zones:           Zone[]
   assignments:     Assignment[]
   agents:          SalesAgent[]
-  regions:         Region[]       // danh sách regions
-  currentRegionId: string | null  // region đang xem/filter
-  currentProjectId: string | undefined       // project đang load data
+  regions:         Region[]       // danh sách vùng
+  currentRegionId: string | null  // vùng đang xem / lọc
+  currentProjectId: string | undefined       // project ?ang t?i d? li?u
   loading:         boolean
-  initialized:     boolean  // true after first successful load
+  initialized:     boolean  // true sau l?n t?i th?nh c?ng ??u ti?n
   saving:          boolean  // true while awaiting DB write
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  /** Load from DB for given project. Resets data on project change. */
+  /** T?i t? DB cho project ?? cho. Reset d? li?u khi ??i project. */
   init: (projectId?: string) => Promise<void>
 
   /** Bulk setters (used by SnapshotManager restore) */
@@ -80,7 +80,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     const prev = get().currentProjectId
     // If same project already initialized, skip
     if (get().initialized && prev === projectId) return
-    // Set active project for localStorage scoping BEFORE any load
+    // ??t project hi?n t?i cho ph?m vi localStorage TR??C m?i l?n t?i
     setActiveProject(projectId)
     // Reset on project change
     set({ loading: true, initialized: false, currentProjectId: projectId })
@@ -98,12 +98,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
         ]),
         timeout,
       ]) as [typeof MOCK_ZONES, typeof MOCK_ASSIGNMENTS, typeof MOCK_AGENTS, never[]]
-      // Keep regionId as-is; null = unassigned (no forced default)
+      // Gi? nguy?n regionId; null = ch?a g?n (kh?ng ?p m?c ??nh)
       set({ zones: z, assignments: a, agents: ag, regions: rg })
     } catch (e) {
       console.error('[DataStore] init error:', e)
       // Important: never leak MOCK data into real accounts/projects when online.
-      // Offline mode is handled by services/db.ts when Supabase isn't configured.
+      // Ch? ?? offline ???c x? l? trong services/db.ts khi Supabase ch?a c?u h?nh.
       set({ zones: [], assignments: [], agents: [], regions: [] })
     } finally {
       set({ loading: false, initialized: true })
@@ -137,7 +137,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
   deleteRegion: async (regionId) => {
     set((s) => ({
       regions: s.regions.filter((r) => r.id !== regionId),
-      // Deselect if deleted region was active
+      // Bỏ chọn nếu vùng bị xóa đang là vùng hiện tại
       currentRegionId: s.currentRegionId === regionId ? null : s.currentRegionId,
     }))
     await dbDeleteRegion(regionId)

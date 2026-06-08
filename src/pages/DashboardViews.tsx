@@ -10,7 +10,7 @@ import { isOnline, supabase } from '../lib/supabase.js';
 import { loadDistrictReports, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
 import type { DistrictReport } from '../../facades/viewmodels.js';
 
-// Clean email-based mock members for offline mode
+// D?n c?c mock member d?a tr?n email cho ch? ?? offline
 const MOCK_MEMBERS = [
   {
     id: 'm1',
@@ -334,7 +334,7 @@ export function UsersView() {
 
   const reloadMembers = async () => {
     if (!supabase || !currentProjectId) {
-      // In online mode, data must be project-scoped. No demo fallback here.
+      // ? ch? ?? online, d? li?u ph?i thu?c ph?m vi project. Kh?ng c? fallback demo ? ??y.
       setMembers([]);
       return;
     }
@@ -370,7 +370,7 @@ export function UsersView() {
       const merged = rawMembers.map((m: any) => ({
         ...m,
         profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
-        // Keep capacity in memory for existing flows (algorithms), but don't show/edit it here.
+        // Gi? capacity trong b? nh? cho lu?ng hi?n c? (thu?t to?n), nh?ng kh?ng hi?n th?/ch?nh ? ??y.
         capacity: m.capacity ?? 500,
       }));
 
@@ -411,7 +411,7 @@ export function UsersView() {
     }
 
     try {
-      // 1. Update project_members table
+      // 1. C?p nh?t b?ng project_members
       const { error: pmError } = await supabase
         .from('project_members')
         .update({
@@ -442,14 +442,14 @@ export function UsersView() {
             });
           if (saError) console.error('[UsersView] upsert agent error:', saError);
         } else {
-        // If changing FROM sales agent, delete agent profile and assignments
+        // N?u chuy?n T? sales agent, x?a profile agent v? assignments
         if (member.role === 'sales') {
           await supabase.from('assignments').delete().eq('sales_agent_id', member.user_id);
           await supabase.from('sales_agents').delete().eq('id', member.user_id);
         }
       }
 
-      // Refresh global store & local members
+      // L?m m?i global store v? danh s?ch th?nh vi?n local
       await useDataStore.getState().init(currentProjectId);
       await reloadMembers();
       setEditingId(null);

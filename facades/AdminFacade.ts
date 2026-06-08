@@ -1,8 +1,8 @@
 /**
- * facades/AdminFacade.ts — L3 Role Façade (stateless)
+ * facades/AdminFacade.ts — L3 Role Façade (không giữ state)
  *
- * Role: Admin — toàn quyền.
- * Không lưu zones/assignments trong constructor — nhận qua method params.
+ * Vai trò: Admin — toàn quyền.
+ * Không lưu zones/assignments trong constructor — nhận qua tham số của method.
  */
 
 import type { Zone, SalesAgent } from '../types/domain.js';
@@ -22,7 +22,7 @@ import type {
 } from './viewmodels.js';
 
 export class AdminFacade {
-  /** Constraint config — persisted in-memory, cập nhật qua configureConstraints(). */
+  /** Cấu hình ràng buộc — lưu trong bộ nhớ, cập nhật qua configureConstraints(). */
   private _constraints: ConstraintConfig = {
     adjThresholdKm: 50,
     balanceThreshold: 1.5,
@@ -33,7 +33,7 @@ export class AdminFacade {
     private readonly territorySvc: TerritoryService,
     private readonly versionSvc: VersionService,
     private readonly activitySvc: ActivityService,
-    private readonly mapSvc?: MapService,    // optional — backward-compatible
+    private readonly mapSvc?: MapService,    // tùy chọn — tương thích ngược
   ) {}
 
   // ─── getSalesManagement ───────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ export class AdminFacade {
       (a, b) => a - b,
     );
     const districtMap: DistrictMap = {};
-    // BUG FIX: Dùng salesAgentId từ Assignment thay vì districtId % salesAgents.length
+    // Sửa lỗi: dùng salesAgentId từ Assignment thay vì districtId % salesAgents.length
     districtIds.forEach((did) => {
       const agentId = assignments.find((a) => a.districtId === did)?.salesAgentId;
       if (agentId) districtMap[did] = agentId;
@@ -86,8 +86,8 @@ export class AdminFacade {
    * @param salesAgents — danh sách sales agents (OPEN-4: giữ nguyên thứ tự canonical)
    * @param opts  — tùy chọn bổ sung (cooling, alpha, ...)
    *
-   * Return type đổi từ PartitionResult → AlgorithmResultVM để L4 không bị
-   * expose L1/L2 internal types (PartitionMetrics, violations union).
+   * Kiểu trả về đổi từ PartitionResult → AlgorithmResultVM để L4 không bị
+   * lộ các type nội bộ L1/L2 (PartitionMetrics, violations union).
    */
   async runAlgorithm(
     algo: 'greedy' | 'local-search' | 'sa',
@@ -143,12 +143,12 @@ export class AdminFacade {
       totalSales: salesAgents.length,
       totalCustomers,
       totalOrders,
-      avgBalanceScore: 0, // Computed by the reporting layer when metrics are available.
+      avgBalanceScore: 0, // được lập báo cáo tĩnh khi có đủ dữ liệu.
       snapshotCount: this.versionSvc.listHistory().length,
     };
   }
 
-  // ─── Activity management (passthrough to ActivityService) ─────────────────
+  // ─── Quản lý activity (chuyển tiếp sang ActivityService) ─────────────────
 
   /**
    * Cập nhật activities (KH, đơn hàng) cho 1 zone.
@@ -164,18 +164,18 @@ export class AdminFacade {
   }
 
   /**
-   * Parse CSV string → ActivityRecord[].
-   * Format: zone_id,customers,orders (header + data rows).
+   * Parse chuỗi CSV → ActivityRecord[].
+   * Định dạng: zone_id,customers,orders (header + data rows).
    */
   importActivitiesCSV(csv: string): Array<{ zoneId: string; customers: number; orders: number }> {
     return this.activitySvc.importActivitiesFromCSV(csv);
   }
 
-  // ─── Map / Matrix methods (passthrough to MapService) ─────────────────────
+  // ─── Phương thức Map / Matrix (chuyển tiếp sang MapService) ─────────────────
 
   /**
    * Tính ma trận kề + ma trận khoảng cách.
-   * adjThresholdKm = 50 (default chuẩn Việt Nam).
+   * adjThresholdKm = 50 (mặc định chuẩn Việt Nam).
    * @throws Error nếu MapService chưa được inject.
    */
   computeMatrices(zones: Zone[]): { adj: Record<string, string[]>; dist: Record<string, Record<string, number>> } {
@@ -184,7 +184,7 @@ export class AdminFacade {
   }
 
   /**
-   * Phát hiện "island zones" — zones không kề zone nào trong adj matrix.
+   * Phát hiện "island zones" — zones không kề zone nào trong ma trận kề.
    * @returns string[] — danh sách zoneIds bị cô lập.
    */
   getIslandZones(zones: Zone[]): string[] {
@@ -198,8 +198,8 @@ export class AdminFacade {
   // ─── wrapAssignmentsAsResult ─────────────────────────────────────────────────
 
   /**
-   * Wrap raw Assignment[] (from Web Worker) into AlgorithmResultVM.
-   * Worker returns assignments without salesAgentId — this method wires them
+   * Bọc Assignment[] thô (từ Web Worker) thành AlgorithmResultVM.
+   * Worker trả về assignments không có salesAgentId — method này gắn lại chúng
    * and validates constraints to produce violations/metrics.
    */
   wrapAssignmentsAsResult(
@@ -209,13 +209,13 @@ export class AdminFacade {
     salesAgents: SalesAgent[],
     durationMs: number,
   ): AlgorithmResultVM {
-    // Wire salesAgentId using canonical salesAgents order
+    // G?n salesAgentId theo th? t? canonical c?a salesAgents
     const assignments = rawAssignments.map(a => ({
       ...a,
       salesAgentId: a.salesAgentId ?? salesAgents[a.districtId % salesAgents.length]?.id ?? `sa${a.districtId}`,
     }));
 
-    // Validate to get metrics + violations
+    // Validate ?? l?y metrics + violations
     const validation = validatePartition(zones, assignments, { adjThresholdKm: 50 });
 
     return {

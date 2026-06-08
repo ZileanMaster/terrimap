@@ -2,7 +2,7 @@
  * TopBar — Navigation & Controls
  *
  * Online mode: User info + role badge + view-as (admin only) + logout
- * Offline mode: Role tabs (original behavior)
+ * Ch? ?? offline: tab vai tr? (h?nh vi g?c)
  * Both: Theme toggle
  */
 
@@ -89,7 +89,7 @@ export default function TopBar() {
               </button>
             ))
           ) : (
-            // Non-admin: just show role badge
+            // V?i non-admin: ch? hi?n th? badge vai tr?
             <div style={styles.roleBadge}>
               <span>{ROLES.find(r => r.id === actualRole)?.icon}</span>
               <span>{ROLE_LABELS[actualRole]}</span>

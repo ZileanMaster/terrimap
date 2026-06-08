@@ -1,10 +1,10 @@
 /**
  * facades/SalesFacade.ts — L3 Role Façade
  *
- * Role: Sales — read-only trên district của mình.
+ * Vai trò: Sales — chỉ đọc trên cụm của mình.
  *
- * Blocked methods (runAlgorithm, createVersion, assignZone) KHÔNG tồn tại
- * trên class này — không phải throw, mà thực sự không có method.
+ * Các phương thức bị chặn (runAlgorithm, createVersion, assignZone) KHÔNG tồn tại
+ * trên class này — không phải throw, mà là thực sự không có method.
  * Lý do: tests kiểm tra bằng `(sales as any).method === undefined`.
  */
 
@@ -21,7 +21,7 @@ import type {
 export class SalesFacade {
   private readonly _role = 'sales' as const;
 
-  /** districtId = findIndex(salesId) trong salesAgents array. */
+  /** districtId = vị trí của salesId trong mảng salesAgents. */
   private readonly _districtId: number;
 
   constructor(
@@ -130,7 +130,7 @@ export class SalesFacade {
     };
   }
 
-  // NOTE: Không có runAlgorithm / createVersion / assignZone
-  // SalesFacade là read-only — các method đó không tồn tại trên class này.
-  // Tests verify: `(sales as any).method === undefined`
+  // Lưu ý: không có runAlgorithm / createVersion / assignZone
+  // SalesFacade chỉ đọc — các method đó không tồn tại trên class này.
+  // Test kiểm tra: `(sales as any).method === undefined`
 }

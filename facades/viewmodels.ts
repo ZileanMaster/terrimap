@@ -14,7 +14,7 @@ import type { PartitionResult } from '../services/TerritoryService.js';
 import type { DistrictSummary } from '../services/ActivityService.js';
 import type { Assignment } from '../lib/partition.js';
 
-// ─── Re-exports: L4 import từ đây, không từ lib/ hay services/ ───────────────
+// ─── Re-export: L4 import từ đây, không import từ lib/ hay services/ ───────────────
 
 /**
  * Re-export Assignment — L4 files dùng type này qua viewmodels,
@@ -30,22 +30,22 @@ export type { Assignment };
 export type { Snapshot, PartitionResult, DistrictSummary };
 
 /**
- * Re-export Zone, GeoJSONPolygon, SalesAgent cho L4 (DrawingToolbar, MatrixViewer, mock-agents).
+ * Xuất lại Zone, GeoJSONPolygon, SalesAgent cho L4 (DrawingToolbar, MatrixViewer, mock-agents).
  * L4 KHÔNG import trực tiếp từ types/domain.ts.
  */
 export type { Zone, GeoJSONPolygon, SalesAgent };
 
 // ─── Matrix types ─────────────────────────────────────────────────────────────
 
-/** Adjacency matrix: zoneId → list of neighbor zoneIds */
+/** Ma trận kề: zoneId → danh sách các zoneId lân cận */
 export type AdjMatrix = Record<string, string[]>;
-/** Distance matrix: zoneId → { zoneId: km } */
+/** Ma trận khoảng cách: zoneId → { zoneId: km } */
 export type DistMatrix = Record<string, Record<string, number>>;
 
-// ─── Algorithm ViewModels (L4b-3) ────────────────────────────────────────────
+// ─── ViewModel thuật toán (L4b-3) ────────────────────────────────────────────
 
 /**
- * Violation ViewModel — flatten union type thành format UI-friendly.
+ * Violation ViewModel — làm phẳng union type thành định dạng thân thiện với UI.
  * L4 không cần biết chi tiết BalanceViolation / ContiguityViolation / DiameterViolation.
  */
 export interface ViolationVM {
@@ -64,8 +64,8 @@ export interface ViolationVM {
  *
  * Map renderer cần assignments[] (zoneId + districtId + salesAgentId) vì:
  * - Tô màu polygon: zoneId → districtId
- * - L4b-1: click sales card → filter assignments by salesAgentId → highlight zones
- * KHÔNG dùng Record<string,number> vì mất salesAgentId.
+ * - L4b-1: bấm thẻ sales → lọc assignments theo salesAgentId → làm nổi zones
+ * KHÔNG dùng Record<string,number> vì sẽ mất salesAgentId.
  *
  * ResultMetrics chỉ cần: balanceScore, violationCount, maxDiameter, algo, durationMs, suggestSA.
  * Flatten ra top-level thay vì giữ trong PartitionMetrics để tránh L1 type leak.
@@ -74,17 +74,17 @@ export interface AlgorithmResultVM {
   /** Zone → district → salesAgent mappings. Dùng để tô màu map + filter theo SA. */
   assignments:    Assignment[];
 
-  // ── Metrics (flat — không expose PartitionMetrics) ──────────────────────────
-  /** Điểm cân bằng workload giữa các districts. 0-100, cao hơn = tốt hơn. */
+// ── Chỉ số (flat — không expose PartitionMetrics) ──────────────────────────
+/** Điểm cân bằng workload giữa các cụm. 0-100, càng cao càng tốt. */
   balanceScore:   number;
   /** Khách hàng trung bình trên mỗi cụm sau phân chia. */
   avgCustomersPerDistrict: number;
-  /** Số vi phạm constraint. */
+/** Số vi phạm ràng buộc. */
   violationCount: number;
-  /** Đường kính tối đa (km) trong tất cả districts. */
+/** Đường kính tối đa (km) trong tất cả cụm. */
   maxDiameter:    number;
 
-  // ── Algorithm metadata ───────────────────────────────────────────────────────
+// ── Metadata thuật toán ───────────────────────────────────────────────────────
   /** Thuật toán đã dùng. */
   algo:           'greedy' | 'local-search' | 'sa';
   /** Thời gian chạy (ms). */
@@ -93,13 +93,13 @@ export interface AlgorithmResultVM {
   // ── UI hints ─────────────────────────────────────────────────────────────────
   /** true → balanceScore < 60 và algo !== 'sa' → hiển thị banner gợi ý SA. */
   suggestSA:      boolean;
-  /** Chi tiết violations — dành cho tooltip hoặc expand panel. */
+/** Chi tiết violations — dùng cho tooltip hoặc panel mở rộng. */
   violations:     ViolationVM[];
 }
 
-// ─── Admin ViewModels ─────────────────────────────────────────────────────────
+// ─── ViewModel cho Admin ─────────────────────────────────────────────────────
 
-/** Map từ districtId (numeric) → salesAgentId (string). */
+/** Map từ districtId (số) → salesAgentId (chuỗi). */
 export type DistrictMap = Record<number, string>;
 
 export interface SalesManagement {
@@ -108,35 +108,35 @@ export interface SalesManagement {
 }
 
 export interface ConstraintConfig {
-  /** Ngưỡng adjacency (km). Mặc định 50. */
+/** Ngưỡng adjacency (km). Mặc định là 50. */
   adjThresholdKm?: number;
-  /** Threshold balance ratio. Mặc định 1.5. */
+/** Tỷ lệ cân bằng ngưỡng. Mặc định là 1.5. */
   balanceThreshold?: number;
   /** Ngưỡng diameter tối đa (km). Không bắt buộc. */
   maxDiameterKm?: number;
-  /** Số districts. */
+/** Số cụm. */
   m?: number;
   /** Thuật toán mặc định. */
   defaultAlgo?: 'greedy' | 'local-search' | 'sa';
 }
 
 export interface ReportData {
-  generatedAt: string;          // ISO 8601
-  /** Raw zones để export / downstream consumers. */
+  generatedAt: string;          // Chuỗi ISO 8601
+/** Dữ liệu zones thô để export / consumer phía sau. */
   zones: Zone[];
-  /** Raw assignments tương ứng. */
+/** Dữ liệu assignments thô tương ứng. */
   assignments: Assignment[];
   totalZones: number;
   totalDistricts: number;
   totalSales: number;
   totalCustomers: number;
   totalOrders: number;
-  /** balanceScore trung bình tất cả districts. */
+/** balanceScore trung bình của tất cả cụm. */
   avgBalanceScore: number;
   snapshotCount: number;
 }
 
-// ─── Coordinator ViewModels ───────────────────────────────────────────────────
+// ─── ViewModel cho Điều phối ─────────────────────────────────────────────────
 
 /** SalesAgent kèm danh sách zones được gán. */
 export interface SalesWithZones {
@@ -172,7 +172,7 @@ export interface HistoryEntry {
   zoneCount: number;
 }
 
-// ─── Sales ViewModels ─────────────────────────────────────────────────────────
+// ─── ViewModel cho Sales ─────────────────────────────────────────────────────
 
 export interface MyDistrict {
   zones: Zone[];
@@ -190,22 +190,22 @@ export interface OrderForecast {
   districtId: number;
   /** Tổng đơn thực tế hiện tại. */
   currentOrders: number;
-  /** Dự báo đơn tháng tới (currentOrders * 1.05 làm placeholder). */
+/** Dự báo đơn tháng tới (currentOrders * 1.05 chỉ là giá trị tạm). */
   forecastedOrders: number;
   /** Ngày tính forecast (ISO 8601). */
   forecastedAt: string;
 }
 
-// ─── Activity ViewModels ──────────────────────────────────────────────────────
+// ─── ViewModel cho activity ─────────────────────────────────────────────────
 
-/** Record parsed từ CSV — dùng cho activity batch import. */
+/** Bản ghi parse từ CSV — dùng cho import activity hàng loạt. */
 export interface ActivityRecord {
   zoneId: string;
   customers: number;
   orders: number;
 }
 
-// ─── District reports (user-entered metrics per cluster) ─────────────────────
+// ─── Báo cáo cụm (chỉ số người dùng nhập theo cụm) ─────────────────────
 
 /**
  * DistrictReport — user-entered KPIs for a cluster (district) in a given period.
@@ -217,10 +217,10 @@ export interface DistrictReport {
   regionId:   string;
   districtId: number;
   userId:     string;
-  period:     string;     // 'YYYY-MM'
+  period:     string;     // Chu?i d?ng 'YYYY-MM'
   customers:  number;
   orders:     number;
   revenue?:   number;
   note?:      string;
-  updatedAt:  string;     // ISO
+  updatedAt:  string;     // Chu?i ISO
 }

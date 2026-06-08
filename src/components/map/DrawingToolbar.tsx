@@ -1,9 +1,9 @@
 /**
- * DrawingToolbar - Native Leaflet.Draw vùng control (Admin only)
+ * DrawingToolbar - Điều khiển Leaflet.Draw gốc cho vùng (chỉ admin)
  *
- * Uses Leaflet Draw directly (not react-leaflet-draw wrapper) to avoid ESM issues.
- * NOTE: CSS is imported globally once (see src/main.tsx) because dynamic CSS import
- * can fail in production builds and cause a blank screen.
+ * Dùng trực tiếp Leaflet Draw (không dùng wrapper react-leaflet-draw) để tránh lỗi ESM.
+ * Lưu ý: CSS được import global một lần (xem src/main.tsx) vì dynamic CSS import
+ * có thể lỗi trong production build và gây màn hình trắng.
  */
 
 import { useEffect, useRef } from 'react'
@@ -30,7 +30,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
   const selectedOriginalRingRef = useRef<[number, number][] | null>(null)
   const existingZonesRef = useRef<Zone[] | undefined>(existingZones)
 
-  // Keep latest zones for overlap validation without re-initializing Leaflet.Draw
+  // Gi? zones m?i nh?t ?? ki?m tra ch?ng l?n m? kh?ng c?n kh?i t?o l?i Leaflet.Draw
   useEffect(() => {
     existingZonesRef.current = existingZones
   }, [existingZones])
@@ -65,12 +65,12 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       if (typeof window === 'undefined') return
       if (cancelled) return
 
-      // Leaflet.Draw is CJS and can be finicky in Vite/E SM builds.
+      // Leaflet.Draw l? CJS v? c? th? h?i kh? ch?u trong c?c build Vite/ESM.
       // Dynamic import here prevents hard crashes and ensures the side-effect runs before we access L.Control.Draw.
       try {
         await import('leaflet-draw')
       } catch (e) {
-        // Without Leaflet.Draw, the toolbar cannot render; surface a useful error for debugging.
+        // Kh?ng c? Leaflet.Draw th? toolbar kh?ng th? render; hi?n th? l?i h?u ?ch ?? debug.
         // eslint-disable-next-line no-console
         console.error('[TerriMap] Failed to load leaflet-draw:', e)
         return
@@ -98,7 +98,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         edit: {
           featureGroup: drawnItems,
           remove: false,
-          // Leaflet.Draw expects an object here (it writes selectedPathOptions onto it).
+          // Leaflet.Draw c?n m?t object ? ??y (n? s? ghi selectedPathOptions v?o ??).
           // Passing boolean true can crash: "Cannot create property 'selectedPathOptions' on boolean 'true'".
           edit: {
             selectedPathOptions: {
@@ -201,7 +201,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
     }
   }, [map, onZoneCreated, onZoneEdited])
 
-  // Keep selected-zone edit layer in sync without recreating the whole draw control.
+  // Gi? layer ch?nh s?a zone ?ang ch?n ??ng b? m? kh?ng ph?i t?o l?i to?n b? draw control.
   useEffect(() => {
     const drawnItems = drawnItemsRef.current
     if (!drawnItems) return
@@ -225,7 +225,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     if (latlngs.length < 3) return
 
-    // IMPORTANT: must be interactive for Leaflet.Draw edit handles to work.
+    // QUAN TR?NG: ph?i t??ng t?c ???c ?? c?c tay n?m s?a c?a Leaflet.Draw ho?t ??ng.
     // If interactive is false, the vùng will not receive pointer events and edits feel "non-clickable".
     const layer = L.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
     ;(layer as any).__zoneId = selectedZone.id
@@ -234,6 +234,6 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
     drawnItems.addLayer(layer)
   }, [selectedZone])
 
-  // Hook-only component - no JSX output
+  // Component chỉ dùng hook - không có JSX output
   return null
 }

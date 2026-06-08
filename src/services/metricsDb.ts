@@ -1,9 +1,9 @@
 /**
- * src/services/metricsDb.ts — Monthly metrics persistence
+ * src/services/metricsDb.ts — Lưu trữ chỉ số theo tháng
  *
  * Lưu/load chỉ số theo tháng (YYYY-MM) cho từng zone.
- * Offline fallback: localStorage key 'terrimap_monthly_metrics'.
- * Online: Supabase table zone_monthly_metrics.
+ * Dự phòng offline: localStorage key 'terrimap_monthly_metrics'.
+ * Online: bảng Supabase zone_monthly_metrics.
  *
  * SQL cần chạy trên Supabase (nếu chưa có):
  * ```sql
@@ -57,18 +57,18 @@ function lsSet(data: Record<string, Record<string, MonthlyMetric[]>>) {
   } catch { /* quota exceeded — ignore */ }
 }
 
-// ── Save ───────────────────────────────────────────────────────────────────
+// ── Lưu ───────────────────────────────────────────────────────────────────
 
 /**
- * Save monthly metrics for one zone.
- * `period` format: '2026-04'
+ * L?u ch? s? theo th?ng cho m?t zone.
+ * ??nh d?ng `period`: '2026-04'
  */
 export async function saveMonthlyMetrics(
   zoneId:  string,
   period:  string,
   metrics: MonthlyMetric[],
 ): Promise<void> {
-  // Always save to localStorage first
+  // Lu?n l?u v?o localStorage tr??c
   const all = lsGet()
   if (!all[period]) all[period] = {}
   all[period]![zoneId] = metrics
@@ -76,7 +76,7 @@ export async function saveMonthlyMetrics(
 
   if (!isOnline()) return
 
-  // Upsert each metric row to Supabase
+  // Upsert t?ng d?ng ch? s? l?n Supabase
   try {
     const rows = metrics.map((m) => ({
       zone_id:     zoneId,
@@ -100,18 +100,18 @@ export async function saveMonthlyMetrics(
   }
 }
 
-// ── Load ───────────────────────────────────────────────────────────────────
+// ── Tải ───────────────────────────────────────────────────────────────────
 
 /**
- * Load monthly metrics for all zones in a period.
- * Optionally filter by regionId (requires zones to have regionId).
- * Returns Map<zoneId, MonthlyMetric[]>
+ * T?i ch? s? th?ng cho to?n b? zone trong m?t k?.
+ * C? th? l?c theo zoneIds (v? d?: c?c zone c?a m?t khu v?c).
+ * Tr? v? Map<zoneId, MonthlyMetric[]>
  */
 export async function loadMonthlyMetrics(
   period:   string,
-  zoneIds?: string[],  // filter to specific zones (e.g. region's zones)
+  zoneIds?: string[],  // l?c theo c?c zone c? th? (v? d?: zone c?a region)
 ): Promise<MetricsMap> {
-  // Always try localStorage first
+  // Lu?n th? localStorage tr??c
   const all     = lsGet()
   const local   = all[period] ?? {}
   const localMap = new Map<string, MonthlyMetric[]>()
@@ -123,7 +123,7 @@ export async function loadMonthlyMetrics(
 
   if (!isOnline()) return localMap
 
-  // Merge with Supabase
+  // G?p v?i Supabase
   try {
     let query = supabase!
       .from('zone_monthly_metrics')
@@ -137,7 +137,7 @@ export async function loadMonthlyMetrics(
     const { data, error } = await query
     if (error || !data) return localMap
 
-    // Build map from remote data (remote fills gaps not in local)
+    // X?y d?ng map t? d? li?u remote (remote l?p ph?n thi?u so v?i local)
     const remoteMap = new Map<string, MonthlyMetric[]>()
     for (const row of data) {
       const list = remoteMap.get(row.zone_id) ?? []
@@ -145,7 +145,7 @@ export async function loadMonthlyMetrics(
       remoteMap.set(row.zone_id, list)
     }
 
-    // Merge: local wins on conflict
+    // G?p: local th?ng khi c? xung ??t
     for (const [zid, mets] of remoteMap.entries()) {
       if (!localMap.has(zid)) localMap.set(zid, mets)
     }
@@ -156,7 +156,7 @@ export async function loadMonthlyMetrics(
 }
 
 /**
- * Get all periods that have saved metrics (from localStorage).
+ * L?y t?t c? period ?? l?u metrics (t? localStorage).
  * Returns sorted descending: ['2026-04', '2026-03', ...]
  */
 export function getAvailablePeriods(): string[] {

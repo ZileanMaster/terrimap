@@ -52,7 +52,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://unpkg.com/leaflet@1.9/dist/images/marker-shadow.png',
 })
 
-// ── MapFlyTo — smooth animation when region changes ───────────────────────────
+// ── MapFlyTo — hiệu ứng bay mượt khi đổi vùng ───────────────────────────────
 function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap()
   const prevCenter = React.useRef(center)
@@ -74,7 +74,7 @@ function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) 
 }
 
 // ── MapZoneFlyTo — fitBounds to selected zone vùng ─────────────────────────
-// Accurate zoom-to-zone using Leaflet bounds (avoids centroid storage issues)
+// Zoom v?o zone ch?nh x?c b?ng Leaflet bounds (tr?nh ph? thu?c centroid l?u s?n)
 function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId?: string | null }) {
   const map = useMap()
   const prevZoneId = React.useRef<string | null | undefined>(null)
@@ -128,7 +128,7 @@ export default function TerritoryMap({
   const showPolygons = useUIStore((s: any) => (s?.showPolygons ?? true) as boolean)
   const hiddenZoneIds = useUIStore((s: any) => (s?.hiddenZoneIds ?? {}) as Record<string, true>)
 
-  // Build colorMap: zoneId → districtId
+  // T?o colorMap: zoneId ? districtId
   const colorMap = useMemo(
     () => new Map(assignments.map((a) => [a.zoneId, a.districtId])),
     [assignments],
@@ -186,7 +186,7 @@ export default function TerritoryMap({
           const isIsland       = islandZoneIds?.has(zone.id) ?? false
           const isDisconnected = isAssigned && (disconnectedDistrictIds?.has(districtId!) ?? false)
 
-          // Legend focus: dim everything except the selected district
+          // Tập trung legend: làm mờ mọi thứ trừ cụm đang chọn
           const isLegendFocused = selectedDistrictId != null
           const isFocusedDistrict = isLegendFocused && districtId === selectedDistrictId
           const shouldDimForLegend = isLegendFocused && !isFocusedDistrict
@@ -196,7 +196,7 @@ export default function TerritoryMap({
             ? salesId === highlightedSalesId
             : null
 
-          // Compute fill opacity — priority: transition > sales highlight > zone selection > default
+          // Tính độ trong suốt fill — ưu tiên: transition > tô sáng sales > chọn zone > mặc định
           let fillOpacity: number
           if (isTransitioning) {
             fillOpacity = DISTRICT_FILL_OPACITY_TRANSITION
@@ -222,7 +222,7 @@ export default function TerritoryMap({
               ? DISTRICT_WEIGHT_SELECTED
               : DISTRICT_WEIGHT
 
-          // L4b-2: Border priority — disconnected (red, 3) > island (orange, 2.5) > unassigned (gray dashed) > normal
+          // L4b-2: Ưu tiên viền — mất liên thông (đỏ, 3) > đảo (cam, 2.5) > chưa gán (xám nét đứt) > bình thường
           let borderColor  = color
           let borderWeight = baseWeight
           let dashArray: string | undefined = undefined

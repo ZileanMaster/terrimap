@@ -1,8 +1,8 @@
 /**
- * DistrictAgentAssigner — Phase 3 update
+ * DistrictAgentAssigner — cập nhật Giai đoạn 3
  *
- * - Color dot + zone count + total customers per district
- * - Agent dropdown filtered by same regionId as selected region
+ * - Chấm màu + số vùng + tổng khách hàng theo cụm
+ * - Dropdown nhân sự được lọc theo regionId của vùng đang chọn
  * - Lưu ngay khi thay đổi
  */
 
@@ -12,7 +12,7 @@ import { getDistrictFillColor } from '../../data/district-colors.js'
 import type { Zone } from '../../../facades/viewmodels.js'
 
 interface DistrictAgentAssignerProps {
-  /** Optional: filter agents by this regionId (Phase 3 — 3B) */
+  /** Tùy chọn: lọc nhân sự theo regionId này (Giai đoạn 3 — 3B) */
   regionId?: string
   zones?:    Zone[]
 }
@@ -25,8 +25,8 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
 
   const zones = propZones ?? storeZones
 
-  // Phase 3: filter agents by region (if regionId provided)
-  // Note 4: nếu agent chưa có regionId → hiện ở tất cả regions
+  // Giai ?o?n 3: l?c nh?n s? theo v?ng (n?u c? regionId)
+  // Ghi ch? 4: n?u nh?n s? ch?a c? regionId ? hi?n ? t?t c? v?ng
   const filteredAgents = useMemo(() => {
     if (!regionId) return agents
     return agents.filter((a) => {
@@ -35,14 +35,14 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
     })
   }, [agents, regionId])
 
-  // Build district stats
+  // T?nh th?ng k? c?a c?m
   const districts = useMemo(() => {
     const ids = [...new Set(assignments.map((a) => a.districtId))].sort((a, b) => a - b)
     return ids.map((d) => {
       const distAssignments = assignments.filter((a) => a.districtId === d)
       const distZones       = zones.filter((z) => distAssignments.some((a) => a.zoneId === z.id))
 
-      // Total customers
+      // T?ng s? kh?ch h?ng
       const totalCustomers = distZones.reduce((sum, z) =>
         sum + z.activities
           .filter((act) => act.type === 'CUSTOMER')
@@ -75,7 +75,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
       <h3 style={styles.title}>👥 Phân công nhân viên</h3>
       {districts.map((d) => (
         <div key={d.districtId} style={styles.row}>
-          {/* District info */}
+          {/* Th?ng tin c?m */}
           <div style={styles.colorDot}>
             <span style={{
               ...styles.dot,
@@ -89,7 +89,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
             </div>
           </div>
 
-          {/* Agent dropdown — filtered by region */}
+          {/* Dropdown nhân sự — đã lọc theo vùng */}
           <select
             value={d.currentAgent}
             onChange={(e) => handleChange(d.districtId, e.target.value)}
@@ -101,7 +101,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
                 {agent.name}
               </option>
             ))}
-            {/* Show current agent even if outside region */}
+            {/* V?n hi?n th? agent hi?n t?i k? c? khi ngo?i v?ng */}
             {d.currentAgent && !filteredAgents.some((a) => a.id === d.currentAgent) && (
               <option value={d.currentAgent}>
                 {agents.find((a) => a.id === d.currentAgent)?.name ?? d.currentAgent} (ngoài vùng)

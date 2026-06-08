@@ -1,14 +1,14 @@
 /**
- * src/services/db.ts — Database CRUD layer (Supabase ↔ App)
+ * src/services/db.ts — Lớp CRUD cho database (Supabase ↔ App)
  *
- * All functions are async and gracefully fall back to MOCK data when
- * Supabase is not configured (VITE_SUPABASE_URL missing).
+ * Tất cả hàm đều async và sẽ fallback mượt sang dữ liệu MOCK khi
+ * Supabase chưa được cấu hình (thiếu VITE_SUPABASE_URL).
  *
- * SAVE functions are fire-and-forget (no await in callers) — UI updates
- * optimistically and DB syncs in background.
+ * Các hàm SAVE là fire-and-forget (caller không await) — UI cập nhật
+ * theo kiểu optimistic và DB sync ở nền.
  *
- * Architecture note: This file lives in L4 (src/) and is the ONLY place
- * that touches Supabase. L0-L3 remain untouched.
+ * Ghi chú kiến trúc: file này nằm ở L4 (src/) và là nơi DUY NHẤT
+ * chạm vào Supabase. L0-L3 không bị đụng tới.
  */
 
 import { supabase, isOnline } from '../lib/supabase.js'
@@ -110,7 +110,7 @@ interface DbRegion {
 // ── LOAD ──────────────────────────────────────────────────────────────────────
 
 /**
- * Load zones + activities from Supabase, optionally filtered by project.
+ * T?i zones + activities t? Supabase, c? th? l?c theo project.
  * Offline fallback: MOCK_ZONES.
  */
 export async function loadZones(projectId?: string): Promise<Zone[]> {
@@ -146,7 +146,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
     }
   }
 
-  // Load activities for these zones
+  // T?i activities cho c?c zones n?y
   const zoneIds = (zones as DbZone[]).map(z => z.id)
   let activities: DbActivity[] = []
   if (zoneIds.length > 0) {
@@ -191,7 +191,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
 }
 
 /**
- * Load assignments, optionally filtered by project.
+ * T?i assignments, c? th? l?c theo project.
  * Offline fallback: MOCK_ASSIGNMENTS.
  */
 export async function loadAssignments(projectId?: string): Promise<Assignment[]> {
@@ -236,7 +236,7 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
 }
 
 /**
- * Load sales agents (ordered canonical — OPEN-4), optionally filtered by project.
+ * Tải sales agents (giữ thứ tự canonical — OPEN-4), có thể lọc theo project.
  * Offline fallback: MOCK_AGENTS.
  */
 export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
@@ -245,7 +245,7 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     : MOCK_AGENTS
 
   // IMPORTANT: never leak demo/legacy (NULL project_id) agents into other projects.
-  // In online mode, data must be project-scoped.
+  // ? ch? ?? online, d? li?u ph?i thu?c ph?m vi project.
   let query = supabase!.from('sales_agents').select('*').order('id')
   if (projectId) query = query.eq('project_id', projectId)
 
@@ -418,14 +418,14 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
 }
 
 /**
- * Save a snapshot with full zones + assignments data.
+ * L?u snapshot v?i to?n b? d? li?u zones + assignments.
  * Offline fallback: project-scoped localStorage.
  */
 export async function saveSnapshot(
   id: string,
   label: string,
   data: { zones: Zone[]; assignments: Assignment[] } | object,
-  period?: string,  // '2026-04' — optional, gắn tháng với snapshot
+  period?: string,  // '2026-04' — tùy chọn, gắn tháng với snapshot
   projectId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const scopedProjectId = projectId ?? _currentProjectId
@@ -463,7 +463,7 @@ export async function saveSnapshot(
 }
 
 /**
- * Load snapshots with full data (newest first, max 50).
+ * T?i snapshots v?i ??y ?? d? li?u (m?i nh?t tr??c, t?i ?a 50).
  * Offline fallback: localStorage.
  */
 export async function loadSnapshots(projectId?: string): Promise<Array<{
@@ -479,7 +479,7 @@ export async function loadSnapshotsForProject(projectId?: string): Promise<Array
   data: { zones: Zone[]; assignments: Assignment[] }
   created_at: string
 }>> {
-  // Read project-scoped localStorage
+  // ??c localStorage theo ph?m vi project
   const scopedProjectId = projectId ?? _currentProjectId
   const key = scopedKey('terrimap_snapshots', scopedProjectId)
   let localSnaps: any[] = []
@@ -489,7 +489,7 @@ export async function loadSnapshotsForProject(projectId?: string): Promise<Array
 
   if (!isOnline()) return localSnaps
 
-  // Online: also read Supabase (filtered by project) and merge
+  // Chế độ online: cũng đọc Supabase (lọc theo project) rồi ghép dữ liệu
   try {
     let query = supabase!
       .from('snapshots')
@@ -552,7 +552,7 @@ export async function deleteSnapshot(id: string, projectId?: string): Promise<vo
  * Upsert (thêm hoặc cập nhật) một sales agent.
  */
 export async function saveAgent(agent: SalesAgent, projectId?: string): Promise<void> {
-  // Luôn update mock-agents trong localStorage (project-scoped)
+  // Lu?n c?p nh?t mock-agents trong localStorage (theo project)
   const agentKey = scopedKey('terrimap_agents', projectId)
   try {
     const stored = readJsonArray<SalesAgent>(agentKey)
@@ -604,10 +604,10 @@ export async function deleteAgent(agentId: string): Promise<void> {
 // ── Regions ────────────────────────────────────────────────────────────────────
 
 /**
- * Load regions, optionally filtered by project.
+ * T?i regions, c? th? l?c theo project.
  */
 export async function loadRegions(projectId?: string): Promise<Region[]> {
-  // Load project-scoped localStorage overrides (coordinator assignments etc.)
+  // T?i c?c override localStorage theo project (ph?n c?ng c?a ?i?u ph?i, v.v.)
   const local = readScopedCollections<Region>('terrimap_regions', projectId)
 
   if (!isOnline()) return local.length > 0 ? local : (projectId ? [] : DEFAULT_REGIONS)
@@ -618,8 +618,8 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       .select('*')
       .order('name')
     
-    // IMPORTANT: never leak global/legacy regions into a project.
-    // In online mode, regions must be project-scoped.
+    // Quan trọng: không bao giờ để vùng global/legacy rò vào project.
+    // ? ch? ?? online, regions ph?i thu?c ph?m vi project.
     if (projectId) query = query.eq('project_id', projectId)
 
     const { data, error } = await query
@@ -661,10 +661,10 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
 }
 
 /**
- * Save (upsert) a region. Also persists to localStorage.
+ * L?u (upsert) m?t region. ??ng th?i l?u v?o localStorage.
  */
 export async function saveRegion(region: Region, projectId?: string): Promise<void> {
-  // Update project-scoped localStorage
+  // C?p nh?t localStorage theo ph?m vi project
   const regionKey = scopedKey('terrimap_regions', projectId)
   try {
     const stored = readJsonArray<Region>(regionKey)

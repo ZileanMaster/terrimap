@@ -1,9 +1,9 @@
 /**
  * useSAWorker — Hook to run SA algorithm in a Web Worker.
- * Fallback: rejects so caller can fall back to main thread.
+ * D? ph?ng: tr? reject ?? caller c? th? r?i v? main thread.
  *
- * Worker returns raw Assignment[] (without salesAgentId).
- * Caller wraps via AdminFacade.wrapAssignmentsAsResult().
+ * Worker tr? v? Assignment[] th? (kh?ng c? salesAgentId).
+ * Caller b?c l?i qua AdminFacade.wrapAssignmentsAsResult().
  */
 
 import { useRef, useCallback } from 'react'
@@ -38,7 +38,7 @@ export function useSAWorker() {
   ): Promise<Assignment[]> => {
     return new Promise((resolve, reject) => {
       try {
-        // Create fresh worker each run (avoid stale state)
+        // Tạo worker mới cho mỗi lần chạy (tránh state cũ)
         const worker = new Worker(
           new URL('../workers/sa-worker.ts', import.meta.url),
           { type: 'module' },
@@ -66,10 +66,10 @@ export function useSAWorker() {
           workerRef.current = null
         }
 
-        // Send serializable data to worker
+        // Gửi dữ liệu để serialize sang worker
         worker.postMessage({ zones, m, opts })
       } catch {
-        // Worker not available (SSR, test env)
+        // Worker kh?ng kh? d?ng (SSR, m?i tr??ng test)
         reject(new Error('Web Worker not available'))
       }
     })

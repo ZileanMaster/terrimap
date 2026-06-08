@@ -1,11 +1,11 @@
 /**
- * SnapshotManager — Save / Load map panel
+ * SnapshotManager — Khối lưu / tải bản đồ
  *
- * Positioned absolute top-right of the map area.
- * Save: prompt for name → saveSnapshot(full zones+assignments)
- * Load: dropdown list → restore zones+assignments to global store
+ * Đặt tuyệt đối ở góc trên bên phải khu vực bản đồ.
+ * Lưu: hỏi tên → saveSnapshot toàn bộ zones + assignments
+ * Tải: danh sách xổ xuống → khôi phục zones + assignments vào store toàn cục
  *
- * Works in both online (Supabase) and offline (localStorage) modes.
+ * Hoạt động cả ở chế độ online (Supabase) và offline (localStorage).
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
@@ -20,7 +20,7 @@ export interface SnapshotItem {
   label:      string
   data:       { zones: any[]; assignments: any[] }
   created_at: string
-  period?:    string   // '2026-04' — optional, gắn tháng
+  period?:    string   // '2026-04' — tùy chọn, gắn tháng
 }
 
 export default function SnapshotManager() {
@@ -30,7 +30,7 @@ export default function SnapshotManager() {
   const [hoveredId, setHoveredId]   = useState<string | null>(null)
   const [periodFilter, setPeriodFilter] = useState<string>('all')
 
-  // Phase 3D: Compare mode
+  // Giai ?o?n 3D: ch? ?? so s?nh
   const [compareMode, setCompareMode]             = useState(false)
   const [selectedForCompare, setSelectedForCompare] = useState<SnapshotItem[]>([])
   const [comparingPair, setComparingPair]           = useState<[SnapshotItem, SnapshotItem] | null>(null)
@@ -46,15 +46,15 @@ export default function SnapshotManager() {
     setSnapshots(data as SnapshotItem[])
   }, [currentProjectId])
 
-  // Load snapshots on mount and whenever project changes.
+  // T?i snapshots khi mount v? m?i khi project thay ??i.
   useEffect(() => {
     void reloadSnapshots().catch((error) => {
       console.error('[SnapshotManager] load error:', error)
     })
   }, [reloadSnapshots, currentProjectId])
 
-  // Live sync: when another admin/coordinator saves a snapshot in the same project,
-  // refresh this dropdown automatically.
+  // ??ng b? tr?c ti?p: khi admin/?i?u ph?i kh?c l?u snapshot trong c?ng project,
+  // t? ??ng l?m m?i dropdown n?y.
   useEffect(() => {
     if (!currentProjectId || !isOnline()) return
 
@@ -81,7 +81,7 @@ export default function SnapshotManager() {
     }
   }, [currentProjectId, reloadSnapshots])
 
-  // Polling fallback in case Realtime isn't available in the current project.
+  // C? ch? polling d? ph?ng n?u Realtime kh?ng kh? d?ng trong project hi?n t?i.
   useEffect(() => {
     if (!currentProjectId) return
 
@@ -94,7 +94,7 @@ export default function SnapshotManager() {
     return () => window.clearInterval(timer)
   }, [currentProjectId, reloadSnapshots])
 
-  // Close dropdown on outside click
+  // ??ng dropdown khi b?m ra ngo?i
   useEffect(() => {
     if (!isOpen) return
     const handler = (e: MouseEvent) => {
@@ -114,7 +114,7 @@ export default function SnapshotManager() {
     const label = window.prompt('Tên bản đồ:', defaultLabel)
     if (!label?.trim()) return
 
-    // Get current period from URL or default to current month
+    // L?y period hi?n t?i t? URL ho?c m?c ??nh l? th?ng hi?n t?i
     const now    = new Date()
     const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
@@ -133,7 +133,7 @@ export default function SnapshotManager() {
       setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
       await saveSnapshot(id, label.trim(), { zones, assignments }, period, currentProjectId ?? undefined)
       void reloadSnapshots().catch(() => {
-        // Keep optimistic local state if refresh fails.
+        // Gi? state local theo ki?u optimistic n?u vi?c refresh th?t b?i.
       })
       // Không cần alert thành công — badge count tăng lên là feedback đủ
     } catch (e) {
@@ -144,19 +144,19 @@ export default function SnapshotManager() {
   }, [zones, assignments, snapshots, reloadSnapshots])
 
   const handleRestore = useCallback((snap: SnapshotItem) => {
-    if (compareMode) return // In compare mode, clicks are for selection
+    if (compareMode) return // ? ch? ?? so s?nh, c?c l?n click ch? d?ng ?? ch?n snapshot
     if (!window.confirm(`Khôi phục map "${snap.label}"?\nDữ liệu hiện tại sẽ bị thay thế.`)) return
     setZones(snap.data.zones as any)
     setAssignments(snap.data.assignments as any)
     setIsOpen(false)
   }, [setZones, setAssignments, compareMode])
 
-  // Phase 3D: toggle snapshot selection for compare
+  // Giai ?o?n 3D: b?t/t?t ch?n snapshot ?? so s?nh
   const toggleCompareSelect = useCallback((snap: SnapshotItem) => {
     setSelectedForCompare((prev) => {
       const exists = prev.find((s) => s.id === snap.id)
       if (exists) return prev.filter((s) => s.id !== snap.id)
-      if (prev.length >= 2) return [prev[1]!, snap] // replace oldest
+      if (prev.length >= 2) return [prev[1]!, snap] // thay th? b?n c? nh?t
       return [...prev, snap]
     })
   }, [])
@@ -179,7 +179,7 @@ export default function SnapshotManager() {
     })
   }, [currentProjectId, reloadSnapshots])
 
-  // Period filter logic
+  // Logic l?c theo period
   const availablePeriods = useMemo(() => {
     const ps = snapshots.map((s) => s.period).filter(Boolean) as string[]
     return [...new Set(ps)].sort((a, b) => b.localeCompare(a))
@@ -197,7 +197,7 @@ export default function SnapshotManager() {
       data-snapshot-manager
       style={styles.container}
     >
-      {/* Save button */}
+      {/* N?t l?u */}
       <button
         id="snapshot-save-btn"
         onClick={handleSave}
@@ -212,7 +212,7 @@ export default function SnapshotManager() {
         {saving ? '⏳' : '💾'} Lưu map
       </button>
 
-      {/* Load dropdown */}
+      {/* Dropdown t?i */}
       <div style={styles.dropdownWrapper}>
         <button
           id="snapshot-load-btn"
@@ -229,7 +229,7 @@ export default function SnapshotManager() {
             <div style={styles.dropdownHeader}>
               <span>Bản đồ đã lưu</span>
               <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', alignItems: 'center' }}>
-                {/* Phase 3D: Compare mode toggle */}
+                {/* Giai ?o?n 3D: n?t b?t/t?t ch? ?? so s?nh */}
                 <button
                   onClick={() => {
                     setCompareMode((v) => !v)
@@ -244,7 +244,7 @@ export default function SnapshotManager() {
                 >
                   📊 So sánh
                 </button>
-                {/* Period filter */}
+                {/* B? l?c period */}
                 {availablePeriods.length > 0 && (
                   <select
                     value={periodFilter}
@@ -262,7 +262,7 @@ export default function SnapshotManager() {
               </div>
             </div>
 
-            {/* Compare banner */}
+            {/* Banner so s?nh */}
             {compareMode && (
               <div style={styles.compareBanner}>
                 {selectedForCompare.length < 2
@@ -301,7 +301,7 @@ export default function SnapshotManager() {
                       onMouseEnter={() => setHoveredId(snap.id)}
                       onMouseLeave={() => setHoveredId(null)}
                     >
-                      {/* Compare checkbox */}
+                      {/* Checkbox so s?nh */}
                       {compareMode && (
                         <input
                           type="checkbox"
@@ -349,7 +349,7 @@ export default function SnapshotManager() {
         )}
       </div>
 
-      {/* Phase 3D: SnapshotCompare modal */}
+      {/* Giai ?o?n 3D: h?p tho?i SnapshotCompare */}
       {comparingPair && (
         <SnapshotCompare
           snapshotA={comparingPair[0]}
@@ -507,7 +507,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight:   700,
     flexShrink:   0,
   },
-  // Phase 3D compare styles
+  // Ki?u cho so s?nh giai ?o?n 3D
   compareToggleBtn: {
     fontSize:     11,
     padding:      '3px 8px',

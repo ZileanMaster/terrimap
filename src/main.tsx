@@ -6,7 +6,7 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary.js'
 import { initTelemetry } from './utils/telemetry.js'
 
-// Apply persisted theme on load (before first render) to avoid flash.
+// ?p d?ng theme s?m ?? l?u ngay khi t?i v? tr?nh nh?y giao di?n.
 try {
   const v = localStorage.getItem('terrimap_theme')
   const theme = v === 'light' || v === 'dark' || v === 'system' ? v : 'system'
@@ -17,10 +17,10 @@ try {
     document.documentElement.classList.toggle('dark', prefersDark)
   }
 } catch {
-  // ignore storage errors
+  // b? qua l?i l?u tr?
 }
 
-// Install global error + rejection listeners (prevents silent blank screens).
+// G?n listener l?i to?n c?c v? rejection ?? tr?nh m?n h?nh tr?ng im l?ng.
 initTelemetry()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

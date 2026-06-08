@@ -1,11 +1,11 @@
 /**
- * RegionManager — Dynamic region management with province search & fly-to
+ * RegionManager — Quản lý vùng động với tìm tỉnh và fly-to
  *
- * Features:
- * - Province search bar: autocomplete 34 provinces, click → fly map
- * - "Tạo khu vực tại đây": save current map center as new region
- * - Pill bar: select/deselect region to filter map + zones
- * - Delete region (with guard if zones still attached)
+ * Tính năng:
+ * - Thanh tìm tỉnh: tự hoàn thành 34 tỉnh, bấm → bay map
+ * - "Tạo khu vực tại đây": lưu tâm bản đồ hiện tại thành vùng mới
+ * - Thanh pill: chọn/bỏ chọn vùng để lọc map + zones
+ * - Xóa vùng (có chặn nếu còn zone đang gắn)
  * - Coordinator assignment for selected region
  * - Empty state guide for new projects
  */
@@ -16,10 +16,10 @@ import { VIETNAM_PROVINCES } from '../../data/provinces.js'
 import type { Region } from '../../data/regions.js'
 
 interface RegionManagerProps {
-  /** Current map center (lat/lng) exposed from TerritoryMap via parent */
+  /** T?m b?n ?? hi?n t?i (lat/lng) ???c truy?n t? TerritoryMap qua parent */
   mapCenter?: { lat: number; lng: number }
   mapZoom?:   number
-  /** Callback to fly the map to given coordinates */
+  /** Callback ?? bay b?n ?? t?i to? ?? ???c truy?n v?o */
   onFlyTo?:   (lat: number, lng: number, zoom: number) => void
 }
 
@@ -38,18 +38,18 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
   const [creating,       setCreating]       = useState(false)
   const [newName,        setNewName]        = useState('')
   const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null)
-  // FIX: save province coords from dropdown so region gets correct center
+  // S?a l?i: l?u to? ?? t?nh t? dropdown ?? khu v?c c? t?m ??ng
   const [selectedProvince, setSelectedProvince] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
 
-  // Filter provinces by query
+  // L?c t?nh theo t? kh?a
   const filteredProvinces = searchQuery.trim().length > 0
     ? VIETNAM_PROVINCES.filter((p) =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : VIETNAM_PROVINCES
 
-  // Close dropdown on outside click
+  // ??ng dropdown khi b?m ra ngo?i
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -63,24 +63,24 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
   const handleProvinceSelect = useCallback((lat: number, lng: number, zoom: number, name: string) => {
     setSearchQuery(name)
     setShowDropdown(false)
-    setNewName(name)          // pre-fill create form with province name
-    setSelectedProvince({ lat, lng, zoom })  // FIX: save coords for region creation
+    setNewName(name)          // ?i?n s?n form t?o b?ng t?n t?nh
+    setSelectedProvince({ lat, lng, zoom })  // S?a l?i: l?u to? ?? ?? t?o khu v?c
     onFlyTo?.(lat, lng, zoom)
   }, [onFlyTo])
 
   const handleCreateRegion = useCallback(async () => {
     if (!newName.trim()) return
-    // FIX: priority — province search coords > mapCenter > fallback
-    // (mapCenter may be undefined since Sidebar doesn't always pass it)
+    // Ưu tiên: tọa độ tìm tỉnh > mapCenter > fallback
+    // (mapCenter c? th? undefined v? Sidebar kh?ng ph?i l?c n?o c?ng truy?n v?o)
     const center = selectedProvince ?? mapCenter ?? { lat: 21.028, lng: 105.854 }  // Hà Nội default
     const zoom   = selectedProvince?.zoom ?? mapZoom ?? 12
     setCreating(false)
     setNewName('')
     setSearchQuery('')
-    setSelectedProvince(null)  // reset after use
+    setSelectedProvince(null)  // reset sau khi d?ng
     const region = await addRegion(newName.trim(), center, zoom)
     setCurrentRegion(region.id)
-    // FIX: fly to newly created region
+    // S?a l?i: bay t?i khu v?c v?a t?o
     onFlyTo?.(center.lat, center.lng, zoom)
   }, [newName, selectedProvince, mapCenter, mapZoom, addRegion, setCurrentRegion, onFlyTo])
 
@@ -138,7 +138,7 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
         )}
       </div>
 
-      {/* ── Create region ─────────────────────────────────────────────── */}
+      {/* ── Tạo vùng ─────────────────────────────────────────────────── */}
       {creating ? (
         <div style={styles.createBox}>
           <input
@@ -194,7 +194,7 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
                   onClick={() => {
                     const nextActive = !isActive
                     setCurrentRegion(nextActive ? region.id : null)
-                    // FIX: fly to region center when selecting
+                    // S?a l?i: bay t?i t?m khu v?c khi ch?n
                     if (nextActive && region.center) {
                       onFlyTo?.(region.center.lat, region.center.lng, (region as any).zoom ?? 12)
                     }

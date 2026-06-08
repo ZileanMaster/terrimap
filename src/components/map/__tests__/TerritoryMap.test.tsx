@@ -1,7 +1,7 @@
 /**
- * TerritoryMap.test.tsx — Unit tests MAP-1 → MAP-5
+ * TerritoryMap.test.tsx — Kiểm thử đơn vị MAP-1 → MAP-5
  *
- * react-leaflet mocked ở test-setup.tsx:
+ * react-leaflet được mock ở test-setup.tsx:
  *   Polygon → <div data-testid="polygon" data-zone-id data-district data-selected onClick>
  */
 
@@ -32,12 +32,12 @@ vi.mock('../../../store/uiStore', () => ({
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 vi.mock('leaflet-draw/dist/leaflet.draw.css', () => ({}))
 
-// Mock ClusterLayer to avoid leaflet.markercluster CJS issues in vitest
+// Mock ClusterLayer ?? tr?nh l?i CJS c?a leaflet.markercluster trong vitest
 vi.mock('../ClusterLayer', () => ({
   default: () => null,
 }))
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+// ── Dữ liệu mock ───────────────────────────────────────────────────────────────
 
 const ring1: [number, number][] = [
   [105.7, 20.9], [105.9, 20.9], [105.9, 21.1],
@@ -79,7 +79,7 @@ describe('TerritoryMap', () => {
     render(
       <TerritoryMap zones={mockZones} assignments={mockAssignments} />,
     )
-    // Mock renders one <div data-testid="polygon"> per zone
+    // Mock render m?t <div data-testid="polygon"> cho m?i zone
     expect(screen.getAllByTestId('polygon')).toHaveLength(2)
   })
 

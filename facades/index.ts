@@ -1,36 +1,36 @@
 /**
  * facades/index.ts
  *
- * Re-export tất cả L3 Role Façades, ViewModels và PermissionError.
+ * Re-export toàn bộ L3 Role Façades, ViewModels và PermissionError.
  */
 
-// ─── Errors ───────────────────────────────────────────────────────────────────
+// ─── Lỗi ─────────────────────────────────────────────────────────────────────
 export { PermissionError } from './errors.js';
 export type { PermissionErrorCode, PermissionErrorDetails } from './errors.js';
 
 // ─── ViewModels ───────────────────────────────────────────────────────────────
 export type {
-  // Admin
+  // Cho Admin
   SalesManagement,
   DistrictMap,
   ConstraintConfig,
   ReportData,
-  // Coordinator
+  // Cho Điều phối
   TeamOverview,
   SalesWithZones,
   AssignResult,
   HistoryEntry,
-  // Sales
+  // Cho Nhân sự
   MyDistrict,
   Customer,
   OrderForecast,
-  // Re-exports từ L2
+  // Re-export từ L2
   Snapshot,
   PartitionResult,
   DistrictSummary,
 } from './viewmodels.js';
 
-// ─── Façades ──────────────────────────────────────────────────────────────────
+// ─── Façades ─────────────────────────────────────────────────────────────────
 export { AdminFacade } from './AdminFacade.js';
 export { CoordinatorFacade } from './CoordinatorFacade.js';
 export { SalesFacade } from './SalesFacade.js';

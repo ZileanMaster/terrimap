@@ -36,7 +36,7 @@ export default function MetricsInput({ period, zones, onRunWithMetrics }: Metric
   const [saving, setSaving]   = useState(false)
   const [loading, setLoading] = useState(true)
 
-  // Load existing metrics for this period on mount or period change
+  // T?i c?c ch? s? ?? c? c?a k? n?y khi mount ho?c khi ??i k?
   useEffect(() => {
     setLoading(true)
     const zoneIds = zones.map((z) => z.id)

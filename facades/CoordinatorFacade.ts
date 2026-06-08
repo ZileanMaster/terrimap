@@ -1,8 +1,8 @@
 /**
- * facades/CoordinatorFacade.ts — L3 Role Façade (stateless)
+ * facades/CoordinatorFacade.ts — L3 Role Façade (không giữ state)
  *
- * Role: Coordinator — xem + gán + lịch sử + chạy phân chia, KHÔNG tạo version.
- * Không lưu state data trong constructor — nhận qua method params.
+ * Vai trò: Điều phối — xem + gán + lịch sử + chạy phân chia, KHÔNG tạo version.
+ * Không lưu state data trong constructor — nhận qua tham số của method.
  */
 
 import type { Zone, SalesAgent, Activity } from '../types/domain.js';
@@ -21,7 +21,7 @@ import type {
   PartitionResult,
 } from './viewmodels.js';
 
-// ─── Internal ─────────────────────────────────────────────────────────────────
+// ─── Nội bộ ─────────────────────────────────────────────────────────────────
 
 interface FlaggedDistrict {
   districtId: number;
@@ -50,14 +50,14 @@ export class CoordinatorFacade {
   ): TeamOverview {
     const zoneMap = new Map<string, Zone>(zones.map((z) => [z.id, z]));
 
-    // BUG FIX: Dùng salesAgentId lookup thay vì districtId % salesAgents.length
-    // Loại bỏ modulo mapping — gán chính xác theo salesAgentId trong Assignment
+    // Sửa lỗi: dùng lookup salesAgentId thay vì districtId % salesAgents.length
+    // Loại bỏ mapping modulo — gán chính xác theo salesAgentId trong Assignment
     const zonesBySales = new Map<string, Zone[]>(
       salesAgents.map((sa) => [sa.id, []]),
     );
 
     for (const a of assignments) {
-      // Skip zones chưa được assign cho ai (salesAgentId undefined)
+      // Bỏ qua zones chưa được gán cho ai (salesAgentId undefined)
       if (!a.salesAgentId) continue;
       const zone = zoneMap.get(a.zoneId);
       if (zone) zonesBySales.get(a.salesAgentId)?.push(zone);
@@ -87,11 +87,11 @@ export class CoordinatorFacade {
     return { sales, totalKH, totalOrders };
   }
 
-  // ─── assignZone — passthrough to manualSwap ───────────────────────────────────
+  // ─── assignZone — chuyển tiếp sang manualSwap ─────────────────────────────────
 
   /**
-   * Gán zone sang district khác.
-   * Coordinator gọi trực tiếp với toDistrict (numeric), không cần salesId mapping.
+   * Gán zone sang cụm khác.
+   * Điều phối gọi trực tiếp với toDistrict (số), không cần mapping salesId.
    */
   async assignZone(
     zoneId: string,
@@ -148,7 +148,7 @@ export class CoordinatorFacade {
     return this._flags;
   }
 
-  // ─── BLOCKED — sync throw ─────────────────────────────────────────────────────
+  // ─── BỊ CHẶN — ném đồng bộ ─────────────────────────────────────────────────────
 
   /** @throws {PermissionError} PERMISSION_DENIED */
   createVersion(_label: string, ..._rest: unknown[]): never {
@@ -160,7 +160,7 @@ export class CoordinatorFacade {
     });
   }
 
-  // ─── BLOCKED — async throw (returns rejected Promise) ────────────────────────
+  // ─── BỊ CHẶN — ném bất đồng bộ (trả về Promise bị reject) ─────────────────────
 
   /**
    * Chạy thuật toán partition cho điều phối viên.
@@ -220,7 +220,7 @@ export class CoordinatorFacade {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+  // ─── Trợ giúp ──────────────────────────────────────────────────────────────────
 
 function _sumActivity(activities: Activity[], type: Activity['type']): number {
   return activities

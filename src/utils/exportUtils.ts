@@ -1,12 +1,12 @@
 /**
- * Export utilities — CSV, GeoJSON, PDF (print)
- * Pure functions, no React dependency.
- * Uses native Blob + URL.createObjectURL for browser downloads.
+ * Tiện ích export — CSV, GeoJSON, PDF (in)
+ * Hàm thuần, không phụ thuộc React.
+ * Dùng Blob + URL.createObjectURL gốc của trình duyệt để tải xuống.
  */
 
 import type { Zone, Assignment, AdjMatrix, ReportData } from '../../facades/viewmodels.js'
 
-// ── HTML escaping (XSS prevention for printReport) ─────────────────────────────
+// ── Escape HTML (chống XSS cho printReport) ─────────────────────────────
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => {
@@ -21,10 +21,10 @@ function escapeHtml(str: string): string {
   })
 }
 
-// ── Download helper ────────────────────────────────────────────────────────────
+// ?? Tr? l? t?i xu?ng ???????????????????????????????????????????????????????????
 
 /**
- * Trigger browser file download from string content.
+ * K?ch ho?t t?i xu?ng file t? n?i dung chu?i.
  */
 function downloadFile(content: string, filename: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType })
@@ -59,8 +59,8 @@ function csvEscape(val: string): string {
 // ── CSV Exports ────────────────────────────────────────────────────────────────
 
 /**
- * Export assignments as CSV.
- * Columns: zoneId, zoneName, districtId, salesAgentId, customers, orders
+ * Xu?t assignments ra CSV.
+ * C?t: zoneId, zoneName, districtId, salesAgentId, customers, orders
  */
 export function exportAssignmentsCSV(zones: Zone[], assignments: Assignment[]): void {
   const zoneMap = new Map(zones.map(z => [z.id, z]))
@@ -76,8 +76,8 @@ export function exportAssignmentsCSV(zones: Zone[], assignments: Assignment[]): 
 }
 
 /**
- * Export zones metadata as CSV.
- * Columns: zoneId, zoneName, status, centroidLat, centroidLng, customers, orders, polygonPointCount
+ * Xu?t metadata c?a zones ra CSV.
+ * C?t: zoneId, zoneName, status, centroidLat, centroidLng, customers, orders, polygonPointCount
  */
 export function exportZonesCSV(zones: Zone[]): void {
   const header = 'zoneId,zoneName,status,centroidLat,centroidLng,customers,orders,polygonPointCount'
@@ -94,8 +94,8 @@ export function exportZonesCSV(zones: Zone[]): void {
 }
 
 /**
- * Export adjacency matrix as CSV.
- * Columns: zoneId, neighbors (comma-separated in quotes)
+ * Xu?t ma tr?n k? ra CSV.
+ * C?t: zoneId, neighbors (ng?n c?ch b?ng d?u ph?y v? ??t trong d?u ngo?c k?p)
  */
 export function exportMatrixCSV(adj: AdjMatrix): void {
   const header = 'zoneId,neighbors'
@@ -108,7 +108,7 @@ export function exportMatrixCSV(adj: AdjMatrix): void {
 // ── GeoJSON Export ─────────────────────────────────────────────────────────────
 
 /**
- * Export zones + assignments as GeoJSON FeatureCollection.
+ * Xu?t zones + assignments th?nh GeoJSON FeatureCollection.
  * Vùng coordinates kept in [lng, lat] (GeoJSON spec).
  */
 export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
@@ -139,7 +139,7 @@ export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
 // ── Print Report (PDF via window.print) ────────────────────────────────────────
 
 /**
- * Open a print-friendly window with report data.
+ * M? c?a s? th?n thi?n ?? in v?i d? li?u b?o c?o.
  * Uses window.open + window.print — no external PDF library needed.
  */
 export function printReport(
@@ -149,7 +149,7 @@ export function printReport(
   const dateStr = new Date(report.generatedAt).toLocaleString('vi-VN')
   const dateShort = new Date(report.generatedAt).toLocaleDateString('vi-VN')
 
-  // Build assignment rows
+  // T?o c?c d?ng assignment
   const assignRows = report.assignments.map(a => {
     const z = report.zones.find(zone => zone.id === a.zoneId)
     const cust = z ? getCustomers(z) : 0

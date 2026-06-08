@@ -1,10 +1,10 @@
 /**
- * Sidebar — Role-adaptive navigation panel
+ * Sidebar — Thanh điều hướng thích ứng theo vai trò
  *
- * L4b-1: Now accepts `assignments` prop from Page (reflects algorithm results).
- * - Zone cards section with scroll-into-view on selectedZoneId change
- * - Agent card click → setHighlightedSalesId → map highlights district
- * - Zone card click → selectZone → map highlights vùng
+ * L4b-1: Hiện nhận prop `assignments` từ Page (phản ánh kết quả thuật toán).
+ * - Khối thẻ zone có scroll-into-view khi selectedZoneId thay đổi
+ * - Click thẻ agent → setHighlightedSalesId → map tô sáng cụm
+ * - Click thẻ zone → selectZone → map tô sáng vùng
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react'
@@ -22,7 +22,7 @@ interface SidebarProps {
   /** Live assignments — reflects algorithm results. Passed from Page. */
   zones: Zone[]
   assignments: Assignment[]
-  /** Callback to create a version snapshot. Admin only. */
+  /** Callback ?? t?o snapshot phi?n b?n. Ch? admin d?ng. */
   onCreateSnapshot?: () => void
   /** L4b-2 EC-1: Island zone IDs (no adj neighbors). */
   islandZoneIds?: Set<string>
@@ -69,8 +69,8 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardLi
     if (onFlyTo) {
       const zone = zones.find(z => z.id === zoneId)
       if (zone) {
-        // Compute centroid from vùng (GeoJSON coords are [lng, lat])
-        // Avoids using the stored centroid field which may be stale/incorrect
+        // T?nh centroid t? v?ng (t?a ?? GeoJSON l? [lng, lat])
+        // Tr?nh d?ng field centroid ?? l?u v? c? th? c?/sai
         let ring: number[][] = []
         if (zone.polygon.type === 'Polygon') {
           ring = (zone.polygon.coordinates[0] ?? []) as number[][]
@@ -215,7 +215,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 }) {
   const { t } = useTranslation()
   const ctx                = useFacade()
-  // Sales team sidebar section removed from assignments view, but we keep the underlying state/hooks
+  // ?? b? ph?n sales team kh?i m?n ph?n chia, nh?ng v?n gi? state/hook n?n b?n d??i
   // to avoid large refactors in this file.
   const highlightedSalesId = useUIStore((s) => s.highlightedSalesId)
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
@@ -280,7 +280,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
               (a) => a.salesAgentId === agent.id,
           ).length
           const isActive = highlightedSalesId === agent.id
-          // L4b-2 EC-2: Check if agent's district is disconnected
+          // L4b-2 EC-2: Kiểm tra xem cụm của nhân sự có bị tách rời không
           const agentDistrictId = assignments.find(a => a.salesAgentId === agent.id)?.districtId
           const isAgentDisconnected = agentDistrictId !== undefined
             && (disconnectedDistrictIds?.has(agentDistrictId) ?? false)

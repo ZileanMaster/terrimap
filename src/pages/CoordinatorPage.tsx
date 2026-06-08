@@ -1,13 +1,13 @@
 /**
- * CoordinatorPage — Team overview + manual zone assignment
- * Layout: [Sidebar | Map]
+ * CoordinatorPage — Tổng quan đội ngũ + gán zone thủ công
+ * Bố cục: [Sidebar | Map]
  *
- * Phase 2 additions:
- * - Region dropdown selector (Adjust 4: không auto-detect, dùng dropdown)
- * - Monthly metrics input flow
- * - Filter zones theo region đang chọn
+ * Bổ sung ở Giai đoạn 2:
+ * - Bộ chọn region dạng dropdown (Adjust 4: không auto-detect, dùng dropdown)
+ * - Luồng nhập chỉ số theo tháng
+ * - Lọc zones theo region đang chọn
  *
- * State: reads from global useDataStore — no local DB init needed.
+ * State: đọc từ useDataStore toàn cục — không cần init DB local.
  */
 
 import React, { useState, useCallback, useMemo } from 'react'
@@ -61,13 +61,13 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const [currentPeriod, setCurrentPeriod]       = useState(currentPeriodDefault())
   const [showMetricsInput, setShowMetricsInput] = useState(false)
 
-  // Filter zones theo region đang chọn
+  // Lọc zones theo region đang chọn
   const displayZones = useMemo<Zone[]>(() => {
     if (!currentRegionId) return zones
     return zones.filter((z) => (z as any).regionId === currentRegionId)
   }, [zones, currentRegionId])
 
-  // Compute map center/zoom from selected region (for flyTo animation)
+  // Tính map center/zoom từ region đã chọn (cho hiệu ứng flyTo)
   const selectedRegion = currentRegionId
     ? regions.find((r) => r.id === currentRegionId)
     : null
@@ -89,7 +89,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
     if (ctx.role !== 'coordinator') return
 
-    // 3C: BFS connectivity check — verify source district remains connected after move
+    // 3C: kiểm tra liên thông BFS — xác nhận cụm nguồn vẫn liên thông sau khi chuyển
     const currentAssignment = displayAssignments.find((a) => a.zoneId === zoneId)
     const fromDistrict = currentAssignment?.districtId ?? -1
 
@@ -107,7 +107,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       const adjMatrix = buildAdjacencyMatrix(displayZones)
       const idToIdx   = new Map(displayZones.map((z, i) => [z.id, i]))
 
-      // Check source district still connected
+      // Kiểm tra cụm nguồn vẫn liên thông
       if (!isDistrictConnected(displayZones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
         throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm nguồn bị tách rời.')
       }
@@ -149,7 +149,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
    * KHÔNG sửa store.zones trực tiếp.
    */
   const handleRunWithMetrics = useCallback((zonesWithMetrics: Zone[]) => {
-    // TODO Phase 2.5: trigger algorithm runner từ CoordinatorPage
+    // TODO Giai ?o?n 2.5: k?ch ho?t b? ch?y thu?t to?n t? CoordinatorPage
     // Hiện tại: thông báo user về zones đã được cập nhật metrics
     console.info('[CoordinatorPage] Running algorithm with metrics-overridden zones:', zonesWithMetrics.length)
     alert(`✅ Chạy phân vùng với ${zonesWithMetrics.length} zones (chỉ số tháng ${currentPeriod}).\nTính năng chạy thuật toán sẽ được tích hợp sau.`)
@@ -170,7 +170,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
   return (
     <div style={styles.layout}>
-      {/* Left sidebar */}
+      {/* Sidebar b?n tr?i */}
       <div style={styles.leftCol}>
         {mode === 'assignments' && (
           <>
@@ -427,5 +427,5 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'spin 0.8s linear infinite',
   },
   loadingText: { color: 'var(--color-text-muted)', fontSize: 14, margin: 0 },
-  // (Deprecated) floatingRegionHeader removed in favor of mapHud
+  // (Kh?ng d?ng n?a) floatingRegionHeader ?? ???c thay b?ng mapHud
 }

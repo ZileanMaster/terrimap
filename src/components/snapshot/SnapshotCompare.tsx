@@ -1,5 +1,5 @@
 /**
- * SnapshotCompare — Phase 3D
+ * SnapshotCompare — Giai đoạn 3D
  *
  * So sánh 2 snapshots: hiển thị summary table + danh sách zones thay đổi district.
  * Chỉ so sánh assignments, không render 2 maps (quá nặng).
@@ -15,7 +15,7 @@ interface SnapshotCompareProps {
 }
 
 export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: SnapshotCompareProps) {
-  // Compute diffs
+  // T?nh c?c kh?c bi?t
   const { diffs, summaryA, summaryB } = useMemo(() => {
     const mapA = new Map(snapshotA.data.assignments.map((a) => [a.zoneId, a.districtId]))
     const mapB = new Map(snapshotB.data.assignments.map((a) => [a.zoneId, a.districtId]))

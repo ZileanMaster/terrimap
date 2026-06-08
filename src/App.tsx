@@ -48,7 +48,7 @@ const queryClient = new QueryClient({
   },
 })
 
-/** Load page */
+/** T?i trang */
 function PageLoader() {
   return (
     <div style={styles.pageLoader}>
@@ -79,10 +79,10 @@ export default function App() {
   const initData       = useDataStore((s) => s.init)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
 
-  // khởi tạo auth khi load
+  // Kh?i t?o auth khi app load
   React.useEffect(() => { initAuth() }, [initAuth])
 
-  // load data khi có project
+  // T?i d? li?u khi ?? c? project
   React.useEffect(() => {
     if (authUser && currentProjectId) {
       initData(currentProjectId)
@@ -109,7 +109,7 @@ export default function App() {
     return <OfflineApp />
   }
 
-  // Loading
+  // ?ang t?i
   if (authLoading) {
     return (
       <div style={styles.splash}>
@@ -140,7 +140,7 @@ export default function App() {
     )
   }
 
-  // Dashboard
+  // B?ng ?i?u khi?n
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
@@ -175,7 +175,7 @@ export default function App() {
   )
 }
 
-/** Offline */
+/** Ngo?i tuy?n */
 function OfflineApp() {
   const role = useUIStore((s) => s.role)
   const init = useDataStore((s) => s.init)
@@ -231,7 +231,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 'var(--topbar-h)',
   },
 
-  // Splash
+  // M?n ch?o
   splash: {
     height: '100vh',
     display: 'flex',
