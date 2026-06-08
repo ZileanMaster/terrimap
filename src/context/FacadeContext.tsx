@@ -21,9 +21,10 @@ import { TerritoryService } from '../../services/TerritoryService.js'
 import { VersionService } from '../../services/VersionService.js'
 import { ActivityService } from '../../services/ActivityService.js'
 import { MapService } from '../../services/MapService.js'
+import { useAuthStore } from '../store/authStore.js'
+import { useDataStore } from '../store/dataStore.js'
 import { useUIStore, type Role } from '../store/uiStore.js'
-import { MOCK_AGENTS, CURRENT_SALES_ID } from '../data/mock-agents.js'
-import { MOCK_ZONES, MOCK_ASSIGNMENTS } from '../data/mock-zones.js'
+import { resolveUserKey } from '../utils/userIdentity.js'
 
 // ── Type ──────────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,11 @@ const mapSvc       = new MapService()
 
 export function FacadeProvider({ children }: { children: ReactNode }) {
   const role = useUIStore((s) => s.role)
+  const authUser = useAuthStore((s) => s.user)
+  const profile = useAuthStore((s) => s.profile)
+  const zones = useDataStore((s) => s.zones)
+  const assignments = useDataStore((s) => s.assignments)
+  const agents = useDataStore((s) => s.agents)
 
   const value = useMemo((): FacadeContextValue => {
     switch (role) {
@@ -60,20 +66,21 @@ export function FacadeProvider({ children }: { children: ReactNode }) {
           role: 'coordinator',
           facade: new CoordinatorFacade(territorySvc, versionSvc, activitySvc),
         }
-      case 'sales':
-        // CRITICAL: MOCK_AGENTS theo thứ tự canonical, KHÔNG SORT
+      case 'sales': {
+        const salesId = resolveUserKey(authUser, profile, agents)
         return {
           role: 'sales',
           facade: new SalesFacade(
-            CURRENT_SALES_ID,
+            salesId,
             activitySvc,
-            MOCK_ZONES,
-            MOCK_ASSIGNMENTS,
-            MOCK_AGENTS,   // ← canonical order preserved
+            zones,
+            assignments,
+            agents,
           ),
         }
+      }
     }
-  }, [role])
+  }, [role, authUser, profile, zones, assignments, agents])
 
   return (
     <FacadeContext.Provider value={value}>

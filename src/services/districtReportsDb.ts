@@ -73,6 +73,7 @@ export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'upd
     period: input.period,
     customers: Math.max(0, Math.floor(input.customers ?? 0)),
     orders: Math.max(0, Math.floor(input.orders ?? 0)),
+    revenue: Math.max(0, Math.floor(input.revenue ?? 0)),
     note: input.note,
     updatedAt: nowIso(),
   }
@@ -91,6 +92,7 @@ export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'upd
       period: report.period,
       customers: report.customers,
       orders: report.orders,
+      revenue: report.revenue ?? 0,
       note: report.note ?? null,
       updated_at: report.updatedAt,
     }
@@ -101,7 +103,19 @@ export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'upd
           .upsert(row, { onConflict: 'project_id,region_id,district_id,user_id,period' })
         if (error) {
           // Table may not exist or RLS may block: keep local-only behavior.
-          console.warn('[DistrictReportsDB] saveDistrictReport supabase error:', error)
+          const msg = String((error as any)?.message ?? '')
+          if (/revenue/i.test(msg) && /column/i.test(msg)) {
+            const fallbackRow = { ...row }
+            delete (fallbackRow as any).revenue
+            const retry = await supabase!
+              .from('district_reports')
+              .upsert(fallbackRow, { onConflict: 'project_id,region_id,district_id,user_id,period' })
+            if (retry.error) {
+              console.warn('[DistrictReportsDB] saveDistrictReport supabase error:', retry.error)
+            }
+          } else {
+            console.warn('[DistrictReportsDB] saveDistrictReport supabase error:', error)
+          }
         }
       } catch (e) {
         console.warn('[DistrictReportsDB] saveDistrictReport unexpected:', e)
@@ -124,7 +138,7 @@ export async function loadDistrictReports(period: string, projectId?: string): P
   try {
     let query = supabase!
       .from('district_reports')
-      .select('id, project_id, region_id, district_id, user_id, period, customers, orders, note, updated_at')
+      .select('*')
       .eq('period', period)
 
     const pid = projectId || getActiveProjectId()
@@ -142,6 +156,7 @@ export async function loadDistrictReports(period: string, projectId?: string): P
       period: r.period as string,
       customers: Number(r.customers ?? 0),
       orders: Number(r.orders ?? 0),
+      revenue: Number(r.revenue ?? 0),
       note: (r.note ?? undefined) as string | undefined,
       updatedAt: (r.updated_at ?? nowIso()) as string,
     } satisfies DistrictReport))

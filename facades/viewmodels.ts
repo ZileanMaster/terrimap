@@ -220,6 +220,7 @@ export interface DistrictReport {
   period:     string;     // 'YYYY-MM'
   customers:  number;
   orders:     number;
+  revenue?:   number;
   note?:      string;
   updatedAt:  string;     // ISO
 }

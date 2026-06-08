@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS public.district_reports (
   period      TEXT NOT NULL, -- 'YYYY-MM'
   customers   INT  NOT NULL DEFAULT 0,
   orders      INT  NOT NULL DEFAULT 0,
+  revenue     INT  NOT NULL DEFAULT 0,
   note        TEXT NULL,
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE(project_id, region_id, district_id, user_id, period)
@@ -55,4 +56,3 @@ CREATE POLICY "district_reports_update" ON public.district_reports
       OR public.is_project_owner(project_id, auth.uid())
     )
   );
-

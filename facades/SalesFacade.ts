@@ -33,14 +33,16 @@ export class SalesFacade {
   ) {
     const idx = salesAgents.findIndex((sa) => sa.id === salesId);
     if (idx === -1) {
-      throw new PermissionError({
-        code: 'NOT_AUTHENTICATED',
-        role: this._role,
-        method: 'constructor',
-        message: `salesId "${salesId}" not found.`,
-      });
+      if (salesAgents.length > 0) {
+        throw new PermissionError({
+          code: 'NOT_AUTHENTICATED',
+          role: this._role,
+          method: 'constructor',
+          message: `salesId "${salesId}" not found.`,
+        });
+      }
     }
-    this._districtId = idx;
+    this._districtId = idx >= 0 ? idx : -1;
   }
 
   // ─── getMyDistrict ────────────────────────────────────────────────────────────

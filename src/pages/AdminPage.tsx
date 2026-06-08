@@ -24,6 +24,7 @@ import DrawingToolbar from '../components/map/DrawingToolbar.js'
 import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
+import { resolveUserKey } from '../utils/userIdentity.js'
 
 import { useSAWorker } from '../hooks/useSAWorker.js'
 import { validatePartition } from '../../lib/validator.js'
@@ -48,7 +49,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const authUser = useAuthStore((s) => s.user)
   const profile  = useAuthStore((s) => s.profile)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
-  const currentUserKey = authUser?.id ?? profile?.id ?? profile?.email ?? ''
+  const currentUserKey = resolveUserKey(authUser, profile, agents)
 
   // Filter zones/agents/assignments by currentRegionId — MANDATORY:
   // The algorithm MUST run on each region independently.

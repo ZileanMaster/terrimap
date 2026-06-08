@@ -17,6 +17,7 @@ import { loadSnapshots } from '../services/db.js'
 import type { Zone, Assignment } from '../../facades/viewmodels.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
+import { resolveUserKey } from '../utils/userIdentity.js'
 
 export default function SalesPage() {
   // ── Global store ───────────────────────────────────────────────────────────
@@ -28,7 +29,8 @@ export default function SalesPage() {
   const authUser = useAuthStore((s) => s.user)
   const profile  = useAuthStore((s) => s.profile)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
-  const currentUserKey = authUser?.id ?? profile?.id ?? profile?.email ?? ''
+  const agents = useDataStore((s) => s.agents)
+  const currentUserKey = resolveUserKey(authUser, profile, agents)
 
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
   const selectZone     = useUIStore((s) => s.selectZone)
@@ -74,18 +76,27 @@ export default function SalesPage() {
     )
   }
 
-  // Use full zones/assignments if sales district is empty (fallback)
-  const displayZones       = myZones.length > 0 ? myZones : zones
-  const displayAssignments = myAssignments.length > 0 ? myAssignments : assignments
+  const hasDistrict = myZones.length > 0 && myAssignments.length > 0
 
   return (
     <div style={styles.layout}>
       <Sidebar zones={zones} assignments={assignments} />
 
       <div style={styles.mapArea}>
+        {!hasDistrict && (
+          <div style={styles.emptyOverlay}>
+            <div style={styles.emptyCard}>
+              <div style={styles.emptyTitle}>Chưa tìm thấy vùng được giao</div>
+              <div style={styles.emptyText}>
+                Hệ thống chưa xác định được cụm/vùng của bạn trong dự án hiện tại.
+                Vui lòng kiểm tra lại gán salesAgentId cho tài khoản này.
+              </div>
+            </div>
+          </div>
+        )}
         <TerritoryMap
-          zones={displayZones}
-          assignments={displayAssignments}
+          zones={myZones}
+          assignments={myAssignments}
           onZoneClick={selectZone}
           selectedZoneId={selectedZoneId}
         />
@@ -94,14 +105,14 @@ export default function SalesPage() {
             currentUserKey={currentUserKey}
             currentProjectId={currentProjectId}
             currentRegionId={currentRegionId}
-            zones={zones}
-            assignments={assignments}
+            zones={myZones}
+            assignments={myAssignments}
           />
         )}
         <ZoneInfoPanel
-          zones={zones}
-          assignments={assignments}
-          districtCount={new Set(assignments.map((a) => a.districtId)).size || 4}
+          zones={myZones}
+          assignments={myAssignments}
+          districtCount={new Set(myAssignments.map((a) => a.districtId)).size || 0}
           // No onAssign — Sales is read-only
         />
 
@@ -128,6 +139,37 @@ export default function SalesPage() {
 const styles: Record<string, React.CSSProperties> = {
   layout:   { display: 'flex', height: '100%', overflow: 'hidden' },
   mapArea:  { flex: 1, position: 'relative', overflow: 'hidden' },
+  emptyOverlay: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 650,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0))',
+  },
+  emptyCard: {
+    maxWidth: 420,
+    margin: 16,
+    padding: '16px 18px',
+    borderRadius: 18,
+    border: '1px solid var(--color-border)',
+    background: 'color-mix(in srgb, var(--color-surface) 94%, transparent)',
+    boxShadow: '0 18px 36px rgba(0,0,0,.14)',
+    backdropFilter: 'blur(10px)',
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: 900,
+    color: 'var(--color-text)',
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 13,
+    lineHeight: 1.6,
+    color: 'var(--color-text-muted)',
+  },
   feedbackBar: {
     position:    'absolute',
     bottom:      14,

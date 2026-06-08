@@ -21,6 +21,7 @@ import MapLegend from '../components/map/MapLegend.js'
 import MetricsInput from '../components/coordinator/MetricsInput.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
+import { resolveUserKey } from '../utils/userIdentity.js'
 import { buildAdjacencyMatrix } from '../../lib/geometry.js'
 import { isDistrictConnected } from '../../lib/partition.js'
 import { validatePartition } from '../../lib/validator.js'
@@ -48,7 +49,8 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const authUser = useAuthStore((s) => s.user)
   const profile  = useAuthStore((s) => s.profile)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
-  const currentUserKey = authUser?.id ?? profile?.id ?? profile?.email ?? ''
+  const agents = useDataStore((s) => s.agents)
+  const currentUserKey = resolveUserKey(authUser, profile, agents)
 
   const selectedZoneId     = useUIStore((s) => s.selectedZoneId)
   const selectZone         = useUIStore((s) => s.selectZone)

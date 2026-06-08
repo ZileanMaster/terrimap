@@ -1,8 +1,8 @@
-/**
- * MyClusterReports — Users enter KPIs for clusters (districts) they manage.
+﻿/**
+ * MyClusterReports â€” Users enter KPIs for clusters (districts) they manage.
  *
  * "Managed" means: at least one assignment exists with salesAgentId === currentUserKey
- * for the current region. This matches existing district→agent mapping behavior.
+ * for the current region. This matches existing districtâ†’agent mapping behavior.
  *
  * Data is stored in localStorage (project-scoped) and optionally Supabase
  * via district_reports table.
@@ -20,7 +20,7 @@ interface MyClusterReportsProps {
   assignments: Assignment[]
 }
 
-type Row = { customers: number; orders: number; note: string; saving: boolean }
+type Row = { customers: number; orders: number; revenue: number; note: string; saving: boolean }
 
 export default function MyClusterReports({
   currentUserKey,
@@ -77,6 +77,7 @@ export default function MyClusterReports({
           nextRows[did] = {
             customers: existing?.customers ?? 0,
             orders: existing?.orders ?? 0,
+            revenue: existing?.revenue ?? 0,
             note: existing?.note ?? '',
             saving: false,
           }
@@ -89,9 +90,9 @@ export default function MyClusterReports({
     return () => { mounted = false }
   }, [period, currentProjectId, currentUserKey, currentRegionId, myDistrictIds])
 
-  const setRowField = (districtId: number, field: 'customers' | 'orders' | 'note', value: string) => {
+  const setRowField = (districtId: number, field: 'customers' | 'orders' | 'revenue' | 'note', value: string) => {
     setRows((prev) => {
-      const cur = prev[districtId] ?? { customers: 0, orders: 0, note: '', saving: false }
+      const cur = prev[districtId] ?? { customers: 0, orders: 0, revenue: 0, note: '', saving: false }
       const next: Row = {
         ...cur,
         [field]: field === 'note' ? value : (Number(value) || 0),
@@ -116,6 +117,7 @@ export default function MyClusterReports({
         period,
         customers: row.customers,
         orders: row.orders,
+        revenue: row.revenue,
         note: row.note,
         updatedAt: new Date().toISOString(),
       }
@@ -139,6 +141,7 @@ export default function MyClusterReports({
         period,
         customers: row.customers,
         orders: row.orders,
+        revenue: row.revenue,
         note: row.note,
       })
       void loadDistrictReports(period, currentProjectId ?? undefined)
@@ -158,59 +161,59 @@ export default function MyClusterReports({
     <div style={styles.container}>
       <div style={styles.header}>
         <div style={styles.headerCopy}>
-          <div style={styles.kicker}>Báo cáo cụm</div>
-          <div style={styles.title}>Số liệu của bạn</div>
+          <div style={styles.kicker}>BÃ¡o cÃ¡o cá»¥m</div>
+          <div style={styles.title}>Sá»‘ liá»‡u cá»§a báº¡n</div>
           <div style={styles.subtitle}>
-            Nhập số khách hàng, số đơn hàng và ghi chú cho các cụm bạn đang quản lý.
+            Nhập số khách hàng, số đơn hàng, doanh thu và ghi chú cho các cụm bạn đang quản lý.
           </div>
           <div style={styles.badgeRow}>
             <span style={styles.badge}>{period}</span>
-            <span style={styles.badge}>{myDistrictIds.length} cụm</span>
-            <span style={styles.badge}>{myReports.length} dòng đã lưu</span>
+            <span style={styles.badge}>{myDistrictIds.length} cá»¥m</span>
+            <span style={styles.badge}>{myReports.length} dÃ²ng Ä‘Ã£ lÆ°u</span>
           </div>
         </div>
         <label style={styles.monthWrap}>
-          <span style={styles.monthLabel}>Tháng</span>
+          <span style={styles.monthLabel}>ThÃ¡ng</span>
           <input
             type="month"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
             style={styles.month}
-            aria-label="Chọn tháng"
+            aria-label="Chá»n thÃ¡ng"
           />
         </label>
       </div>
 
       {loading && (
-        <div style={styles.loading}>Đang tải...</div>
+        <div style={styles.loading}>Äang táº£i...</div>
       )}
 
       {!loading && (
         <div style={styles.list}>
           {myReports.length === 0 && (
             <div style={styles.emptyState}>
-              Chưa có báo cáo nào trong tháng này. Nhập số liệu để dashboard cập nhật ngay.
+              ChÆ°a cÃ³ bÃ¡o cÃ¡o nÃ o trong thÃ¡ng nÃ y. Nháº­p sá»‘ liá»‡u Ä‘á»ƒ dashboard cáº­p nháº­t ngay.
             </div>
           )}
           {myDistrictIds.map((did) => {
-            const row = rows[did] ?? { customers: 0, orders: 0, note: '', saving: false }
+            const row = rows[did] ?? { customers: 0, orders: 0, revenue: 0, note: '', saving: false }
             const updatedAt = myReports.find((r) => r.districtId === did)?.updatedAt
             return (
               <div key={did} style={styles.card}>
                 <div style={styles.cardTop}>
-                  <div style={styles.cardTitle}>Cụm {did}</div>
+                  <div style={styles.cardTitle}>Cá»¥m {did}</div>
                   <button
                     type="button"
                     style={{ ...styles.saveBtn, opacity: row.saving ? 0.7 : 1 }}
                     disabled={row.saving}
                     onClick={() => handleSaveOne(did)}
                   >
-                    {row.saving ? 'Đang lưu...' : 'Lưu'}
+                    {row.saving ? 'Äang lÆ°u...' : 'LÆ°u'}
                   </button>
                 </div>
                 <div style={styles.grid}>
                   <label style={styles.field}>
-                    <span style={styles.label}>Khách hàng</span>
+                    <span style={styles.label}>KhÃ¡ch hÃ ng</span>
                     <input
                       type="number"
                       min={0}
@@ -220,7 +223,7 @@ export default function MyClusterReports({
                     />
                   </label>
                   <label style={styles.field}>
-                    <span style={styles.label}>Đơn hàng</span>
+                    <span style={styles.label}>ÄÆ¡n hÃ ng</span>
                     <input
                       type="number"
                       min={0}
@@ -231,17 +234,29 @@ export default function MyClusterReports({
                   </label>
                 </div>
                 <label style={styles.fieldWide}>
-                  <span style={styles.label}>Ghi chú</span>
+                  <span style={styles.label}>Doanh thu</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={row.revenue}
+                    onChange={(e) => setRowField(did, 'revenue', e.target.value)}
+                    style={styles.input}
+                    placeholder="VNÄ"
+                  />
+                </label>
+                <label style={styles.fieldWide}>
+                  <span style={styles.label}>Ghi chÃº</span>
                   <input
                     type="text"
                     value={row.note}
                     onChange={(e) => setRowField(did, 'note', e.target.value)}
                     style={styles.input}
-                    placeholder="(Tùy chọn)"
+                    placeholder="(TÃ¹y chá»n)"
                   />
                 </label>
                 {updatedAt && (
-                  <div style={styles.meta}>Cập nhật: {new Date(updatedAt).toLocaleString('vi-VN')}</div>
+                  <div style={styles.meta}>Cáº­p nháº­t: {new Date(updatedAt).toLocaleString('vi-VN')}</div>
                 )}
               </div>
             )
@@ -428,3 +443,4 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-text-3)',
   },
 }
+
