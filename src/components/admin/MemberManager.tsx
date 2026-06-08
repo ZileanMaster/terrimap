@@ -57,7 +57,8 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
   // Load members with profile info — guaranteed to finish in ≤6s
   const reload = useCallback(async () => {
-    if (!supabase || !currentProjectId) {
+    const client = supabase
+    if (!client || !currentProjectId) {
       setLoading(false)
       return
     }
@@ -70,7 +71,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
       // Step 2: Get profiles for these members
       const userIds = rawMembers.map((m: any) => m.user_id)
-      const { data: profiles } = await supabase
+      const { data: profiles } = await client
         .from('profiles')
         .select('id, email, full_name')
         .in('id', userIds)
