@@ -140,7 +140,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
       // Bỏ chọn nếu vùng bị xóa đang là vùng hiện tại
       currentRegionId: s.currentRegionId === regionId ? null : s.currentRegionId,
     }))
-    await dbDeleteRegion(regionId)
+    await dbDeleteRegion(regionId, get().currentProjectId)
   },
 
   addZone: async (zone) => {
@@ -157,7 +157,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
       assignments: s.assignments.filter((a) => a.zoneId !== zoneId),
       saving:      true,
     }))
-    await dbDeleteZone(zoneId)
+    await dbDeleteZone(zoneId, get().currentProjectId)
     set({ saving: false })
   },
 

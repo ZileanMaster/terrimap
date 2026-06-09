@@ -66,6 +66,27 @@ function readScopedCollections<T>(base: string, projectId?: string): T[] {
   return legacy
 }
 
+function dispatchSnapshotChange(projectId?: string, snapshotId?: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent('terrimap:snapshots-updated', {
+      detail: { projectId, snapshotId },
+    }),
+  )
+}
+
+export function readSnapshotCache(projectId?: string): Array<{
+  id: string
+  label: string
+  data: { zones: Zone[]; assignments: Assignment[] }
+  created_at: string
+  period?: string
+}> {
+  const scopedProjectId = projectId ?? _currentProjectId
+  const key = scopedKey('terrimap_snapshots', scopedProjectId)
+  return readJsonArray<any>(key)
+}
+
 // ── DB row shapes (snake_case) ────────────────────────────────────────────────
 
 interface DbZone {
@@ -114,8 +135,10 @@ interface DbRegion {
  * Offline fallback: MOCK_ZONES.
  */
 export async function loadZones(projectId?: string): Promise<Zone[]> {
-  if (!isOnline()) return readScopedCollections<Zone>('terrimap_zones', projectId).length > 0
-    ? readScopedCollections<Zone>('terrimap_zones', projectId)
+  const localZones = readScopedCollections<Zone>('terrimap_zones', projectId)
+
+  if (!isOnline()) return localZones.length > 0
+    ? localZones
     : MOCK_ZONES
 
   let query = supabase!.from('zones').select('*').order('id')
@@ -126,8 +149,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
 
   if (zErr || !zones || zones.length === 0) {
     if (zErr) console.error('[DB] loadZones error:', zErr)
-    const cached = readScopedCollections<Zone>('terrimap_zones', projectId)
-    if (cached.length > 0) return cached
+    if (localZones.length > 0) return localZones
     if (projectId) {
       const { data: legacyZones, error: legacyErr } = await supabase!
         .from('zones')
@@ -187,7 +209,31 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
     return []
   }
 
-  return loadedZones
+  if (localZones.length === 0) return loadedZones
+
+  const mergedZones = [...loadedZones]
+  const zoneIndexMap = new Map(loadedZones.map((zone, index) => [zone.id, index]))
+  for (const localZone of localZones) {
+    const existingIndex = zoneIndexMap.get(localZone.id)
+    if (existingIndex === undefined) {
+      mergedZones.push(localZone)
+    } else {
+      mergedZones[existingIndex] = {
+        ...mergedZones[existingIndex],
+        ...localZone,
+        activities: localZone.activities?.length ? localZone.activities : mergedZones[existingIndex]!.activities,
+      }
+    }
+  }
+
+  try {
+    assertNoPolygonTopologyViolations(mergedZones as any)
+  } catch (e) {
+    console.error('[DB] loadZones merged topology error:', e)
+    return loadedZones
+  }
+
+  return mergedZones
 }
 
 /**
@@ -195,8 +241,10 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
  * Offline fallback: MOCK_ASSIGNMENTS.
  */
 export async function loadAssignments(projectId?: string): Promise<Assignment[]> {
-  if (!isOnline()) return readScopedCollections<Assignment>('terrimap_assignments', projectId).length > 0
-    ? readScopedCollections<Assignment>('terrimap_assignments', projectId)
+  const localAssignments = readScopedCollections<Assignment>('terrimap_assignments', projectId)
+
+  if (!isOnline()) return localAssignments.length > 0
+    ? localAssignments
     : MOCK_ASSIGNMENTS
 
   let query = supabase!.from('assignments').select('*')
@@ -206,8 +254,7 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
 
   if (error || !data || data.length === 0) {
     if (error) console.error('[DB] loadAssignments error:', error)
-    const cached = readScopedCollections<Assignment>('terrimap_assignments', projectId)
-    if (cached.length > 0) return cached
+    if (localAssignments.length > 0) return localAssignments
     if (projectId) {
       const { data: legacyData, error: legacyErr } = await supabase!
         .from('assignments')
@@ -228,11 +275,27 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
     return []
   }
 
-  return (data as DbAssignment[]).map((a) => ({
+  const remoteAssignments: Assignment[] = (data as DbAssignment[]).map((a) => ({
     zoneId:       a.zone_id,
     districtId:   a.district_id,
     salesAgentId: a.sales_agent_id,
   }))
+
+  const mergedAssignments: Assignment[] = [...remoteAssignments]
+  const remoteIndex = new Map(remoteAssignments.map((assignment, index) => [`${assignment.zoneId}:${assignment.districtId}`, index]))
+
+  for (const assignment of localAssignments) {
+    const key = `${assignment.zoneId}:${assignment.districtId}`
+    const index = remoteIndex.get(key)
+    if (index === undefined) {
+      remoteIndex.set(key, mergedAssignments.length)
+      mergedAssignments.push(assignment)
+      continue
+    }
+    mergedAssignments[index] = assignment
+  }
+
+  return mergedAssignments
 }
 
 /**
@@ -298,7 +361,7 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
 
 /**
  * Upsert a single zone + replace its activities.
- * Fire-and-forget — does not throw.
+ * Local cache is written first, then Supabase is awaited when online.
  */
 export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
   const zonesKey = scopedKey('terrimap_zones', projectId)
@@ -312,41 +375,35 @@ export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
   if (!isOnline()) return
 
   try {
-    void (async () => {
-      try {
-        const row: Record<string, unknown> = {
-          id:       zone.id,
-          name:     zone.name,
-          status:   zone.status,
-          polygon:  zone.polygon,
-          centroid: zone.centroid,
-        }
-        if ((zone as any).regionId) row.region_id = (zone as any).regionId
-        if (projectId) row.project_id = projectId
+    const row: Record<string, unknown> = {
+      id:       zone.id,
+      name:     zone.name,
+      status:   zone.status,
+      polygon:  zone.polygon,
+      centroid: zone.centroid,
+    }
+    if ((zone as any).regionId) row.region_id = (zone as any).regionId
+    if (projectId) row.project_id = projectId
 
-        const { error: zErr } = await supabase!.from('zones').upsert(row)
-        if (zErr) {
-          console.error('[DB] saveZone upsert error:', zErr)
-          return
-        }
+    const { error: zErr } = await supabase!.from('zones').upsert(row)
+    if (zErr) {
+      console.error('[DB] saveZone upsert error:', zErr)
+      return
+    }
 
-        await supabase!.from('activities').delete().eq('zone_id', zone.id)
+    await supabase!.from('activities').delete().eq('zone_id', zone.id)
 
-        if (zone.activities.length > 0) {
-          const { error: aErr } = await supabase!.from('activities').insert(
-            zone.activities.map((a) => ({
-              id:      a.id,
-              zone_id: zone.id,
-              type:    a.type,
-              value:   a.value,
-            })),
-          )
-          if (aErr) console.error('[DB] saveZone activities error:', aErr)
-        }
-      } catch (e) {
-        console.error('[DB] saveZone unexpected error:', e)
-      }
-    })()
+    if (zone.activities.length > 0) {
+      const { error: aErr } = await supabase!.from('activities').insert(
+        zone.activities.map((a) => ({
+          id:      a.id,
+          zone_id: zone.id,
+          type:    a.type,
+          value:   a.value,
+        })),
+      )
+      if (aErr) console.error('[DB] saveZone activities error:', aErr)
+    }
   } catch (e) {
     console.error('[DB] saveZone unexpected error:', e)
   }
@@ -354,15 +411,14 @@ export async function saveZone(zone: Zone, projectId?: string): Promise<void> {
 
 /**
  * Delete a zone and its activities/assignments (cascade).
- * Fire-and-forget.
  */
-export async function deleteZone(zoneId: string): Promise<void> {
+export async function deleteZone(zoneId: string, projectId?: string): Promise<void> {
   try {
-    const zonesKey = lsKey('terrimap_zones')
+    const zonesKey = scopedKey('terrimap_zones', projectId ?? _currentProjectId)
     const stored = readJsonArray<Zone>(zonesKey)
     writeJsonArray(zonesKey, stored.filter((z) => z.id !== zoneId))
 
-    const assignmentsKey = lsKey('terrimap_assignments')
+    const assignmentsKey = scopedKey('terrimap_assignments', projectId ?? _currentProjectId)
     const storedAssignments = readJsonArray<Assignment>(assignmentsKey)
     writeJsonArray(assignmentsKey, storedAssignments.filter((a) => a.zoneId !== zoneId))
   } catch { /* ignore */ }
@@ -372,9 +428,13 @@ export async function deleteZone(zoneId: string): Promise<void> {
   try {
     // assignments ON DELETE CASCADE handles automatically via FK,
     // but we delete explicitly for safety (in case RLS blocks cascade)
-    await supabase!.from('assignments').delete().eq('zone_id', zoneId)
+    let assignmentsQuery = supabase!.from('assignments').delete().eq('zone_id', zoneId)
+    if (projectId ?? _currentProjectId) assignmentsQuery = assignmentsQuery.eq('project_id', projectId ?? _currentProjectId)
+    await assignmentsQuery
     await supabase!.from('activities').delete().eq('zone_id', zoneId)
-    const { error } = await supabase!.from('zones').delete().eq('id', zoneId)
+    let zoneQuery = supabase!.from('zones').delete().eq('id', zoneId)
+    if (projectId ?? _currentProjectId) zoneQuery = zoneQuery.eq('project_id', projectId ?? _currentProjectId)
+    const { error } = await zoneQuery
     if (error) console.error('[DB] deleteZone error:', error)
   } catch (e) {
     console.error('[DB] deleteZone unexpected error:', e)
@@ -391,27 +451,25 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
   if (!isOnline()) return
 
   try {
-    void (async () => {
-      try {
-        let delQuery = supabase!.from('assignments').delete().neq('zone_id', '')
-        if (projectId) delQuery = delQuery.eq('project_id', projectId)
-        await delQuery
+    let delQuery = supabase!.from('assignments').delete().neq('zone_id', '')
+    if (projectId) delQuery = delQuery.eq('project_id', projectId)
+    const { error: deleteError } = await delQuery
+    if (deleteError) {
+      console.error('[DB] saveAssignments delete error:', deleteError)
+      return
+    }
 
-        if (assignments.length > 0) {
-          const { error } = await supabase!.from('assignments').insert(
-            assignments.map((a) => ({
-              zone_id:        a.zoneId,
-              district_id:    a.districtId,
-              sales_agent_id: a.salesAgentId ?? `sa${a.districtId}`,
-              ...(projectId ? { project_id: projectId } : {}),
-            })),
-          )
-          if (error) console.error('[DB] saveAssignments error:', error)
-        }
-      } catch (e) {
-        console.error('[DB] saveAssignments unexpected error:', e)
-      }
-    })()
+    if (assignments.length > 0) {
+      const { error } = await supabase!.from('assignments').insert(
+        assignments.map((a) => ({
+          zone_id:        a.zoneId,
+          district_id:    a.districtId,
+          sales_agent_id: a.salesAgentId ?? `sa${a.districtId}`,
+          ...(projectId ? { project_id: projectId } : {}),
+        })),
+      )
+      if (error) console.error('[DB] saveAssignments error:', error)
+    }
   } catch (e) {
     console.error('[DB] saveAssignments unexpected error:', e)
   }
@@ -432,10 +490,11 @@ export async function saveSnapshot(
   // LUÔN lưu localStorage (scoped by project)
   const key = scopedKey('terrimap_snapshots', scopedProjectId)
   try {
-    const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[]
+    const existing = readSnapshotCache(scopedProjectId) as unknown[]
     existing.unshift({ id, label, data, period, created_at: new Date().toISOString() })
     if (existing.length > 50) existing.pop()
     localStorage.setItem(key, JSON.stringify(existing))
+    dispatchSnapshotChange(scopedProjectId, id)
   } catch (e) {
     console.error('[DB] saveSnapshot localStorage error:', e)
   }
@@ -481,11 +540,7 @@ export async function loadSnapshotsForProject(projectId?: string): Promise<Array
 }>> {
   // ??c localStorage theo ph?m vi project
   const scopedProjectId = projectId ?? _currentProjectId
-  const key = scopedKey('terrimap_snapshots', scopedProjectId)
-  let localSnaps: any[] = []
-  try {
-    localSnaps = JSON.parse(localStorage.getItem(key) ?? '[]')
-  } catch { /* ignore */ }
+  const localSnaps = readSnapshotCache(scopedProjectId)
 
   if (!isOnline()) return localSnaps
 
@@ -528,6 +583,7 @@ export async function deleteSnapshot(id: string, projectId?: string): Promise<vo
     const existing = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[]
     const filtered = existing.filter((s: any) => s?.id !== id)
     localStorage.setItem(key, JSON.stringify(filtered))
+    dispatchSnapshotChange(scopedProjectId, id)
   } catch (e) {
     console.error('[DB] deleteSnapshot localStorage error:', e)
   }
@@ -648,13 +704,28 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       return DEFAULT_REGIONS
     }
 
-    return (data as DbRegion[]).map((r) => ({
+    const remoteRegions = (data as DbRegion[]).map((r) => ({
       id:     r.id,
       name:   r.name,
       ...(r.coordinator_id ? { coordinatorId: r.coordinator_id } : {}),
       center: r.center,
       zoom:   r.zoom,
     }))
+
+    const mergedRegions = [...remoteRegions]
+    const remoteIndex = new Map(remoteRegions.map((region, index) => [region.id, index]))
+
+    for (const region of local) {
+      const index = remoteIndex.get(region.id)
+      if (index === undefined) {
+        remoteIndex.set(region.id, mergedRegions.length)
+        mergedRegions.push(region)
+        continue
+      }
+      mergedRegions[index] = region
+    }
+
+    return mergedRegions.sort((left, right) => left.name.localeCompare(right.name, 'vi'))
   } catch {
     return local.length > 0 ? local : (projectId ? [] : DEFAULT_REGIONS)
   }
@@ -698,9 +769,9 @@ export async function saveRegion(region: Region, projectId?: string): Promise<vo
 /**
  * Delete a region from DB and localStorage.
  */
-export async function deleteRegion(regionId: string): Promise<void> {
+export async function deleteRegion(regionId: string, projectId?: string): Promise<void> {
   // Remove from localStorage
-  const regionKey = lsKey('terrimap_regions')
+  const regionKey = scopedKey('terrimap_regions', projectId ?? _currentProjectId)
   try {
     const stored = readJsonArray<Region>(regionKey)
     writeJsonArray(regionKey, stored.filter((r) => r.id !== regionId))
@@ -709,7 +780,11 @@ export async function deleteRegion(regionId: string): Promise<void> {
   if (!isOnline()) return
 
   try {
-    const { error } = await supabase!.from('regions').delete().eq('id', regionId)
+    let query = supabase!.from('regions').delete().eq('id', regionId)
+    if (projectId ?? _currentProjectId) {
+      query = query.eq('project_id', projectId ?? _currentProjectId)
+    }
+    const { error } = await query
     if (error) console.error('[DB] deleteRegion error:', error)
   } catch (e) {
     console.error('[DB] deleteRegion unexpected:', e)
