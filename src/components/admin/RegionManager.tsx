@@ -1,190 +1,53 @@
-/**
- * RegionManager — Quản lý vùng động với tìm tỉnh và fly-to
- *
- * Tính năng:
- * - Thanh tìm tỉnh: tự hoàn thành 34 tỉnh, bấm → bay map
- * - "Tạo khu vực tại đây": lưu tâm bản đồ hiện tại thành vùng mới
- * - Thanh pill: chọn/bỏ chọn vùng để lọc map + zones
- * - Xóa vùng (có chặn nếu còn zone đang gắn)
- * - Coordinator assignment for selected region
- * - Empty state guide for new projects
- */
-
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useUIStore } from '../../store/uiStore.js'
-import { VIETNAM_PROVINCES } from '../../data/provinces.js'
-import type { Region } from '../../data/regions.js'
 
 interface RegionManagerProps {
-  /** T?m b?n ?? hi?n t?i (lat/lng) ???c truy?n t? TerritoryMap qua parent */
-  mapCenter?: { lat: number; lng: number }
-  mapZoom?:   number
-  /** Callback ?? bay b?n ?? t?i to? ?? ???c truy?n v?o */
-  onFlyTo?:   (lat: number, lng: number, zoom: number) => void
+  onFlyTo?: (lat: number, lng: number, zoom: number) => void
 }
 
-export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionManagerProps) {
-  const role             = useUIStore((s) => s.role)
-  const regions          = useDataStore((s) => s.regions)
-  const zones            = useDataStore((s) => s.zones)
-  const agents           = useDataStore((s) => s.agents)
-  const currentRegionId  = useDataStore((s) => s.currentRegionId)
+export default function RegionManager({ onFlyTo }: RegionManagerProps) {
+  const role = useUIStore((s) => s.role)
+  const regions = useDataStore((s) => s.regions)
+  const zones = useDataStore((s) => s.zones)
+  const agents = useDataStore((s) => s.agents)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
-  const updateRegion     = useDataStore((s) => s.updateRegion)
-  const addRegion        = useDataStore((s) => s.addRegion)
-  const deleteRegion     = useDataStore((s) => s.deleteRegion)
-
-  const [searchQuery,    setSearchQuery]    = useState('')
-  const [showDropdown,   setShowDropdown]   = useState(false)
-  const [creating,       setCreating]       = useState(false)
-  const [newName,        setNewName]        = useState('')
-  const [confirmDelete,  setConfirmDelete]  = useState<string | null>(null)
-  // S?a l?i: l?u to? ?? t?nh t? dropdown ?? khu v?c c? t?m ??ng
-  const [selectedProvince, setSelectedProvince] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
-  const searchRef = useRef<HTMLDivElement>(null)
-
-  // L?c t?nh theo t? kh?a
-  const filteredProvinces = searchQuery.trim().length > 0
-    ? VIETNAM_PROVINCES.filter((p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : VIETNAM_PROVINCES
-
-  // ??ng dropdown khi b?m ra ngo?i
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleProvinceSelect = useCallback((lat: number, lng: number, zoom: number, name: string) => {
-    setSearchQuery(name)
-    setShowDropdown(false)
-    setNewName(name)          // ?i?n s?n form t?o b?ng t?n t?nh
-    setSelectedProvince({ lat, lng, zoom })  // S?a l?i: l?u to? ?? ?? t?o khu v?c
-    onFlyTo?.(lat, lng, zoom)
-  }, [onFlyTo])
-
-  const handleCreateRegion = useCallback(async () => {
-    if (!newName.trim()) return
-    // Ưu tiên: tọa độ tìm tỉnh > mapCenter > fallback
-    // (mapCenter c? th? undefined v? Sidebar kh?ng ph?i l?c n?o c?ng truy?n v?o)
-    const center = selectedProvince ?? mapCenter ?? { lat: 21.028, lng: 105.854 }  // Hà Nội default
-    const zoom   = selectedProvince?.zoom ?? mapZoom ?? 12
-    setCreating(false)
-    setNewName('')
-    setSearchQuery('')
-    setSelectedProvince(null)  // reset sau khi d?ng
-    const region = await addRegion(newName.trim(), center, zoom)
-    setCurrentRegion(region.id)
-    // S?a l?i: bay t?i khu v?c v?a t?o
-    onFlyTo?.(center.lat, center.lng, zoom)
-  }, [newName, selectedProvince, mapCenter, mapZoom, addRegion, setCurrentRegion, onFlyTo])
+  const updateRegion = useDataStore((s) => s.updateRegion)
+  const deleteRegion = useDataStore((s) => s.deleteRegion)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   const handleDeleteRegion = useCallback(async (regionId: string) => {
-    const zoneCount = zones.filter((z) => (z as any).regionId === regionId).length
+    const zoneCount = zones.filter((zone) => (zone as any).regionId === regionId).length
     if (zoneCount > 0) {
-      alert(`Khu vực này còn ${zoneCount} vùng. Hãy chuyển tất cả vùng sang khu vực khác trước khi xóa.`)
+      alert(`Khu vực này còn ${zoneCount} vùng. Hãy chuyển toàn bộ vùng sang khu vực khác trước khi xóa.`)
       setConfirmDelete(null)
       return
     }
     await deleteRegion(regionId)
     setConfirmDelete(null)
-  }, [zones, deleteRegion])
+  }, [deleteRegion, zones])
 
-  const activeRegion = regions.find((r) => r.id === currentRegionId)
+  const activeRegion = regions.find((region) => region.id === currentRegionId)
 
   return (
     <div style={styles.wrapper}>
-
-      {/* ── Province search ────────────────────────────────────────────── */}
-      <div ref={searchRef} style={styles.searchWrap}>
-        <div style={styles.searchBox}>
-          <span style={styles.searchIcon}>🔍</span>
-          <input
-            style={styles.searchInput}
-            placeholder="Tìm tỉnh thành..."
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true) }}
-            onFocus={() => setShowDropdown(true)}
-          />
-          {searchQuery && (
-            <button
-              style={styles.clearSearchBtn}
-              onClick={() => { setSearchQuery(''); setShowDropdown(false) }}
-            >×</button>
-          )}
-        </div>
-
-        {showDropdown && (
-          <div style={styles.dropdown}>
-            {filteredProvinces.length === 0 ? (
-              <div style={styles.dropdownEmpty}>Không tìm thấy tỉnh thành</div>
-            ) : (
-              filteredProvinces.map((p) => (
-                <button
-                  key={p.name}
-                  style={styles.dropdownItem}
-                  onClick={() => handleProvinceSelect(p.lat, p.lng, p.zoom, p.name)}
-                >
-                  📍 {p.name}
-                </button>
-              ))
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Tạo vùng ─────────────────────────────────────────────────── */}
-      {role === 'admin' && (creating ? (
-        <div style={styles.createBox}>
-          <input
-            autoFocus
-            style={styles.createInput}
-            placeholder="Tên khu vực..."
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCreateRegion()
-              if (e.key === 'Escape') { setCreating(false); setNewName('') }
-            }}
-          />
-          <div style={styles.createBtns}>
-            <button style={styles.confirmBtn} onClick={handleCreateRegion} disabled={!newName.trim()}>
-              ✓ Tạo tại đây
-            </button>
-            <button style={styles.cancelBtn} onClick={() => { setCreating(false); setNewName('') }}>
-              ✕
-            </button>
-          </div>
-          <div style={styles.createHint}>
-            📌 Khu vực sẽ được đặt tại vị trí bản đồ đang nhìn
-          </div>
-        </div>
-      ) : (
-        <button style={styles.createTrigger} onClick={() => setCreating(true)}>
-          + Tạo khu vực mới
-        </button>
-      ))}
-
-      {/* ── Region pills ──────────────────────────────────────────────── */}
       {regions.length === 0 ? (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>🗺️</div>
           <div style={styles.emptyText}>Chưa có khu vực nào</div>
-          <div style={styles.emptyHint}>Tìm tỉnh thành → Tạo khu vực</div>
+          <div style={styles.emptyHint}>
+            {role === 'admin'
+              ? 'Hãy dùng nút tạo khu vực ở góc trên bên phải để khởi tạo dữ liệu.'
+              : 'Chờ quản trị viên tạo khu vực để bắt đầu làm việc.'}
+          </div>
         </div>
       ) : (
         <div style={styles.pillBar}>
           {regions.map((region) => {
-            const isActive    = currentRegionId === region.id
-            const zoneCount   = zones.filter((z) => (z as any).regionId === region.id).length
-            const isConfirm   = confirmDelete === region.id
+            const isActive = currentRegionId === region.id
+            const zoneCount = zones.filter((zone) => (zone as any).regionId === region.id).length
+            const isConfirming = confirmDelete === region.id
 
             return (
               <div key={region.id} style={styles.pillRow}>
@@ -196,7 +59,6 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
                   onClick={() => {
                     const nextActive = !isActive
                     setCurrentRegion(nextActive ? region.id : null)
-                    // S?a l?i: bay t?i t?m khu v?c khi ch?n
                     if (nextActive && region.center) {
                       onFlyTo?.(region.center.lat, region.center.lng, (region as any).zoom ?? 12)
                     }
@@ -204,27 +66,30 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
                   title={`${region.name} · ${zoneCount} vùng`}
                 >
                   <span style={styles.pillName}>{region.name}</span>
-                  <span style={{
-                    ...styles.pillBadge,
-                    background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--color-surface)',
-                  }}>
+                  <span
+                    style={{
+                      ...styles.pillBadge,
+                      background: isActive ? 'rgba(255,255,255,0.22)' : 'var(--color-surface)',
+                    }}
+                  >
                     {zoneCount}
                   </span>
                 </button>
 
-                {/* Delete button */}
-                {role === 'admin' && isConfirm ? (
+                {role === 'admin' && isConfirming ? (
                   <div style={styles.confirmRow}>
                     <span style={styles.confirmText}>Xóa?</span>
                     <button style={styles.confirmYes} onClick={() => handleDeleteRegion(region.id)}>✓</button>
-                    <button style={styles.confirmNo}  onClick={() => setConfirmDelete(null)}>✕</button>
+                    <button style={styles.confirmNo} onClick={() => setConfirmDelete(null)}>✕</button>
                   </div>
                 ) : role === 'admin' ? (
                   <button
                     style={styles.deleteBtn}
                     onClick={() => setConfirmDelete(region.id)}
                     title="Xóa khu vực"
-                  >🗑</button>
+                  >
+                    🗑
+                  </button>
                 ) : null}
               </div>
             )
@@ -232,7 +97,6 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
         </div>
       )}
 
-      {/* ── Coordinator for selected region ───────────────────────────── */}
       {activeRegion && role === 'admin' && (
         <div style={styles.detailRow}>
           <span style={styles.detailLabel}>Điều phối:</span>
@@ -252,270 +116,147 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
   )
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
 const styles: Record<string, React.CSSProperties> = {
   wrapper: {
-    display:       'flex',
-    flexDirection: 'column',
-    gap:           8,
-  },
-  // Search
-  searchWrap: {
-    position: 'relative',
-  },
-  searchBox: {
-    display:      'flex',
-    alignItems:   'center',
-    gap:          6,
-    padding:      '5px 10px',
-    borderRadius: 8,
-    border:       '1.5px solid var(--color-border)',
-    background:   'var(--color-surface-2)',
-  },
-  searchIcon: {
-    fontSize:   13,
-    flexShrink: 0,
-    opacity:    0.7,
-  },
-  searchInput: {
-    flex:       1,
-    border:     'none',
-    background: 'transparent',
-    outline:    'none',
-    fontSize:   13,
-    color:      'var(--color-text)',
-    minWidth:   0,
-  },
-  clearSearchBtn: {
-    border:      'none',
-    background:  'transparent',
-    cursor:      'pointer',
-    fontSize:    16,
-    color:       'var(--color-text-muted)',
-    padding:     0,
-    lineHeight:  1,
-    flexShrink:  0,
-  },
-  dropdown: {
-    position:     'absolute' as const,
-    top:          '100%',
-    left:         0,
-    right:        0,
-    zIndex:       200,
-    background:   'var(--color-surface)',
-    border:       '1.5px solid var(--color-border)',
-    borderRadius: 8,
-    boxShadow:    '0 4px 16px rgba(0,0,0,0.15)',
-    maxHeight:    220,
-    overflowY:    'auto' as const,
-    marginTop:    4,
-  },
-  dropdownItem: {
-    display:    'block',
-    width:      '100%',
-    textAlign:  'left' as const,
-    padding:    '7px 12px',
-    border:     'none',
-    background: 'transparent',
-    color:      'var(--color-text)',
-    fontSize:   13,
-    cursor:     'pointer',
-  },
-  dropdownEmpty: {
-    padding:  '10px 12px',
-    fontSize: 12,
-    color:    'var(--color-text-muted)',
-  },
-  // Create form
-  createBox: {
-    display:       'flex',
-    flexDirection: 'column',
-    gap:           5,
-    padding:       '8px 10px',
-    borderRadius:  8,
-    border:        '1.5px solid var(--color-accent)',
-    background:    'var(--color-surface-2)',
-  },
-  createInput: {
-    border:       '1px solid var(--color-border)',
-    borderRadius: 6,
-    padding:      '5px 8px',
-    fontSize:     13,
-    background:   'var(--color-surface)',
-    color:        'var(--color-text)',
-    outline:      'none',
-  },
-  createBtns: {
     display: 'flex',
-    gap:     6,
-  },
-  confirmBtn: {
-    flex:         1,
-    padding:      '5px 0',
-    borderRadius: 6,
-    border:       'none',
-    background:   'var(--color-accent)',
-    color:        '#fff',
-    fontSize:     12,
-    fontWeight:   600,
-    cursor:       'pointer',
-  },
-  cancelBtn: {
-    padding:      '5px 10px',
-    borderRadius: 6,
-    border:       '1px solid var(--color-border)',
-    background:   'transparent',
-    color:        'var(--color-text-muted)',
-    fontSize:     12,
-    cursor:       'pointer',
-  },
-  createHint: {
-    fontSize: 11,
-    color:    'var(--color-text-muted)',
-  },
-  createTrigger: {
-    padding:      '5px 0',
-    borderRadius: 7,
-    border:       '1.5px dashed var(--color-border)',
-    background:   'transparent',
-    color:        'var(--color-accent)',
-    fontSize:     12,
-    fontWeight:   600,
-    cursor:       'pointer',
-    width:        '100%',
-    transition:   'all 150ms',
-  },
-  // Empty state
-  emptyState: {
-    display:        'flex',
-    flexDirection:  'column',
-    alignItems:     'center',
-    padding:        '14px 8px',
-    gap:            4,
-    borderRadius:   8,
-    border:         '1.5px dashed var(--color-border)',
-    background:     'var(--color-surface-2)',
-  },
-  emptyIcon: { fontSize: 22 },
-  emptyText: { fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)' },
-  emptyHint: { fontSize: 11, color: 'var(--color-text-3)', textAlign: 'center' as const },
-  // Pills
-  pillBar: {
-    display:       'flex',
     flexDirection: 'column',
-    gap:           4,
+    gap: 8,
+  },
+  emptyState: {
+    padding: 16,
+    borderRadius: 14,
+    border: '1px dashed var(--color-border)',
+    background: 'var(--color-surface-2)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    alignItems: 'center',
+    textAlign: 'center',
+  },
+  emptyIcon: {
+    fontSize: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  emptyHint: {
+    fontSize: 12,
+    lineHeight: 1.5,
+    color: 'var(--color-text-2)',
+  },
+  pillBar: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
   },
   pillRow: {
-    display:     'flex',
-    alignItems:  'center',
-    gap:         5,
+    display: 'grid',
+    gridTemplateColumns: '1fr auto',
+    gap: 8,
+    alignItems: 'center',
   },
   pill: {
-    flex:         1,
-    display:      'flex',
-    alignItems:   'center',
+    border: '1px solid var(--color-border)',
+    borderRadius: 999,
+    minHeight: 42,
+    padding: '0 14px',
+    display: 'flex',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap:          5,
-    padding:      '5px 10px',
-    borderRadius: 20,
-    border:       '1.5px solid',
-    cursor:       'pointer',
-    fontSize:     12,
-    fontWeight:   600,
-    transition:   'all 150ms',
-    minWidth:     0,
+    gap: 12,
+    cursor: 'pointer',
+    fontWeight: 700,
   },
   pillActive: {
-    background:  'var(--color-accent)',
+    background: 'var(--color-accent)',
+    color: '#fff',
     borderColor: 'var(--color-accent)',
-    color:       '#fff',
-    boxShadow:   '0 2px 8px rgba(99,102,241,0.30)',
+    boxShadow: '0 10px 24px rgba(37,99,235,0.18)',
   },
   pillInactive: {
-    background:  'var(--color-surface-2)',
-    borderColor: 'var(--color-border)',
-    color:       'var(--color-text)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
   },
   pillName: {
-    overflow:     'hidden',
+    overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace:   'nowrap' as const,
-    flex:         1,
-    textAlign:    'left' as const,
+    whiteSpace: 'nowrap',
+    fontSize: 15,
   },
   pillBadge: {
-    fontSize:     10,
-    fontWeight:   700,
-    padding:      '1px 5px',
-    borderRadius: 10,
-    flexShrink:   0,
+    minWidth: 32,
+    height: 24,
+    borderRadius: 999,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 8px',
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'inherit',
   },
   deleteBtn: {
-    padding:      '3px 6px',
-    borderRadius: 6,
-    border:       'none',
-    background:   'transparent',
-    cursor:       'pointer',
-    fontSize:     12,
-    opacity:      0.5,
-    flexShrink:   0,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    cursor: 'pointer',
   },
   confirmRow: {
-    display:     'flex',
-    alignItems:  'center',
-    gap:         3,
-    flexShrink:  0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
   },
   confirmText: {
-    fontSize: 10,
-    color:    'var(--color-text-muted)',
+    fontSize: 11,
+    color: 'var(--color-text-2)',
+    fontWeight: 700,
   },
   confirmYes: {
-    padding:      '2px 5px',
-    borderRadius: 4,
-    border:       'none',
-    background:   '#ef4444',
-    color:        '#fff',
-    fontSize:     10,
-    cursor:       'pointer',
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    border: '1px solid #fecaca',
+    background: '#fef2f2',
+    color: '#b91c1c',
+    cursor: 'pointer',
+    fontWeight: 800,
   },
   confirmNo: {
-    padding:      '2px 5px',
-    borderRadius: 4,
-    border:       '1px solid var(--color-border)',
-    background:   'transparent',
-    color:        'var(--color-text-muted)',
-    fontSize:     10,
-    cursor:       'pointer',
-  },
-  // Coordinator
-  detailRow: {
-    display:     'flex',
-    alignItems:  'center',
-    gap:         8,
-    padding:     '6px 10px',
+    width: 28,
+    height: 28,
     borderRadius: 8,
-    background:  'var(--color-surface-2)',
-    border:      '1px solid var(--color-border)',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    cursor: 'pointer',
+    fontWeight: 800,
+  },
+  detailRow: {
+    display: 'grid',
+    gridTemplateColumns: '72px 1fr',
+    gap: 10,
+    alignItems: 'center',
+    padding: '10px 12px',
+    borderRadius: 12,
+    background: 'var(--color-surface-2)',
+    border: '1px solid var(--color-border)',
   },
   detailLabel: {
-    fontSize:   11,
-    fontWeight: 600,
-    color:      'var(--color-text-3)',
-    whiteSpace: 'nowrap' as const,
-    flexShrink: 0,
+    fontSize: 12,
+    fontWeight: 700,
+    color: 'var(--color-text-2)',
   },
   select: {
-    flex:         1,
-    fontSize:     12,
-    padding:      '3px 6px',
-    borderRadius: 6,
-    border:       '1px solid var(--color-border)',
-    background:   'var(--color-surface)',
-    color:        'var(--color-text)',
-    cursor:       'pointer',
-    outline:      'none',
-    minWidth:     0,
+    width: '100%',
+    minHeight: 36,
+    borderRadius: 10,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    padding: '0 10px',
+    fontSize: 14,
   },
 }
