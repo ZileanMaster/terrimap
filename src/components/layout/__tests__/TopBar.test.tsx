@@ -38,9 +38,7 @@ let store: MockStoreState
 
 function setupStore(overrides: Partial<MockStoreState> = {}) {
   store = makeStore(overrides)
-  vi.mocked(useUIStore).mockImplementation((selector: (s: MockStoreState) => unknown) =>
-    selector(store),
-  )
+  ;(vi.mocked(useUIStore) as any).mockImplementation((selector: (s: MockStoreState) => unknown) => selector(store))
 }
 
 describe('TopBar', () => {

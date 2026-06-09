@@ -69,7 +69,7 @@ export const GeoJSONPolygonSchema = z.discriminatedUnion('type', [
 ]);
 export type GeoJSONPolygon = DomainGeoJSONPolygon;
 
-export const ActivityTypeSchema = z.enum(['CUSTOMER', 'ORDER', 'REVENUE']);
+export const ActivityTypeSchema = z.enum(['CUSTOMER', 'ORDER', 'REVENUE', 'FAMILIARITY']);
 export type ActivityType = DomainActivityType;
 
 export const ActivitySchema = z.object({

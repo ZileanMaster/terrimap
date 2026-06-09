@@ -9,7 +9,7 @@
 export interface Region {
   id:            string
   name:          string
-  coordinatorId?: string   // agent phụ trách
+  coordinatorId?: string | undefined   // agent phụ trách
   center:        { lat: number; lng: number }
   zoom:          number
 }

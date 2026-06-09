@@ -19,16 +19,27 @@ vi.mock('react-i18next', () => ({
 }))
 
 function makeResult(overrides: Partial<AlgorithmResultVM> = {}): AlgorithmResultVM {
-  return {
+  const base: AlgorithmResultVM = {
     assignments: [],
     balanceScore: 75,
     avgCustomersPerDistrict: 100,
     maxDiameter: 25,
     violationCount: 0,
     algo: 'local-search',
+    durationMs: 1200,
     suggestSA: false,
     violations: [],
-    ...overrides,
+  }
+
+  const merged = { ...base, ...overrides }
+
+  return {
+    ...merged,
+    balanceScore: merged.balanceScore ?? base.balanceScore,
+    avgCustomersPerDistrict: merged.avgCustomersPerDistrict ?? base.avgCustomersPerDistrict,
+    maxDiameter: merged.maxDiameter ?? base.maxDiameter,
+    violationCount: merged.violationCount ?? base.violationCount,
+    durationMs: merged.durationMs ?? base.durationMs,
   }
 }
 

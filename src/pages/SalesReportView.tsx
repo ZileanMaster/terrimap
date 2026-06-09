@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react'
 import { useAuthStore } from '../store/authStore.js'
 import { useDataStore } from '../store/dataStore.js'
-import { useFacade } from '../context/FacadeContext.js'
+import { useSalesFacade } from '../context/FacadeContext.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { getUserIdentityCandidates, resolveUserKey } from '../utils/userIdentity.js'
+import type { Zone } from '../../facades/viewmodels.js'
 
 export default function SalesReportView() {
   const zones = useDataStore((s) => s.zones)
@@ -18,7 +19,7 @@ export default function SalesReportView() {
   const agents = useDataStore((s) => s.agents)
   const currentUserKey = resolveUserKey(authUser, profile, agents)
 
-  const ctx = useFacade()
+  const salesFacade = useSalesFacade()
 
   const identityCandidates = useMemo(
     () => getUserIdentityCandidates(authUser, profile),
@@ -31,7 +32,7 @@ export default function SalesReportView() {
 
     for (const assignment of assignments) {
       const isMine =
-        identityCandidates.includes(assignment.salesAgentId)
+        (assignment.salesAgentId !== undefined && identityCandidates.includes(assignment.salesAgentId))
         || (currentUserKey !== '' && assignment.salesAgentId === currentUserKey)
       if (!isMine) continue
       matchedDistrictIds.add(assignment.districtId)
@@ -40,8 +41,8 @@ export default function SalesReportView() {
 
     if (matchedDistrictIds.size === 0) {
       try {
-        const district = ctx.facade.getMyDistrict()
-        const zoneIds = new Set(district.zones.map((zone) => zone.id))
+        const district = salesFacade.getMyDistrict()
+        const zoneIds = new Set(district.zones.map((zone: Zone) => zone.id))
         for (const assignment of assignments) {
           if (zoneIds.has(assignment.zoneId)) {
             matchedDistrictIds.add(assignment.districtId)
@@ -59,8 +60,8 @@ export default function SalesReportView() {
 
     const targetRegionId =
       currentRegionId
-      ?? targetZones.find((zone) => (zone as any).regionId ?? (zone as any).region_id ?? null)?.regionId
-      ?? targetZones.find((zone) => (zone as any).regionId ?? (zone as any).region_id ?? null)?.region_id
+      ?? targetZones.find((zone) => ((zone as any).regionId ?? (zone as any).region_id ?? null) != null)?.['regionId' as keyof typeof targetZones[number]] as string | undefined
+      ?? targetZones.find((zone) => ((zone as any).regionId ?? (zone as any).region_id ?? null) != null)?.['region_id' as keyof typeof targetZones[number]] as string | undefined
       ?? null
 
     const regionLabel = targetRegionId
@@ -74,7 +75,7 @@ export default function SalesReportView() {
       regionId: targetRegionId,
       regionLabel,
     }
-  }, [assignments, ctx.facade, currentRegionId, currentUserKey, identityCandidates, regions, zones])
+  }, [assignments, salesFacade, currentRegionId, currentUserKey, identityCandidates, regions, zones])
 
   if (loading) {
     return (

@@ -24,8 +24,8 @@ interface RightPanelProps {
   snapshots?:    Snapshot[]
   matrixData?:   { adj: AdjMatrix; dist: DistMatrix } | null
   zones?:        Zone[]
-  report?:       ReportData | null   // L4b-5: export report data
-  assignments?:  Assignment[]        // L4b-5: for export panel
+  report?:       ReportData | null | undefined   // L4b-5: export report data
+  assignments?:  Assignment[] | undefined        // L4b-5: for export panel
 }
 
 export default function RightPanel({
@@ -109,8 +109,8 @@ export default function RightPanel({
           <ExportPanel
             zones={zones ?? []}
             assignments={assignments ?? result?.assignments ?? []}
-            adj={matrixData?.adj}
-            report={report}
+            adj={matrixData?.adj ?? null}
+            report={report ?? null}
             result={result}
           />
         )}

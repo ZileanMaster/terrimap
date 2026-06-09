@@ -22,6 +22,7 @@ import {
 import { useUIStore } from '../../store/uiStore.js'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw/dist/leaflet.draw.css'
+import * as L from 'leaflet'
 
 /** Dimmed opacity when another sales agent is highlighted */
 const DISTRICT_FILL_OPACITY_DIMMED = 0.10
@@ -31,26 +32,29 @@ const DISTRICT_FILL_OPACITY_TRANSITION = 0.05
 export interface TerritoryMapProps {
   zones:              Zone[]
   assignments:        Assignment[]
-  onZoneClick?:       (zoneId: string) => void
-  selectedZoneId?:    string | null
-  highlightedSalesId?: string | null   // L4b-1
-  isTransitioning?:   boolean          // L4b-1
-  center?:            [number, number]
-  zoom?:              number
-  children?:          React.ReactNode  // L4c: DrawingToolbar
-  islandZoneIds?:           Set<string>   // L4b-2 EC-1
-  disconnectedDistrictIds?: Set<number>   // L4b-2 EC-2
+  onZoneClick?:       ((zoneId: string) => void) | undefined
+  selectedZoneId?:    string | null | undefined
+  highlightedSalesId?: string | null | undefined   // L4b-1
+  isTransitioning?:   boolean | undefined          // L4b-1
+  center?:            [number, number] | undefined
+  zoom?:              number | undefined
+  children?:          React.ReactNode | undefined  // L4c: DrawingToolbar
+  islandZoneIds?:           Set<string> | undefined   // L4b-2 EC-1
+  disconnectedDistrictIds?: Set<number> | undefined   // L4b-2 EC-2
 }
 
 // ── Leaflet position fix ───────────────────────────────────────────────────────
-import L from 'leaflet'
-// @ts-expect-error _getIconUrl
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
+const leaflet = L as any
+delete leaflet.Icon.Default.prototype._getIconUrl
+leaflet.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9/dist/images/marker-icon-2x.png',
   iconUrl:       'https://unpkg.com/leaflet@1.9/dist/images/marker-icon.png',
   shadowUrl:     'https://unpkg.com/leaflet@1.9/dist/images/marker-shadow.png',
 })
+
+const RLMapContainer = MapContainer as unknown as React.ComponentType<any>
+const RLTileLayer = TileLayer as unknown as React.ComponentType<any>
+const RLTooltip = Tooltip as unknown as React.ComponentType<any>
 
 // ── MapFlyTo — hiệu ứng bay mượt khi đổi vùng ───────────────────────────────
 function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
@@ -98,7 +102,7 @@ function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId
     // Convert GeoJSON [lng, lat] → Leaflet [lat, lng]
     const latlngs: [number, number][] = ring.map(([lng, lat]) => [lat!, lng!])
     try {
-      const bounds = L.latLngBounds(latlngs)
+      const bounds = leaflet.latLngBounds(latlngs)
       if (bounds.isValid()) {
         map.flyToBounds(bounds, { padding: [40, 40], duration: 1.0, maxZoom: 16 })
       }
@@ -154,7 +158,7 @@ export default function TerritoryMap({
 
   return (
     <div style={styles.wrapper} data-testid="territory-map">
-      <MapContainer
+      <RLMapContainer
         center={center}
         zoom={zoom}
         style={styles.map}
@@ -163,8 +167,8 @@ export default function TerritoryMap({
         {/* Smooth fly-to when region changes */}
         <MapFlyTo center={center} zoom={zoom} />
         {/* Accurate zoom-to-zone when zone is selected */}
-        <MapZoneFlyTo zones={zones} selectedZoneId={selectedZoneId} />
-        <TileLayer
+        <MapZoneFlyTo zones={zones} {...(selectedZoneId !== undefined ? { selectedZoneId } : {})} />
+        <RLTileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           className="map-tiles"
@@ -283,7 +287,7 @@ export default function TerritoryMap({
                 click: () => onZoneClick?.(zone.id),
               }}
             >
-              <Tooltip sticky>
+              <RLTooltip sticky>
                 <div style={{ minWidth: 120 }}>
                   <strong>{zone.name}</strong>
                   <div style={{ fontSize: 11, marginTop: 2, color: '#666' }}>
@@ -305,13 +309,13 @@ export default function TerritoryMap({
                     </div>
                   )}
                 </div>
-              </Tooltip>
+              </RLTooltip>
             </Polygon>
           )
         })}
 
           {children}
-        </MapContainer>
+        </RLMapContainer>
 
       {/* Dark tile filter injection */}
       <style>{`

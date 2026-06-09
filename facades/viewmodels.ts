@@ -213,7 +213,7 @@ export interface ActivityRecord {
  */
 export interface DistrictReport {
   id:         string;
-  projectId?: string;
+  projectId?: string | undefined;
   regionId:   string;
   districtId: number;
   userId:     string;
@@ -221,6 +221,6 @@ export interface DistrictReport {
   customers:  number;
   orders:     number;
   revenue?:   number;
-  note?:      string;
+  note?:      string | undefined;
   updatedAt:  string;     // Chu?i ISO
 }

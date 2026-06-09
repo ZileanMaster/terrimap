@@ -578,16 +578,16 @@ export function UsersView() {
                         {isEditing ? (
                           <div style={styles.btnGroup}>
                           <button onClick={() => handleSaveEdit(m)} style={styles.inlineSaveBtn}>
-                            ✓ Lưu
+                            Lưu
                           </button>
                           <button onClick={() => setEditingId(null)} style={styles.inlineCancelBtn}>
-                            Há»§y
+                            Hủy
                           </button>
                         </div>
                       ) : (
                         <div style={styles.btnGroup}>
                           <button onClick={() => handleStartEdit(m)} style={styles.inlineEditBtn}>
-                            Sá»­a
+                            Sửa
                           </button>
                           <button onClick={() => handleDeleteMember(m)} style={styles.inlineDeleteBtn}>
                             Xóa

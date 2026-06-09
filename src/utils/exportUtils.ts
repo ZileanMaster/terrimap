@@ -154,7 +154,7 @@ export function printReport(
     const z = report.zones.find(zone => zone.id === a.zoneId)
     const cust = z ? getCustomers(z) : 0
     const ord = z ? getOrders(z) : 0
-    return `<tr><td>${escapeHtml(z?.name ?? a.zoneId)}</td><td>D${a.districtId}</td><td>${escapeHtml(a.salesAgentId)}</td><td>${cust}</td><td>${ord}</td></tr>`
+    return `<tr><td>${escapeHtml(z?.name ?? a.zoneId)}</td><td>D${a.districtId}</td><td>${escapeHtml(a.salesAgentId ?? '')}</td><td>${cust}</td><td>${ord}</td></tr>`
   }).join('')
 
   const algoSection = result ? `

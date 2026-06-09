@@ -6,9 +6,9 @@ import React from 'react'
  */
 export default class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
-  { hasError: boolean; message: string; stack?: string }
+  { hasError: boolean; message: string; stack?: string | undefined }
 > {
-  state = { hasError: false, message: '', stack: undefined as string | undefined }
+  state: { hasError: boolean; message: string; stack?: string | undefined } = { hasError: false, message: '' }
 
   static getDerivedStateFromError(err: any) {
     return {
@@ -43,7 +43,7 @@ export default class ErrorBoundary extends React.Component<
             </button>
             <button
               style={styles.ghostBtn}
-              onClick={() => this.setState({ hasError: false, message: '', stack: undefined })}
+              onClick={() => this.setState({ hasError: false, message: '' })}
             >
               Thử tiếp
             </button>

@@ -34,7 +34,7 @@ export interface GeoJSONMultiPolygon {
 export type GeoJSONPolygon = GeoJSONSimplePolygon | GeoJSONMultiPolygon;
 
 
-export type ActivityType = 'CUSTOMER' | 'ORDER' | 'REVENUE';
+export type ActivityType = 'CUSTOMER' | 'ORDER' | 'REVENUE' | 'FAMILIARITY';
 
 export interface Activity {
   id: string;

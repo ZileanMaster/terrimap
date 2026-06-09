@@ -8,7 +8,7 @@
 
 import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
-import L from 'leaflet'
+import * as L from 'leaflet'
 import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
@@ -25,7 +25,8 @@ interface DrawingToolbarProps {
 
 export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZones, selectedZone }: DrawingToolbarProps) {
   const map = useMap()
-  const drawnItemsRef = useRef<L.FeatureGroup | null>(null)
+  const leaflet = L as any
+  const drawnItemsRef = useRef<any | null>(null)
   const selectedLayerRef = useRef<any>(null)
   const selectedOriginalRingRef = useRef<[number, number][] | null>(null)
   const existingZonesRef = useRef<Zone[] | undefined>(existingZones)
@@ -36,18 +37,18 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
   }, [existingZones])
 
   const layerToRing = (layer: any): [number, number][] => {
-    const latlngs = (layer.getLatLngs()[0] ?? []) as L.LatLng[]
+    const latlngs = (layer.getLatLngs()[0] ?? []) as Array<{ lat: number; lng: number }>
     const ring: [number, number][] = latlngs.map((ll) => [ll.lng, ll.lat])
     if (ring.length > 0) {
-      const first = ring[0]
-      const last = ring[ring.length - 1]
+      const first = ring[0]!
+      const last = ring[ring.length - 1]!
       if (first[0] !== last[0] || first[1] !== last[1]) ring.push([first[0], first[1]])
     }
     return ring
   }
 
   const layerCentroid = (layer: any) => {
-    const latlngs = (layer.getLatLngs()[0] ?? []) as L.LatLng[]
+    const latlngs = (layer.getLatLngs()[0] ?? []) as Array<{ lat: number; lng: number }>
     const lats = latlngs.map((ll) => ll.lat)
     const lngs = latlngs.map((ll) => ll.lng)
     return {
@@ -58,7 +59,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
   useEffect(() => {
     let cancelled = false
-    let drawnItems: L.FeatureGroup | null = null
+    let drawnItems: any | null = null
     let drawControl: any | null = null
 
     const boot = async () => {
@@ -77,7 +78,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       }
       if (cancelled) return
 
-      drawnItems = new L.FeatureGroup()
+      drawnItems = new leaflet.FeatureGroup()
       map.addLayer(drawnItems)
       drawnItemsRef.current = drawnItems
 
@@ -227,7 +228,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
 
     // QUAN TR?NG: ph?i t??ng t?c ???c ?? c?c tay n?m s?a c?a Leaflet.Draw ho?t ??ng.
     // If interactive is false, the vùng will not receive pointer events and edits feel "non-clickable".
-    const layer = L.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
+    const layer = leaflet.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
     ;(layer as any).__zoneId = selectedZone.id
     selectedLayerRef.current = layer
     selectedOriginalRingRef.current = layerToRing(layer)

@@ -3,7 +3,7 @@ import { useDataStore } from '../../store/dataStore.js'
 import { useUIStore } from '../../store/uiStore.js'
 
 interface RegionManagerProps {
-  onFlyTo?: (lat: number, lng: number, zoom: number) => void
+  onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined
 }
 
 export default function RegionManager({ onFlyTo }: RegionManagerProps) {
@@ -102,7 +102,14 @@ export default function RegionManager({ onFlyTo }: RegionManagerProps) {
           <span style={styles.detailLabel}>Điều phối:</span>
           <select
             value={activeRegion.coordinatorId ?? ''}
-            onChange={(e) => updateRegion({ ...activeRegion, coordinatorId: e.target.value || undefined })}
+            onChange={(e) => {
+              const coordinatorId = e.target.value || undefined
+              updateRegion(
+                coordinatorId === undefined
+                  ? { ...activeRegion }
+                  : { ...activeRegion, coordinatorId },
+              )
+            }}
             style={styles.select}
           >
             <option value="">— Chưa gán —</option>

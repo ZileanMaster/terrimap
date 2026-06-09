@@ -115,6 +115,9 @@ function componentCount(zones: Zone[]): number {
   const zoom = selectedRegion?.zoom ?? 12
 
   const runScenario = async (algo: Algo, m: number) =>
+    (ctx.role === 'sales')
+      ? Promise.reject(new Error('Nhân sự không có quyền chạy thuật toán'))
+      :
     (ctx.role === 'admin' && algo === 'sa')
       ? (async () => {
           const saOpts = { maxIter: 12000, initialTemp: 1500, cooling: 0.9965 }

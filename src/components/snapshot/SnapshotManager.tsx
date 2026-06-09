@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
-import { saveSnapshot, loadSnapshots, deleteSnapshot } from '../../services/db.js'
+import { saveSnapshot, loadSnapshots, deleteSnapshot, readSnapshotCache } from '../../services/db.js'
 import { supabase, isOnline } from '../../lib/supabase.js'
 import SnapshotCompare from './SnapshotCompare.js'
 
@@ -41,17 +41,20 @@ export default function SnapshotManager() {
   const setZones       = useDataStore((s) => s.setZones)
   const setAssignments = useDataStore((s) => s.setAssignments)
 
-  const reloadSnapshots = useCallback(async () => {
+  const refreshSnapshots = useCallback(async () => {
+    const projectSnapshots = readSnapshotCache(currentProjectId ?? undefined) as SnapshotItem[]
+    setSnapshots(projectSnapshots)
+
     const data = await loadSnapshots(currentProjectId ?? undefined)
     setSnapshots(data as SnapshotItem[])
   }, [currentProjectId])
 
   // T?i snapshots khi mount v? m?i khi project thay ??i.
   useEffect(() => {
-    void reloadSnapshots().catch((error) => {
+    void refreshSnapshots().catch((error) => {
       console.error('[SnapshotManager] load error:', error)
     })
-  }, [reloadSnapshots, currentProjectId])
+  }, [refreshSnapshots, currentProjectId])
 
   // ??ng b? tr?c ti?p: khi admin/?i?u ph?i kh?c l?u snapshot trong c?ng project,
   // t? ??ng l?m m?i dropdown n?y.
@@ -69,7 +72,7 @@ export default function SnapshotManager() {
           filter: `project_id=eq.${currentProjectId}`,
         },
         () => {
-          void reloadSnapshots().catch((error) => {
+          void refreshSnapshots().catch((error) => {
             console.error('[SnapshotManager] realtime refresh error:', error)
           })
         },
@@ -79,20 +82,46 @@ export default function SnapshotManager() {
     return () => {
       void supabase!.removeChannel(channel)
     }
-  }, [currentProjectId, reloadSnapshots])
+  }, [currentProjectId, refreshSnapshots])
 
   // C? ch? polling d? ph?ng n?u Realtime kh?ng kh? d?ng trong project hi?n t?i.
   useEffect(() => {
     if (!currentProjectId) return
 
     const timer = window.setInterval(() => {
-      void reloadSnapshots().catch((error) => {
+      void refreshSnapshots().catch((error) => {
         console.error('[SnapshotManager] polling refresh error:', error)
       })
     }, 15_000)
 
     return () => window.clearInterval(timer)
-  }, [currentProjectId, reloadSnapshots])
+  }, [currentProjectId, refreshSnapshots])
+
+  // Đồng bộ ngay khi snapshot được lưu/xóa ở component khác trong cùng project
+  useEffect(() => {
+    const handleSnapshotUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<{ projectId?: string }>).detail
+      if (detail?.projectId && detail.projectId !== currentProjectId) return
+      void refreshSnapshots().catch((error) => {
+        console.error('[SnapshotManager] event refresh error:', error)
+      })
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (!event.key?.startsWith('terrimap_snapshots')) return
+      if (currentProjectId && event.key !== `terrimap_snapshots_${currentProjectId}` && event.key !== 'terrimap_snapshots') return
+      void refreshSnapshots().catch((error) => {
+        console.error('[SnapshotManager] storage refresh error:', error)
+      })
+    }
+
+    window.addEventListener('terrimap:snapshots-updated', handleSnapshotUpdate as EventListener)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener('terrimap:snapshots-updated', handleSnapshotUpdate as EventListener)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [currentProjectId, refreshSnapshots])
 
   // ??ng dropdown khi b?m ra ngo?i
   useEffect(() => {
@@ -132,16 +161,13 @@ export default function SnapshotManager() {
 
       setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
       await saveSnapshot(id, label.trim(), { zones, assignments }, period, currentProjectId ?? undefined)
-      void reloadSnapshots().catch(() => {
-        // Gi? state local theo ki?u optimistic n?u vi?c refresh th?t b?i.
-      })
       // Không cần alert thành công — badge count tăng lên là feedback đủ
     } catch (e) {
       alert('❌ Lưu thất bại: ' + (e as Error).message)
     } finally {
       setSaving(false)
     }
-  }, [zones, assignments, snapshots, reloadSnapshots])
+  }, [zones, assignments, snapshots, refreshSnapshots])
 
   const handleRestore = useCallback((snap: SnapshotItem) => {
     if (compareMode) return // ? ch? ?? so s?nh, c?c l?n click ch? d?ng ?? ch?n snapshot
@@ -173,11 +199,10 @@ export default function SnapshotManager() {
     setSnapshots((prev) => prev.filter((s) => s.id !== snapId))
     void (async () => {
       await deleteSnapshot(snapId, currentProjectId ?? undefined)
-      await reloadSnapshots()
     })().catch((error) => {
       console.error('[SnapshotManager] delete error:', error)
     })
-  }, [currentProjectId, reloadSnapshots])
+  }, [currentProjectId, refreshSnapshots])
 
   // Logic l?c theo period
   const availablePeriods = useMemo(() => {

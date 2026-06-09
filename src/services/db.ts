@@ -691,7 +691,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
         if (legacyErr) {
           console.error('[DB] loadRegions legacy error:', legacyErr)
         } else if (legacyData && legacyData.length > 0) {
-          return (legacyData as DbRegion[]).map((r) => ({
+          return (legacyData as DbRegion[]).map((r): Region => ({
             id:     r.id,
             name:   r.name,
             ...(r.coordinator_id ? { coordinatorId: r.coordinator_id } : {}),
@@ -704,7 +704,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       return DEFAULT_REGIONS
     }
 
-    const remoteRegions = (data as DbRegion[]).map((r) => ({
+    const remoteRegions: Region[] = (data as DbRegion[]).map((r): Region => ({
       id:     r.id,
       name:   r.name,
       ...(r.coordinator_id ? { coordinatorId: r.coordinator_id } : {}),

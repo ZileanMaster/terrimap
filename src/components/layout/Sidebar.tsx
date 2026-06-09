@@ -24,13 +24,13 @@ interface SidebarProps {
   zones: Zone[]
   assignments: Assignment[]
   /** Callback ?? t?o snapshot phi?n b?n. Ch? admin d?ng. */
-  onCreateSnapshot?: () => void
+  onCreateSnapshot?: (() => void) | undefined
   /** L4b-2 EC-1: Island zone IDs (no adj neighbors). */
-  islandZoneIds?: Set<string>
+  islandZoneIds?: Set<string> | undefined
   /** L4b-2 EC-2: Disconnected district IDs (contiguity violations). */
-  disconnectedDistrictIds?: Set<number>
+  disconnectedDistrictIds?: Set<number> | undefined
   /** Fly map to given coordinates (from province search) */
-  onFlyTo?: (lat: number, lng: number, zoom: number) => void
+  onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined
   mode?: 'regions' | 'assignments'
 }
 
@@ -55,8 +55,8 @@ const VIRTUAL_THRESHOLD = 40  // virtual scroll only when > this many zones
 interface ZoneCardListProps {
   zones:          Zone[]
   assignments:    Assignment[]
-  islandZoneIds?: Set<string>    // L4b-2 EC-1
-  onFlyTo?:       (lat: number, lng: number, zoom: number) => void
+  islandZoneIds?: Set<string> | undefined    // L4b-2 EC-1
+  onFlyTo?:       ((lat: number, lng: number, zoom: number) => void) | undefined
   mode?:          'regions' | 'assignments'
 }
 
@@ -179,7 +179,7 @@ const ZoneCard = React.memo(function ZoneCard({
   zone, assignment, isSelected, isIsland, onSelect, mode = 'assignments',
 }: {
   zone: Zone
-  assignment?: Assignment
+  assignment?: Assignment | undefined
   isSelected: boolean
   isIsland: boolean
   onSelect: (id: string) => void
@@ -227,9 +227,9 @@ const ZoneCard = React.memo(function ZoneCard({
 })
 
 function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo, mode }: {
-  zones: Zone[]; assignments: Assignment[]; onCreateSnapshot?: () => void;
-  islandZoneIds?: Set<string>; disconnectedDistrictIds?: Set<number>;
-  onFlyTo?: (lat: number, lng: number, zoom: number) => void;
+  zones: Zone[]; assignments: Assignment[]; onCreateSnapshot?: (() => void) | undefined;
+  islandZoneIds?: Set<string> | undefined; disconnectedDistrictIds?: Set<number> | undefined;
+  onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined;
   mode?: 'regions' | 'assignments';
 }) {
   const { t } = useTranslation()
@@ -252,7 +252,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   if (mode === 'regions') {
     return (
       <div style={styles.content}>
-        <MapDataWorkspacePanel zones={zones} assignments={assignments} onFlyTo={onFlyTo} />
+        <MapDataWorkspacePanel zones={zones} assignments={assignments} />
         <div style={styles.divider} />
         <RegionManager onFlyTo={onFlyTo} />
         <div style={styles.divider} />
@@ -275,87 +275,12 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
       <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} mode="assignments" />
 
       <div style={styles.divider} />
-      <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot}>
+      <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot} disabled={!onCreateSnapshot}>
         📸 {t('sidebar.create_snapshot')}
       </button>
     </div>
   )
-
-    return (
-      <div style={styles.content}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={styles.sectionTitle}>👥 Đội ngũ Sales</h2>
-          <button
-            onClick={() => setAgentModalOpen(true)}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontSize: 14,
-              padding: '2px 6px',
-              borderRadius: 4,
-            }}
-            title="Quản lý nhân viên"
-          >
-            ⚙️
-          </button>
-        </div>
-        <div style={styles.agentList}>
-          {mgmt.sales.map((agent) => {
-            const assignedCount = assignments.filter(
-              (a) => a.salesAgentId === agent.id,
-          ).length
-          const isActive = highlightedSalesId === agent.id
-          // L4b-2 EC-2: Kiểm tra xem cụm của nhân sự có bị tách rời không
-          const agentDistrictId = assignments.find(a => a.salesAgentId === agent.id)?.districtId
-          const isAgentDisconnected = agentDistrictId !== undefined
-            && (disconnectedDistrictIds?.has(agentDistrictId) ?? false)
-          return (
-            <div
-              key={agent.id}
-              data-testid={`sales-card-${agent.id}`}
-              style={{
-                ...styles.agentCard,
-                borderColor: isActive ? 'var(--color-accent)' : 'var(--color-border)',
-                boxShadow: isActive ? '0 0 0 2px var(--color-accent-light)' : 'none',
-                cursor: 'pointer',
-              }}
-              onClick={() => setHighlightedSalesId(agent.id)}
-            >
-              <div style={styles.agentAvatar}>
-                {agent.name.charAt(0)}
-              </div>
-              <div>
-                <div style={styles.agentName}>
-                  {agent.name}
-                  {isAgentDisconnected && (
-                    <span style={styles.disconnectedBadge} title="Cụm bị tách rời">🔴</span>
-                  )}
-                </div>
-                <div style={styles.agentMeta}>
-                  {agent.activeRegion} · {assignedCount} vùng
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div style={styles.divider} />
-      <DistrictAgentAssigner />
-
-      <div style={styles.divider} />
-      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
-
-      <div style={styles.divider} />
-      <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot}>
-        📸 {t('sidebar.create_snapshot')}
-      </button>
-
-        <AgentManager open={agentModalOpen} onClose={() => setAgentModalOpen(false)} />
-      </div>
-    )
-  }
+}
 
 function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assignments: Assignment[]; mode?: 'regions' | 'assignments' }) {
   const { t } = useTranslation()

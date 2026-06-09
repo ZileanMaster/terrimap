@@ -1,6 +1,6 @@
 type TelemetryEvent =
-  | { kind: 'error'; message: string; stack?: string; when: string; href?: string }
-  | { kind: 'rejection'; message: string; stack?: string; when: string; href?: string }
+  | { kind: 'error'; message: string; stack?: string | undefined; when: string; href?: string | undefined }
+  | { kind: 'rejection'; message: string; stack?: string | undefined; when: string; href?: string | undefined }
 
 const STORAGE_KEY = 'terrimap_last_errors_v1'
 const MAX_EVENTS = 20
@@ -54,4 +54,3 @@ export function readLastErrors(): TelemetryEvent[] {
     return []
   }
 }
-

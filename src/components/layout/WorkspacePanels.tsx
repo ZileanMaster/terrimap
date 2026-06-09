@@ -27,16 +27,12 @@ function TinyStat({ label, value }: { label: string; value: number }) {
 export function MapDataWorkspacePanel({
   zones,
   assignments,
-  onFlyTo,
   canExport = true,
 }: {
   zones: Zone[]
   assignments: Assignment[]
-  onFlyTo?: (lat: number, lng: number, zoom: number) => void
   canExport?: boolean
 }) {
-  const totalCustomers = useMemo(() => zones.reduce((sum, zone) => sum + getZoneCustomers(zone), 0), [zones])
-  const totalOrders = useMemo(() => zones.reduce((sum, zone) => sum + getZoneOrders(zone), 0), [zones])
   const assignedIds = useMemo(() => new Set(assignments.map((assignment) => assignment.zoneId)), [assignments])
   const unassignedCount = useMemo(
     () => zones.filter((zone) => !assignedIds.has(zone.id)).length,
@@ -47,56 +43,35 @@ export function MapDataWorkspacePanel({
     () => zones.filter((zone) => getZoneCustomers(zone) === 0 && getZoneOrders(zone) === 0).length,
     [zones],
   )
-  const avgCenter = useMemo(() => {
-    if (zones.length === 0) return null
-    const aggregate = zones.reduce((acc, zone) => ({
-      lat: acc.lat + zone.centroid.lat,
-      lng: acc.lng + zone.centroid.lng,
-    }), { lat: 0, lng: 0 })
-    return {
-      lat: aggregate.lat / zones.length,
-      lng: aggregate.lng / zones.length,
-    }
-  }, [zones])
 
   return (
     <div style={styles.stack}>
-      <div style={styles.card}>
-        <div style={styles.header}>
-          <div>
-            <div style={styles.eyebrow}>Không gian dữ liệu nền</div>
-            <div style={styles.title}>Khu vực & bản đồ</div>
-            <div style={styles.desc}>
-              Dùng để quản lý vùng gốc, kiểm tra chất lượng polygon và hoàn thiện dữ liệu khách hàng, đơn hàng trước khi phân chia.
-            </div>
-          </div>
-          {avgCenter && onFlyTo && (
-            <button style={styles.secondaryBtn} onClick={() => onFlyTo(avgCenter.lat, avgCenter.lng, 11)}>
-              Xem toàn vùng
-            </button>
-          )}
-        </div>
-        <div style={styles.statsGrid}>
-          <TinyStat label="Vùng" value={zones.length} />
-          <TinyStat label="Khách hàng" value={totalCustomers} />
-          <TinyStat label="Đơn hàng" value={totalOrders} />
-        </div>
-      </div>
-
       <div style={styles.card}>
         <div style={styles.subTitle}>Kiểm tra dữ liệu</div>
         <div style={styles.checkList}>
           <div style={styles.checkItem}>
             <span style={styles.statusDot(topologyErrors === 0)} />
-            <span>{topologyErrors === 0 ? 'Không có lỗi chồng lấn polygon.' : `Có ${topologyErrors} lỗi polygon cần xử lý.`}</span>
+            <span>
+              {topologyErrors === 0
+                ? 'Không có lỗi chồng lấn polygon.'
+                : `Có ${topologyErrors} lỗi polygon cần xử lý.`}
+            </span>
           </div>
           <div style={styles.checkItem}>
             <span style={styles.statusDot(unassignedCount === 0)} />
-            <span>{unassignedCount === 0 ? 'Tất cả vùng đã sẵn sàng để phân cụm.' : `${unassignedCount} vùng chưa được đưa vào cụm.`}</span>
+            <span>
+              {unassignedCount === 0
+                ? 'Tất cả vùng đã sẵn sàng để phân cụm.'
+                : `${unassignedCount} vùng chưa được đưa vào cụm.`}
+            </span>
           </div>
           <div style={styles.checkItem}>
             <span style={styles.statusDot(emptyMetricsCount === 0)} />
-            <span>{emptyMetricsCount === 0 ? 'Mọi vùng đã có số liệu khách hàng/đơn hàng.' : `${emptyMetricsCount} vùng còn thiếu số liệu hoạt động.`}</span>
+            <span>
+              {emptyMetricsCount === 0
+                ? 'Mọi vùng đã có số liệu khách hàng/đơn hàng.'
+                : `${emptyMetricsCount} vùng còn thiếu số liệu hoạt động.`}
+            </span>
           </div>
         </div>
 
@@ -105,7 +80,11 @@ export function MapDataWorkspacePanel({
             <button style={styles.ghostBtn} onClick={() => exportZonesCSV(zones)} disabled={zones.length === 0}>
               Xuất CSV vùng
             </button>
-            <button style={styles.ghostBtn} onClick={() => exportGeoJSON(zones, assignments)} disabled={zones.length === 0}>
+            <button
+              style={styles.ghostBtn}
+              onClick={() => exportGeoJSON(zones, assignments)}
+              disabled={zones.length === 0}
+            >
               Xuất GeoJSON
             </button>
           </div>
@@ -127,7 +106,8 @@ export function AssignmentWorkspacePanel({
       <div style={styles.eyebrow}>Không gian vận hành</div>
       <div style={styles.title}>Phân chia lãnh thổ</div>
       <div style={styles.desc}>
-        Màn này dành cho phân cụm, gán nhân sự, cân bằng tải và lưu phương án triển khai. Phần dữ liệu nền nên xử lý ở màn Khu vực & bản đồ.
+        Màn này dành cho phân cụm, gán nhân sự, cân bằng tải và lưu phương án triển khai. Phần dữ liệu nền
+        nên xử lý ở màn Khu vực & bản đồ.
       </div>
       <div style={styles.statsGrid}>
         <TinyStat label="Vùng trong khu vực" value={zoneCount} />
@@ -151,12 +131,6 @@ const styles: Record<string, any> = {
     padding: 12,
     display: 'flex',
     flexDirection: 'column',
-    gap: 10,
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     gap: 10,
   },
   eyebrow: {
@@ -244,16 +218,5 @@ const styles: Record<string, any> = {
     fontSize: 12,
     fontWeight: 700,
     cursor: 'pointer',
-  },
-  secondaryBtn: {
-    padding: '8px 12px',
-    borderRadius: 'var(--radius-md)',
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface)',
-    color: 'var(--color-text)',
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
   },
 }

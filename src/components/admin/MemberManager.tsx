@@ -1,24 +1,9 @@
-/**
- * MemberManager — Hộp thoại quản lý thành viên dự án
- *
- * Tính năng:
- * - Xem toàn bộ thành viên cùng vai trò
- * - Mời thành viên mới bằng email
- * - Đổi vai trò thành viên (có kiểm tra thứ bậc)
- * - Xóa thành viên (có chặn admin cuối cùng)
- *
- * Role hierarchy: admin > coordinator > sales
- * - Admin can invite/change to any role
- * - Coordinator can only invite sales
- * - Sales cannot invite anyone
- */
-
 import React, { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
 import type { ProjectMember, Profile } from '../../store/authStore.js'
 import { supabase } from '../../lib/supabase.js'
 
-// C?u h?nh hi?n th? vai tr?
+// Cấu hình hiển thị vai trò
 const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string; level: number }> = {
   admin:       { label: 'Quản trị',   color: '#f59e0b', icon: '👑', level: 3 },
   coordinator: { label: 'Điều phối',  color: '#3b82f6', icon: '📋', level: 2 },
@@ -55,7 +40,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   const myRole  = membership?.role ?? 'sales'
   const myLevel = ROLE_CONFIG[myRole]?.level ?? 0
 
-  // Tải thành viên kèm hồ sơ — luôn kết thúc trong tối đa 6 giây
+  // Tải thành viên kèm hồ sơ
   const reload = useCallback(async () => {
     const client = supabase
     if (!client || !currentProjectId) {
@@ -65,11 +50,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     setLoading(true)
 
     const doLoad = async (): Promise<MemberWithProfile[]> => {
-      // B??c 1: L?y th?nh vi?n th? (helper c?a store hi?n ?? t? s?a membership ch? d? ?n b? thi?u)
+      // Lấy danh sách thành viên
       const rawMembers = await loadMembers()
       if (!rawMembers || rawMembers.length === 0) return []
 
-      // B??c 2: L?y h? s? cho c?c th?nh vi?n n?y
+      // Lấy hồ sơ người dùng
       const userIds = rawMembers.map((m: any) => m.user_id)
       const { data: profiles } = await client
         .from('profiles')
@@ -84,7 +69,6 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
 
     try {
-      // Hard 6s timeout — never hangs
       const timeout = new Promise<MemberWithProfile[]>((resolve) =>
         setTimeout(() => {
           console.error('[MemberManager] Load timeout (6s)')
@@ -109,39 +93,36 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
   }, [open, reload, clearError])
 
-  // ??m s? admin
+  // Đếm số admin
   const adminCount = members.filter(m => m.role === 'admin').length
 
-  // C?c vai tr? m? ng??i d?ng hi?n t?i c? th? g?n
-  // Admin c? th? g?n T?T C? vai tr? (k? c? admin). Coordinator ch? c? th? g?n sales.
+  // Xác định vai trò có thể phân quyền
   const assignableRoles: string[] = myRole === 'admin'
     ? ['admin', 'coordinator', 'sales']
     : myRole === 'coordinator'
       ? ['sales']
       : []
 
-  // Handle invite — try/finally guarantees UI never stays frozen
   const handleInvite = useCallback(async () => {
     if (!inviteEmail.trim()) return
     setSubmitting(true)
     clearError()
     try {
-      // Timeout 10s: n?u Supabase treo, m? kh?a UI
       let timedOut = false
       const timeoutId = setTimeout(() => {
         timedOut = true
         setSubmitting(false)
-        alert('⏳ Mời thành viên bị timeout. Vui lòng thử lại.')
+        alert('⏳ Vui lòng thử lại.')
       }, 10_000)
 
       const ok = await inviteMember(inviteEmail.trim(), inviteRole)
       clearTimeout(timeoutId)
-      if (timedOut) return  // timeout ?? ???c x? l?
+      if (timedOut) return
 
       if (ok) {
         setInviteEmail('')
         setInviteOpen(false)
-        reload()  // fire-and-forget, kh?ng await
+        reload()
       }
     } catch (e) {
       console.error('[MemberManager] invite error:', e)
@@ -151,7 +132,6 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
   }, [inviteEmail, inviteRole, inviteMember, clearError, reload])
 
-  // Handle role change — with try/finally
   const handleRoleChange = useCallback(async (member: MemberWithProfile, newRole: string) => {
     if (member.user_id === user?.id) {
       alert('Không thể tự đổi vai trò của mình')
@@ -176,7 +156,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
   }, [user, myLevel, adminCount, updateRole, reload])
 
-  // Handle remove — with try/finally
+  // Xoá thành viên
   const handleRemove = useCallback(async (member: MemberWithProfile) => {
     if (member.user_id === user?.id) {
       alert('Không thể tự xóa mình khỏi dự án')
@@ -212,7 +192,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
           <button onClick={onClose} style={styles.closeBtn}>×</button>
         </div>
 
-        {/* Banner l?i */}
+        {/* Banner lỗi */}
         {authError && (
           <div style={styles.errorBanner}>
             ⚠️ {authError}
@@ -220,13 +200,12 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
           </div>
         )}
 
-        {/* Danh s?ch th?nh vi?n */}
+        {/* Danh sách thành viên */}
         <div style={styles.listSection}>
           <div style={styles.sectionHeader}>
             <h3 style={styles.sectionTitle}>
               Thành viên ({members.length})
             </h3>
-            {/* Ch? admin v? coordinator m?i ???c m?i */}
             {myLevel >= 2 && (
               <button
                 onClick={() => setInviteOpen(!inviteOpen)}
@@ -237,7 +216,6 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
             )}
           </div>
 
-          {/* Form m?i (inline) */}
           {inviteOpen && (
             <div style={styles.inviteForm}>
               <input
@@ -291,7 +269,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
                     ...(isSelf ? styles.memberRowSelf : {}),
                   }}
                 >
-                  {/* Avatar + th?ng tin */}
+                  {/* Avatar + thông tin */}
                   <div style={styles.memberInfo}>
                     <div style={{ ...styles.avatar, background: cfg.color }}>
                       {member.profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
@@ -307,7 +285,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
                     </div>
                   </div>
 
-                  {/* Badge vai tr? + thao t?c */}
+                  {/* Badge vai trò + thao tác */}
                   <div style={styles.memberActions}>
                     {canManage ? (
                       <select
@@ -359,7 +337,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
           )}
         </div>
 
-        {/* Ch? gi?i vai tr? */}
+        {/* Chú thích vai trò */}
         <div style={styles.legend}>
           <div style={styles.legendTitle}>📖 Phân cấp quyền hạn</div>
           <div style={styles.legendItems}>
