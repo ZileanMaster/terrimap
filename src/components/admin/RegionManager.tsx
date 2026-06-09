@@ -12,6 +12,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
+import { useUIStore } from '../../store/uiStore.js'
 import { VIETNAM_PROVINCES } from '../../data/provinces.js'
 import type { Region } from '../../data/regions.js'
 
@@ -24,6 +25,7 @@ interface RegionManagerProps {
 }
 
 export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionManagerProps) {
+  const role             = useUIStore((s) => s.role)
   const regions          = useDataStore((s) => s.regions)
   const zones            = useDataStore((s) => s.zones)
   const agents           = useDataStore((s) => s.agents)
@@ -139,7 +141,7 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
       </div>
 
       {/* ── Tạo vùng ─────────────────────────────────────────────────── */}
-      {creating ? (
+      {role === 'admin' && (creating ? (
         <div style={styles.createBox}>
           <input
             autoFocus
@@ -168,7 +170,7 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
         <button style={styles.createTrigger} onClick={() => setCreating(true)}>
           + Tạo khu vực mới
         </button>
-      )}
+      ))}
 
       {/* ── Region pills ──────────────────────────────────────────────── */}
       {regions.length === 0 ? (
@@ -211,19 +213,19 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
                 </button>
 
                 {/* Delete button */}
-                {isConfirm ? (
+                {role === 'admin' && isConfirm ? (
                   <div style={styles.confirmRow}>
                     <span style={styles.confirmText}>Xóa?</span>
                     <button style={styles.confirmYes} onClick={() => handleDeleteRegion(region.id)}>✓</button>
                     <button style={styles.confirmNo}  onClick={() => setConfirmDelete(null)}>✕</button>
                   </div>
-                ) : (
+                ) : role === 'admin' ? (
                   <button
                     style={styles.deleteBtn}
                     onClick={() => setConfirmDelete(region.id)}
                     title="Xóa khu vực"
                   >🗑</button>
-                )}
+                ) : null}
               </div>
             )
           })}
@@ -231,7 +233,7 @@ export default function RegionManager({ mapCenter, mapZoom, onFlyTo }: RegionMan
       )}
 
       {/* ── Coordinator for selected region ───────────────────────────── */}
-      {activeRegion && (
+      {activeRegion && role === 'admin' && (
         <div style={styles.detailRow}>
           <span style={styles.detailLabel}>Điều phối:</span>
           <select

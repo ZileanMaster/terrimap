@@ -16,6 +16,7 @@ import { getDistrictFillColor } from '../../data/district-colors.js'
 import AgentManager from '../agent/AgentManager.js'
 import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
+import { AssignmentWorkspacePanel, MapDataWorkspacePanel } from './WorkspacePanels.js'
 import type { Assignment, HistoryEntry, Zone } from '../../../facades/viewmodels.js'
 
 interface SidebarProps {
@@ -56,9 +57,22 @@ interface ZoneCardListProps {
   assignments:    Assignment[]
   islandZoneIds?: Set<string>    // L4b-2 EC-1
   onFlyTo?:       (lat: number, lng: number, zoom: number) => void
+  mode?:          'regions' | 'assignments'
 }
 
-function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardListProps) {
+function getZoneCustomers(zone: Zone): number {
+  return zone.activities
+    .filter((a) => a.type === 'CUSTOMER')
+    .reduce((sum, a) => sum + a.value, 0)
+}
+
+function getZoneOrders(zone: Zone): number {
+  return zone.activities
+    .filter((a) => a.type === 'ORDER')
+    .reduce((sum, a) => sum + a.value, 0)
+}
+
+function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo, mode = 'assignments' }: ZoneCardListProps) {
   const selectedZoneId = useUIStore((s) => s.selectedZoneId)
   const selectZone     = useUIStore((s) => s.selectZone)
   const containerRef   = useRef<HTMLDivElement>(null)
@@ -118,6 +132,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardLi
               isSelected={zone.id === selectedZoneId}
               isIsland={islandZoneIds?.has(zone.id) ?? false}
               onSelect={handleZoneSelect}
+              mode={mode}
             />
           ))}
         </div>
@@ -149,6 +164,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardLi
             isSelected={zone.id === selectedZoneId}
             isIsland={islandZoneIds?.has(zone.id) ?? false}
             onSelect={handleZoneSelect}
+            mode={mode}
           />
         ))}
         <div style={{ height: (zones.length - endIdx) * CARD_HEIGHT, flexShrink: 0 }} />
@@ -160,19 +176,22 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo }: ZoneCardLi
 // ── ZoneCard (memoized) ───────────────────────────────────────────────────────
 
 const ZoneCard = React.memo(function ZoneCard({
-  zone, assignment, isSelected, isIsland, onSelect,
+  zone, assignment, isSelected, isIsland, onSelect, mode = 'assignments',
 }: {
   zone: Zone
   assignment?: Assignment
   isSelected: boolean
   isIsland: boolean
   onSelect: (id: string) => void
+  mode?: 'regions' | 'assignments'
 }) {
   const districtId = assignment?.districtId ?? -1
-  const customers = zone.activities
-    .filter((a) => a.type === 'CUSTOMER')
-    .reduce((s, a) => s + a.value, 0)
-  const distColor = districtId >= 0 ? getDistrictFillColor(districtId) : '#888'
+  const customers = getZoneCustomers(zone)
+  const orders = getZoneOrders(zone)
+  const isAssigned = districtId >= 0
+  const distColor = mode === 'regions'
+    ? (isAssigned ? '#10b981' : '#888')
+    : (districtId >= 0 ? getDistrictFillColor(districtId) : '#888')
 
   return (
     <div
@@ -200,7 +219,7 @@ const ZoneCard = React.memo(function ZoneCard({
           )}
         </div>
         <div style={styles.zoneMeta}>
-          {districtId >= 0 ? `C${districtId}` : '—'} · {customers} KH
+          {mode === 'regions' ? `${customers} KH · ${orders} đơn · ${isAssigned ? 'Đã phân cụm' : 'Chưa phân cụm'}` : `${districtId >= 0 ? `C${districtId}` : '—'} · ${customers} KH`}
         </div>
       </div>
     </div>
@@ -233,9 +252,11 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   if (mode === 'regions') {
     return (
       <div style={styles.content}>
+        <MapDataWorkspacePanel zones={zones} assignments={assignments} onFlyTo={onFlyTo} />
+        <div style={styles.divider} />
         <RegionManager onFlyTo={onFlyTo} />
         <div style={styles.divider} />
-        <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
+        <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} mode="regions" />
       </div>
     )
   }
@@ -243,10 +264,15 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   // Per request: remove the Sales team section from "Phân chia lãnh thổ" sidebar.
   return (
     <div style={styles.content}>
+      <AssignmentWorkspacePanel
+        zoneCount={zones.length}
+        districtCount={new Set(assignments.map((assignment) => assignment.districtId)).size}
+      />
+      <div style={styles.divider} />
       <DistrictAgentAssigner />
 
       <div style={styles.divider} />
-      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
+      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} mode="assignments" />
 
       <div style={styles.divider} />
       <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot}>
@@ -348,7 +374,9 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
   if (mode === 'regions') {
     return (
       <div style={styles.content}>
-        <ZoneCardList zones={zones} assignments={assignments} />
+        <MapDataWorkspacePanel zones={zones} assignments={assignments} canExport={false} />
+        <div style={styles.divider} />
+        <ZoneCardList zones={zones} assignments={assignments} mode="regions" />
       </div>
     )
   }
@@ -392,7 +420,7 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
       <DistrictAgentAssigner />
 
       <div style={styles.divider} />
-      <ZoneCardList zones={zones} assignments={assignments} />
+      <ZoneCardList zones={zones} assignments={assignments} mode="assignments" />
 
       {/* Update History */}
       <div style={styles.divider} />
