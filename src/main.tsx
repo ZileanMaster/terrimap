@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles/tokens.css'
 import './i18n/index.js'
@@ -6,7 +6,7 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary.js'
 import { initTelemetry } from './utils/telemetry.js'
 
-// ?p d?ng theme s?m ?? l?u ngay khi t?i v? tr?nh nh?y giao di?n.
+
 try {
   const v = localStorage.getItem('terrimap_theme')
   const theme = v === 'light' || v === 'dark' || v === 'system' ? v : 'system'
@@ -17,10 +17,10 @@ try {
     document.documentElement.classList.toggle('dark', prefersDark)
   }
 } catch {
-  // b? qua l?i l?u tr?
+  // Bỏ qua lỗi lưu trữ
 }
 
-// G?n listener l?i to?n c?c v? rejection ?? tr?nh m?n h?nh tr?ng im l?ng.
+// Gắn listener lỗi toàn cục và rejection để tránh màn hình trống im lặng.
 initTelemetry()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

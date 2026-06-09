@@ -22,12 +22,12 @@ function pushEvent(ev: TelemetryEvent) {
     arr.unshift(ev)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(arr.slice(0, MAX_EVENTS)))
   } catch {
-    // b? qua
+
   }
 }
 
 export function initTelemetry() {
-  // window.onerror b?t l?i ??ng b?, k? c? l?i render ???c ??y l?n.
+
   window.addEventListener('error', (e) => {
     const err = (e as any).error as Error | undefined
     const message = err?.message || (e as any).message || 'Unknown error'
@@ -36,7 +36,7 @@ export function initTelemetry() {
     try { console.error('[telemetry:error]', e) } catch {}
   })
 
-  // c?c promise b? reject nh?ng ch?a ???c x? l?
+
   window.addEventListener('unhandledrejection', (e) => {
     const reason = (e as PromiseRejectionEvent).reason
     const message = safeString(reason?.message ?? reason)

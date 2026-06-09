@@ -1,11 +1,11 @@
-/**
- * TerritoryMap — Leaflet map với zones + assignments coloring
+﻿/**
+ * TerritoryMap - Bản đồ Leaflet với màu sắc zones + assignments
  *
  * L4b-1: highlightedSalesId + isTransitioning
- * L4b-2: islandZoneIds (dashed orange border) + disconnectedDistrictIds (dashed red border)
- * L4c:   children prop for DrawingToolbar
+ * L4b-2: islandZoneIds (viền cam nét đứt) + disconnectedDistrictIds (viền đỏ nét đứt)
+ * L4c:   children prop cho DrawingToolbar
  *
- * Priority chain: disconnected(red) > island(orange) > highlighted > selected > normal
+ * Thứ tự ưu tiên: disconnected (đỏ) > island (cam) > highlighted > selected > normal
  */
 
 import React, { useMemo } from 'react'
@@ -43,7 +43,7 @@ export interface TerritoryMapProps {
   disconnectedDistrictIds?: Set<number> | undefined   // L4b-2 EC-2
 }
 
-// ── Leaflet position fix ───────────────────────────────────────────────────────
+// ── Sửa icon mặc định của Leaflet ──────────────────────────────────────────────
 const leaflet = L as any
 delete leaflet.Icon.Default.prototype._getIconUrl
 leaflet.Icon.Default.mergeOptions({
@@ -56,7 +56,7 @@ const RLMapContainer = MapContainer as unknown as React.ComponentType<any>
 const RLTileLayer = TileLayer as unknown as React.ComponentType<any>
 const RLTooltip = Tooltip as unknown as React.ComponentType<any>
 
-// ── MapFlyTo — hiệu ứng bay mượt khi đổi vùng ───────────────────────────────
+// ── MapFlyTo - Hiệu ứng bay mượt khi đổi vùng ─────────────────────────────────
 function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap()
   const prevCenter = React.useRef(center)
@@ -77,8 +77,8 @@ function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) 
   return null
 }
 
-// ── MapZoneFlyTo — fitBounds to selected zone vùng ─────────────────────────
-// Zoom v?o zone ch?nh x?c b?ng Leaflet bounds (tr?nh ph? thu?c centroid l?u s?n)
+// ── MapZoneFlyTo - fitBounds theo zone đang được chọn ─────────────────────────
+// Zoom vào zone chính xác bằng Leaflet bounds (tránh phụ thuộc vào centroid đã lưu)
 function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId?: string | null }) {
   const map = useMap()
   const prevZoneId = React.useRef<string | null | undefined>(null)
@@ -89,8 +89,7 @@ function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId
 
     const zone = zones.find((z) => z.id === selectedZoneId)
     if (!zone) return
-
-    // Build [lat, lng][] from GeoJSON [lng, lat][] for Leaflet
+    // Chuyển [lat, lng][] từ GeoJSON [lng, lat][] để Leaflet dùng được
     let ring: number[][] = []
     if (zone.polygon.type === 'Polygon') {
       ring = (zone.polygon.coordinates[0] ?? []) as number[][]
@@ -98,8 +97,7 @@ function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId
       ring = ((zone.polygon.coordinates[0]?.[0]) ?? []) as number[][]
     }
     if (ring.length < 2) return
-
-    // Convert GeoJSON [lng, lat] → Leaflet [lat, lng]
+    // Chuyển GeoJSON [lng, lat] → Leaflet [lat, lng]
     const latlngs: [number, number][] = ring.map(([lng, lat]) => [lat!, lng!])
     try {
       const bounds = leaflet.latLngBounds(latlngs)
@@ -127,18 +125,16 @@ export default function TerritoryMap({
   islandZoneIds,
   disconnectedDistrictIds,
 }: TerritoryMapProps) {
-  // Note: uiStore is mocked in some unit tests with partial state, so keep defaults here.
+  // Lưu ý: uiStore bị mock một phần trong một số unit test, nên giữ default ở đây.
   const selectedDistrictId = useUIStore((s: any) => (s?.selectedDistrictId ?? null) as number | null)
   const showPolygons = useUIStore((s: any) => (s?.showPolygons ?? true) as boolean)
   const hiddenZoneIds = useUIStore((s: any) => (s?.hiddenZoneIds ?? {}) as Record<string, true>)
-
-  // T?o colorMap: zoneId ? districtId
+  // Tạo colorMap: zoneId -> districtId
   const colorMap = useMemo(
     () => new Map(assignments.map((a) => [a.zoneId, a.districtId])),
     [assignments],
   )
-
-  // Build salesMap: zoneId → salesAgentId
+  // Tạo salesMap: zoneId -> salesAgentId
   const salesMap = useMemo(
     () => new Map(assignments.map((a) => [a.zoneId, a.salesAgentId])),
     [assignments],
@@ -185,11 +181,9 @@ export default function TerritoryMap({
             ? getDistrictFillColor(districtId!)
             : '#9ca3af'  // gray-400 for unassigned zones
           const customers   = customersMap.get(zone.id) ?? 0
-
-          // L4b-2: Edge case flags
+          // Ưu tiên viền - mất liên thông (đỏ, 3) > đảo (cam, 2.5) > chưa gán (xám nét đứt) > bình thường
           const isIsland       = islandZoneIds?.has(zone.id) ?? false
           const isDisconnected = isAssigned && (disconnectedDistrictIds?.has(districtId!) ?? false)
-
           // Tập trung legend: làm mờ mọi thứ trừ cụm đang chọn
           const isLegendFocused = selectedDistrictId != null
           const isFocusedDistrict = isLegendFocused && districtId === selectedDistrictId
@@ -199,8 +193,7 @@ export default function TerritoryMap({
           const isHighlightedSales = highlightedSalesId != null
             ? salesId === highlightedSalesId
             : null
-
-          // Tính độ trong suốt fill — ưu tiên: transition > tô sáng sales > chọn zone > mặc định
+          // Tính độ trong suốt fill - ưu tiên: transition > tô sáng sales > chọn zone > mặc định
           let fillOpacity: number
           if (isTransitioning) {
             fillOpacity = DISTRICT_FILL_OPACITY_TRANSITION
@@ -225,8 +218,7 @@ export default function TerritoryMap({
             isSelected || isHighlightedSales === true
               ? DISTRICT_WEIGHT_SELECTED
               : DISTRICT_WEIGHT
-
-          // L4b-2: Ưu tiên viền — mất liên thông (đỏ, 3) > đảo (cam, 2.5) > chưa gán (xám nét đứt) > bình thường
+          // Ưu tiên viền - mất liên thông (đỏ, 3) > đảo (cam, 2.5) > chưa gán (xám nét đứt) > bình thường
           let borderColor  = color
           let borderWeight = baseWeight
           let dashArray: string | undefined = undefined
@@ -247,8 +239,7 @@ export default function TerritoryMap({
             borderWeight = 2.5
             dashArray    = '8 4'
           }
-
-          // Convert GeoJSON [lng, lat][] → Leaflet [lat, lng][]
+    // Chuyển GeoJSON [lng, lat] → Leaflet [lat, lng]
           let positions: [number, number][][]
 
           if (zone.polygon.type === 'Polygon') {
@@ -256,7 +247,7 @@ export default function TerritoryMap({
               ring.map(([lng, lat]) => [lat, lng] as [number, number]),
             )
           } else {
-            // MultiPolygon — pick first vùng for now
+            // MultiPolygon - tạm lấy phần đầu tiên
             positions = (zone.polygon.coordinates[0] ?? []).map((ring) =>
               ring.map(([lng, lat]) => [lat, lng] as [number, number]),
             )
@@ -291,11 +282,11 @@ export default function TerritoryMap({
                 <div style={{ minWidth: 120 }}>
                   <strong>{zone.name}</strong>
                   <div style={{ fontSize: 11, marginTop: 2, color: '#666' }}>
-                    {isAssigned ? `Cụm ${districtId!} · ` : 'Chưa phân vùng · '}{customers} KH
+                    {isAssigned ? `Cụm ${districtId!} · ` : ' Chưa phân vùng · ' }{customers} KH
                   </div>
                   {isDisconnected && (
                     <div style={{ fontSize: 11, marginTop: 3, color: '#dc2626', fontWeight: 600 }}>
-                      Cụm bị tách rời
+                      Cụm bị tách rồi
                     </div>
                   )}
                   {isIsland && !isDisconnected && (

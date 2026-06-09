@@ -32,7 +32,7 @@ vi.mock('../../../store/uiStore', () => ({
 vi.mock('leaflet/dist/leaflet.css', () => ({}))
 vi.mock('leaflet-draw/dist/leaflet.draw.css', () => ({}))
 
-// Mock ClusterLayer ?? tr?nh l?i CJS c?a leaflet.markercluster trong vitest
+
 vi.mock('../ClusterLayer', () => ({
   default: () => null,
 }))
@@ -79,7 +79,7 @@ describe('TerritoryMap', () => {
     render(
       <TerritoryMap zones={mockZones} assignments={mockAssignments} />,
     )
-    // Mock render m?t <div data-testid="polygon"> cho m?i zone
+
     expect(screen.getAllByTestId('polygon')).toHaveLength(2)
   })
 

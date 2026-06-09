@@ -38,7 +38,7 @@ export default function AgentManager({ open, onClose }: AgentManagerProps) {
   const handleSubmit = useCallback(async () => {
     if (!form.name.trim()) return alert('Tên nhân viên không được trống')
 
-    // D?ng t?n region l?m activeRegion n?u ch?n t? dropdown
+
     const regionName = regions.find((r) => r.id === form.regionId)?.name ?? form.activeRegion.trim()
 
     if (editing) {
@@ -47,7 +47,7 @@ export default function AgentManager({ open, onClose }: AgentManagerProps) {
         name:         form.name.trim(),
         activeRegion: regionName || editing.activeRegion,
         capacity:     Number(form.capacity) || 400,
-        // regionId ???c l?u nh? field ph? (safe cast ? L0 kh?ng ??i)
+
         ...({ regionId: form.regionId || undefined } as any),
       })
     } else {
@@ -56,7 +56,7 @@ export default function AgentManager({ open, onClose }: AgentManagerProps) {
         name:         form.name.trim(),
         activeRegion: regionName || 'Hà Nội',
         capacity:     Number(form.capacity) || 400,
-        // regionId ???c l?u nh? field ph?
+
         ...({ regionId: form.regionId || undefined } as any),
       }
       await addAgent(newAgent)

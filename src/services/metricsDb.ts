@@ -59,16 +59,12 @@ function lsSet(data: Record<string, Record<string, MonthlyMetric[]>>) {
 
 // ── Lưu ───────────────────────────────────────────────────────────────────
 
-/**
- * L?u ch? s? theo th?ng cho m?t zone.
- * ??nh d?ng `period`: '2026-04'
- */
 export async function saveMonthlyMetrics(
   zoneId:  string,
   period:  string,
   metrics: MonthlyMetric[],
 ): Promise<void> {
-  // Lu?n l?u v?o localStorage tr??c
+
   const all = lsGet()
   if (!all[period]) all[period] = {}
   all[period]![zoneId] = metrics
@@ -76,7 +72,7 @@ export async function saveMonthlyMetrics(
 
   if (!isOnline()) return
 
-  // Upsert t?ng d?ng ch? s? l?n Supabase
+
   try {
     const rows = metrics.map((m) => ({
       zone_id:     zoneId,
@@ -102,16 +98,11 @@ export async function saveMonthlyMetrics(
 
 // ── Tải ───────────────────────────────────────────────────────────────────
 
-/**
- * T?i ch? s? th?ng cho to?n b? zone trong m?t k?.
- * C? th? l?c theo zoneIds (v? d?: c?c zone c?a m?t khu v?c).
- * Tr? v? Map<zoneId, MonthlyMetric[]>
- */
 export async function loadMonthlyMetrics(
   period:   string,
-  zoneIds?: string[],  // l?c theo c?c zone c? th? (v? d?: zone c?a region)
+  zoneIds?: string[],
 ): Promise<MetricsMap> {
-  // Lu?n th? localStorage tr??c
+
   const all     = lsGet()
   const local   = all[period] ?? {}
   const localMap = new Map<string, MonthlyMetric[]>()
@@ -123,7 +114,7 @@ export async function loadMonthlyMetrics(
 
   if (!isOnline()) return localMap
 
-  // G?p v?i Supabase
+
   try {
     let query = supabase!
       .from('zone_monthly_metrics')
@@ -137,7 +128,7 @@ export async function loadMonthlyMetrics(
     const { data, error } = await query
     if (error || !data) return localMap
 
-    // X?y d?ng map t? d? li?u remote (remote l?p ph?n thi?u so v?i local)
+
     const remoteMap = new Map<string, MonthlyMetric[]>()
     for (const row of data) {
       const list = remoteMap.get(row.zone_id) ?? []
@@ -145,7 +136,7 @@ export async function loadMonthlyMetrics(
       remoteMap.set(row.zone_id, list)
     }
 
-    // G?p: local th?ng khi c? xung ??t
+
     for (const [zid, mets] of remoteMap.entries()) {
       if (!localMap.has(zid)) localMap.set(zid, mets)
     }
@@ -155,10 +146,6 @@ export async function loadMonthlyMetrics(
   }
 }
 
-/**
- * L?y t?t c? period ?? l?u metrics (t? localStorage).
- * Returns sorted descending: ['2026-04', '2026-03', ...]
- */
 export function getAvailablePeriods(): string[] {
   const all = lsGet()
   return Object.keys(all).sort((a, b) => b.localeCompare(a))

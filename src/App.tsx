@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+﻿import React, { Suspense } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { FacadeProvider } from './context/FacadeContext.js'
 import { useUIStore } from './store/uiStore.js'
@@ -35,7 +35,7 @@ function lazyRetry<T extends React.ComponentType<any>>(
   })
 }
 
-// không tải các page khi mở
+// Không tải các page ngay khi mở
 const AdminPage       = lazyRetry(() => import('./pages/AdminPage.js'))
 const CoordinatorPage = lazyRetry(() => import('./pages/CoordinatorPage.js'))
 const SalesPage       = lazyRetry(() => import('./pages/SalesPage.js'))
@@ -48,7 +48,7 @@ const queryClient = new QueryClient({
   },
 })
 
-/** T?i trang */
+
 function PageLoader() {
   return (
     <div style={styles.pageLoader}>
@@ -58,7 +58,7 @@ function PageLoader() {
 }
 
 export default function App() {
-  // lấy state
+  // Lấy state
   const authUser       = useAuthStore((s) => s.user)
   const authSession    = useAuthStore((s) => s.session)
   const authLoading    = useAuthStore((s) => s.loading)
@@ -67,7 +67,7 @@ export default function App() {
   const projects       = useAuthStore((s) => s.projects)
   const initAuth       = useAuthStore((s) => s.initialize)
 
-  // lấy vai trò đang dùng
+  // Lấy vai trò đang dùng
   const viewAsRole     = useUIStore((s) => s.role)
   const currentProject  = projects.find((project) => project.id === currentProjectId)
   const activeMembership = membership?.project_id === currentProjectId ? membership : null
@@ -79,17 +79,17 @@ export default function App() {
   const initData       = useDataStore((s) => s.init)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
 
-  // Kh?i t?o auth khi app load
+  // Khởi tạo auth khi app load
   React.useEffect(() => { initAuth() }, [initAuth])
 
-  // T?i d? li?u khi ?? c? project
+  // Tải dữ liệu khi đã có project
   React.useEffect(() => {
     if (authUser && currentProjectId) {
       initData(currentProjectId)
     }
   }, [authUser, currentProjectId, initData])
 
-  // sales và điều phối tự chuyển sang vai trò được gán khi vào project
+  // Lấy vai trò đang dùng
   React.useEffect(() => {
     const nextRole = activeMembership?.role === 'admin'
       ? viewAsRole
@@ -109,12 +109,12 @@ export default function App() {
     return <OfflineApp />
   }
 
-  // ?ang t?i
+  // Đang tải
   if (authLoading) {
     return (
       <div style={styles.splash}>
         <div style={styles.splashContent}>
-          <span style={styles.splashIcon}>⬡</span>
+          <span style={styles.splashIcon}>â¬¡</span>
           <span style={styles.splashText}>TerriMap</span>
           <div style={styles.splashSpinner} />
         </div>
@@ -122,7 +122,7 @@ export default function App() {
     )
   }
 
-  // chưa đăng nhập thì show login
+  // Chưa đăng nhập thì show login
   if (!authUser || !authSession) {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -131,7 +131,7 @@ export default function App() {
     )
   }
 
-  // đăng nhập rồi nhưng chưa chọn project thì show select project
+  // Tải dữ liệu khi đã có project
   if (!currentProjectId) {
     return (
       <Suspense fallback={<PageLoader />}>
@@ -140,7 +140,7 @@ export default function App() {
     )
   }
 
-  // B?ng ?i?u khi?n
+
   return (
     <QueryClientProvider client={queryClient}>
       <FacadeProvider>
@@ -175,7 +175,7 @@ export default function App() {
   )
 }
 
-/** Ngo?i tuy?n */
+
 function OfflineApp() {
   const role = useUIStore((s) => s.role)
   const init = useDataStore((s) => s.init)
@@ -231,7 +231,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 'var(--topbar-h)',
   },
 
-  // M?n ch?o
+
   splash: {
     height: '100vh',
     display: 'flex',

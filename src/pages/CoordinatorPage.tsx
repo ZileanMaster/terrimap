@@ -149,7 +149,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
    * KHÔNG sửa store.zones trực tiếp.
    */
   const handleRunWithMetrics = useCallback((zonesWithMetrics: Zone[]) => {
-    // TODO Giai ?o?n 2.5: k?ch ho?t b? ch?y thu?t to?n t? CoordinatorPage
+
     // Hiện tại: thông báo user về zones đã được cập nhật metrics
     console.info('[CoordinatorPage] Running algorithm with metrics-overridden zones:', zonesWithMetrics.length)
     alert(`✅ Chạy phân vùng với ${zonesWithMetrics.length} zones (chỉ số tháng ${currentPeriod}).\nTính năng chạy thuật toán sẽ được tích hợp sau.`)
@@ -170,7 +170,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
   return (
     <div style={styles.layout}>
-      {/* Sidebar b?n tr?i */}
+      {
       <div style={styles.leftCol}>
         {mode === 'assignments' && (
           <>
@@ -427,5 +427,5 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'spin 0.8s linear infinite',
   },
   loadingText: { color: 'var(--color-text-muted)', fontSize: 14, margin: 0 },
-  // (Kh?ng d?ng n?a) floatingRegionHeader ?? ???c thay b?ng mapHud
+
 }

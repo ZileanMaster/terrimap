@@ -144,8 +144,8 @@ function componentCount(zones: Zone[]): number {
     setProgress(0)
     setCurrentCost(null)
 
-    // Cho tr?nh duy?t m?t khung v? ?? overlay ?ang ch?y k?p hi?n th?
-    // tr??c khi thu?t to?n b?t ??u ph?n x? l? n?ng h?n.
+
+
     await waitForPaint()
 
     try {

@@ -21,11 +21,8 @@ function escapeHtml(str: string): string {
   })
 }
 
-// ?? Tr? l? t?i xu?ng ???????????????????????????????????????????????????????????
 
-/**
- * K?ch ho?t t?i xu?ng file t? n?i dung chu?i.
- */
+
 function downloadFile(content: string, filename: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
@@ -58,10 +55,6 @@ function csvEscape(val: string): string {
 
 // ── CSV Exports ────────────────────────────────────────────────────────────────
 
-/**
- * Xu?t assignments ra CSV.
- * C?t: zoneId, zoneName, districtId, salesAgentId, customers, orders
- */
 export function exportAssignmentsCSV(zones: Zone[], assignments: Assignment[]): void {
   const zoneMap = new Map(zones.map(z => [z.id, z]))
   const header = 'zoneId,zoneName,districtId,salesAgentId,customers,orders'
@@ -75,10 +68,6 @@ export function exportAssignmentsCSV(zones: Zone[], assignments: Assignment[]): 
   downloadFile([header, ...rows].join('\n'), 'assignments.csv', 'text/csv;charset=utf-8')
 }
 
-/**
- * Xu?t metadata c?a zones ra CSV.
- * C?t: zoneId, zoneName, status, centroidLat, centroidLng, customers, orders, polygonPointCount
- */
 export function exportZonesCSV(zones: Zone[]): void {
   const header = 'zoneId,zoneName,status,centroidLat,centroidLng,customers,orders,polygonPointCount'
   const rows = zones.map(z => {
@@ -93,10 +82,6 @@ export function exportZonesCSV(zones: Zone[]): void {
   downloadFile([header, ...rows].join('\n'), 'zones.csv', 'text/csv;charset=utf-8')
 }
 
-/**
- * Xu?t ma tr?n k? ra CSV.
- * C?t: zoneId, neighbors (ng?n c?ch b?ng d?u ph?y v? ??t trong d?u ngo?c k?p)
- */
 export function exportMatrixCSV(adj: AdjMatrix): void {
   const header = 'zoneId,neighbors'
   const rows = Object.entries(adj).map(([id, neighbors]) =>
@@ -107,10 +92,6 @@ export function exportMatrixCSV(adj: AdjMatrix): void {
 
 // ── GeoJSON Export ─────────────────────────────────────────────────────────────
 
-/**
- * Xu?t zones + assignments th?nh GeoJSON FeatureCollection.
- * Vùng coordinates kept in [lng, lat] (GeoJSON spec).
- */
 export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
   const assignMap = new Map(assignments.map(a => [a.zoneId, a]))
 
@@ -138,10 +119,6 @@ export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
 
 // ── Print Report (PDF via window.print) ────────────────────────────────────────
 
-/**
- * M? c?a s? th?n thi?n ?? in v?i d? li?u b?o c?o.
- * Uses window.open + window.print — no external PDF library needed.
- */
 export function printReport(
   report: ReportData,
   result?: { balanceScore: number; maxDiameter: number; violationCount: number; algo: string } | null,
@@ -149,7 +126,7 @@ export function printReport(
   const dateStr = new Date(report.generatedAt).toLocaleString('vi-VN')
   const dateShort = new Date(report.generatedAt).toLocaleDateString('vi-VN')
 
-  // T?o c?c d?ng assignment
+
   const assignRows = report.assignments.map(a => {
     const z = report.zones.find(zone => zone.id === a.zoneId)
     const cust = z ? getCustomers(z) : 0

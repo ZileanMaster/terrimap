@@ -186,7 +186,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Ph?n ??u */}
+        {
         <div style={styles.header}>
           <h2 style={styles.headerTitle}>👥 Quản lý thành viên</h2>
           <button onClick={onClose} style={styles.closeBtn}>×</button>

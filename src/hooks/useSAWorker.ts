@@ -1,10 +1,3 @@
-/**
- * useSAWorker — Hook to run SA algorithm in a Web Worker.
- * D? ph?ng: tr? reject ?? caller c? th? r?i v? main thread.
- *
- * Worker tr? v? Assignment[] th? (kh?ng c? salesAgentId).
- * Caller b?c l?i qua AdminFacade.wrapAssignmentsAsResult().
- */
 
 import { useRef, useCallback } from 'react'
 import type { Assignment } from '../../facades/viewmodels.js'
@@ -35,7 +28,7 @@ export function useSAWorker() {
     m: number,
     opts: SAOpts,
     onProgress?: (iter: number, cost: number, total: number) => void,
-  ): Promise<Assignment[]> => {
+        // Tạo worker mới cho mỗi lần chạy (tránh state cũ)
     return new Promise((resolve, reject) => {
       try {
         // Tạo worker mới cho mỗi lần chạy (tránh state cũ)
@@ -62,14 +55,14 @@ export function useSAWorker() {
 
         worker.onerror = (err) => {
           reject(new Error(err.message))
-          worker.terminate()
+        // Gửi dữ liệu để serialize sang worker
           workerRef.current = null
         }
 
         // Gửi dữ liệu để serialize sang worker
         worker.postMessage({ zones, m, opts })
       } catch {
-        // Worker kh?ng kh? d?ng (SSR, m?i tr??ng test)
+
         reject(new Error('Web Worker not available'))
       }
     })

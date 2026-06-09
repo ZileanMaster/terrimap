@@ -1,12 +1,3 @@
-/**
- * src/services/districtReportsDb.ts — User-entered metrics per cluster (district)
- *
- * Offline fallback: project-scoped localStorage.
- * Online: Supabase table district_reports (see docs/migration-district-reports.sql).
- *
- * L?u ?: module n?y ???c thi?t k? ?? an to?n ngay c? khi b?ng Supabase ch?a t?n t?i.
- * In that case, it will log and behave like offline mode (localStorage only).
- */
 
 import { supabase, isOnline } from '../lib/supabase.js'
 import { getActiveProjectId } from './db.js'
@@ -59,10 +50,6 @@ function upsertLocal(next: DistrictReport, projectId?: string) {
   lsWrite(all, projectId)
 }
 
-/**
- * L?u (upsert) b?o c?o c?m cho (period, userId, regionId, districtId).
- * Always writes localStorage first.
- */
 export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'updatedAt'> & { id?: string }): Promise<void> {
   const report: DistrictReport = {
     id: input.id ?? `dr-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -126,10 +113,6 @@ export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'upd
   }
 }
 
-/**
- * T?i b?o c?o (g?p local + remote) cho m?t k?.
- * If table missing/unavailable, returns local only.
- */
 export async function loadDistrictReports(period: string, projectId?: string): Promise<DistrictReport[]> {
   const local = lsRead(projectId).filter((r) => r.period === period)
 

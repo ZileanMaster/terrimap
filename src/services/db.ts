@@ -130,10 +130,6 @@ interface DbRegion {
 
 // ── LOAD ──────────────────────────────────────────────────────────────────────
 
-/**
- * T?i zones + activities t? Supabase, c? th? l?c theo project.
- * Offline fallback: MOCK_ZONES.
- */
 export async function loadZones(projectId?: string): Promise<Zone[]> {
   const localZones = readScopedCollections<Zone>('terrimap_zones', projectId)
 
@@ -168,7 +164,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
     }
   }
 
-  // T?i activities cho c?c zones n?y
+
   const zoneIds = (zones as DbZone[]).map(z => z.id)
   let activities: DbActivity[] = []
   if (zoneIds.length > 0) {
@@ -236,10 +232,6 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
   return mergedZones
 }
 
-/**
- * T?i assignments, c? th? l?c theo project.
- * Offline fallback: MOCK_ASSIGNMENTS.
- */
 export async function loadAssignments(projectId?: string): Promise<Assignment[]> {
   const localAssignments = readScopedCollections<Assignment>('terrimap_assignments', projectId)
 
@@ -308,7 +300,7 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     : MOCK_AGENTS
 
   // IMPORTANT: never leak demo/legacy (NULL project_id) agents into other projects.
-  // ? ch? ?? online, d? li?u ph?i thu?c ph?m vi project.
+
   let query = supabase!.from('sales_agents').select('*').order('id')
   if (projectId) query = query.eq('project_id', projectId)
 
@@ -475,10 +467,6 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
   }
 }
 
-/**
- * L?u snapshot v?i to?n b? d? li?u zones + assignments.
- * Offline fallback: project-scoped localStorage.
- */
 export async function saveSnapshot(
   id: string,
   label: string,
@@ -521,10 +509,6 @@ export async function saveSnapshot(
   return { ok: true }
 }
 
-/**
- * T?i snapshots v?i ??y ?? d? li?u (m?i nh?t tr??c, t?i ?a 50).
- * Offline fallback: localStorage.
- */
 export async function loadSnapshots(projectId?: string): Promise<Array<{
   id: string; label: string
   data: { zones: Zone[]; assignments: Assignment[] }
@@ -538,7 +522,7 @@ export async function loadSnapshotsForProject(projectId?: string): Promise<Array
   data: { zones: Zone[]; assignments: Assignment[] }
   created_at: string
 }>> {
-  // ??c localStorage theo ph?m vi project
+
   const scopedProjectId = projectId ?? _currentProjectId
   const localSnaps = readSnapshotCache(scopedProjectId)
 
@@ -608,7 +592,7 @@ export async function deleteSnapshot(id: string, projectId?: string): Promise<vo
  * Upsert (thêm hoặc cập nhật) một sales agent.
  */
 export async function saveAgent(agent: SalesAgent, projectId?: string): Promise<void> {
-  // Lu?n c?p nh?t mock-agents trong localStorage (theo project)
+
   const agentKey = scopedKey('terrimap_agents', projectId)
   try {
     const stored = readJsonArray<SalesAgent>(agentKey)
@@ -659,11 +643,8 @@ export async function deleteAgent(agentId: string): Promise<void> {
 
 // ── Regions ────────────────────────────────────────────────────────────────────
 
-/**
- * T?i regions, c? th? l?c theo project.
- */
 export async function loadRegions(projectId?: string): Promise<Region[]> {
-  // T?i c?c override localStorage theo project (ph?n c?ng c?a ?i?u ph?i, v.v.)
+
   const local = readScopedCollections<Region>('terrimap_regions', projectId)
 
   if (!isOnline()) return local.length > 0 ? local : (projectId ? [] : DEFAULT_REGIONS)
@@ -675,7 +656,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       .order('name')
     
     // Quan trọng: không bao giờ để vùng global/legacy rò vào project.
-    // ? ch? ?? online, regions ph?i thu?c ph?m vi project.
+
     if (projectId) query = query.eq('project_id', projectId)
 
     const { data, error } = await query
@@ -731,11 +712,8 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
   }
 }
 
-/**
- * L?u (upsert) m?t region. ??ng th?i l?u v?o localStorage.
- */
 export async function saveRegion(region: Region, projectId?: string): Promise<void> {
-  // C?p nh?t localStorage theo ph?m vi project
+
   const regionKey = scopedKey('terrimap_regions', projectId)
   try {
     const stored = readJsonArray<Region>(regionKey)

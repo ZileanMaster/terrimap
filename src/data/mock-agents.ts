@@ -8,13 +8,13 @@ const hnMOCK_AGENTS: SalesAgent[] = [
   { id: 'sales.test@terrimap.vn', name: 'Nhân Viên Test (Admin/Sales)', activeRegion: 'Hà Nội', capacity: 450 }
 ]
 
-// T?o th?m 19 nh?n s? H? N?i (HN-1 ??n HN-19)
+
 for (let i = 1; i <= 19; i++) {
   hnMOCK_AGENTS.push({
     id: `sales_hn_${i}@terrimap.vn`,
     name: `Nhân Viên HN-${i}`,
     activeRegion: 'Hà Nội',
-    capacity: 350 + (i * 15) % 300 // s?c ch?a t? 350 ??n 650
+    capacity: 350 + (i * 15) % 300
   })
 }
 

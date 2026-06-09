@@ -29,7 +29,7 @@ self.onmessage = (e: MessageEvent) => {
     const assignments = partitionSimulatedAnnealing(zones, m, {
       ...opts,
       onProgress: (iter, cost) => {
-        // Gi?i h?n t?n su?t: ch? g?i progress m?i 100 v?ng ?? tr?nh spam message
+
         if (iter % 100 === 0 || iter === maxIter - 1) {
           self.postMessage({ type: 'progress', iter, cost, total: maxIter })
         }

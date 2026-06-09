@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DrawingToolbar - Điều khiển Leaflet.Draw gốc cho vùng (chỉ admin)
  *
  * Dùng trực tiếp Leaflet Draw (không dùng wrapper react-leaflet-draw) để tránh lỗi ESM.
@@ -13,13 +13,13 @@ import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
 interface DrawingToolbarProps {
-  /** Callback when user finishes drawing a vùng. */
+  /** Callback khi người dùng vẽ xong một vùng. */
   onZoneCreated: (polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
-  /** Callback when user edits an existing zone vùng. */
+  /** Callback khi người dùng chỉnh sửa một vùng đã tồn tại. */
   onZoneEdited: (zoneId: string, polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
   /** Existing zones for overlap validation. */
   existingZones?: Zone[]
-  /** Selected zone to edit (only one at a time for performance). */
+  /** Vùng đang được chọn để sửa (chỉ một vùng tại một thời điểm để tối ưu hiệu năng). */
   selectedZone?: Zone | null
 }
 
@@ -30,8 +30,6 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
   const selectedLayerRef = useRef<any>(null)
   const selectedOriginalRingRef = useRef<[number, number][] | null>(null)
   const existingZonesRef = useRef<Zone[] | undefined>(existingZones)
-
-  // Gi? zones m?i nh?t ?? ki?m tra ch?ng l?n m? kh?ng c?n kh?i t?o l?i Leaflet.Draw
   useEffect(() => {
     existingZonesRef.current = existingZones
   }, [existingZones])
@@ -65,13 +63,11 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
     const boot = async () => {
       if (typeof window === 'undefined') return
       if (cancelled) return
-
-      // Leaflet.Draw l? CJS v? c? th? h?i kh? ch?u trong c?c build Vite/ESM.
-      // Dynamic import here prevents hard crashes and ensures the side-effect runs before we access L.Control.Draw.
+      // Leaflet.Draw là CJS và có thể khó chịu trong các build Vite/ESM.
+      // Dynamic import ở đây giúp tránh crash và đảm bảo side-effect chạy xong trước khi truy cập L.Control.Draw.
       try {
         await import('leaflet-draw')
       } catch (e) {
-        // Kh?ng c? Leaflet.Draw th? toolbar kh?ng th? render; hi?n th? l?i h?u ?ch ?? debug.
         // eslint-disable-next-line no-console
         console.error('[TerriMap] Failed to load leaflet-draw:', e)
         return
@@ -83,7 +79,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       drawnItemsRef.current = drawnItems
 
       drawControl = new (L.Control as any).Draw({
-        // Avoid overlapping the app's top-right map actions ("Lưu map" / "Mở map").
+        // Tránh chồng lấn với các nút hành động ở góc phải trên của bản đồ ("Lưu map" / "Mở map").
         position: 'topright',
         draw: {
           polygon: {
@@ -99,7 +95,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         edit: {
           featureGroup: drawnItems,
           remove: false,
-          // Leaflet.Draw c?n m?t object ? ??y (n? s? ghi selectedPathOptions v?o ??).
+          // Leaflet.Draw cần một object ở đây (nó sẽ ghi selectedPathOptions vào đó).
           // Passing boolean true can crash: "Cannot create property 'selectedPathOptions' on boolean 'true'".
           edit: {
             selectedPathOptions: {
@@ -125,7 +121,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
               zone.polygon.type === 'Polygon' ? zone.polygon.coordinates[0] : zone.polygon.coordinates[0]?.[0]
             if (existingRing && polygonsOverlap(ring, existingRing)) {
               drawnItems?.removeLayer(layer)
-              alert(`Vùng mới chồng lắp với vùng "${zone.name}". Vui lòng vẽ lại.`)
+              alert(`Vớng mới chồng lắp với vớng "${zone.name}". Vui lòng vẽ lại.`)
               return
             }
           }
@@ -201,8 +197,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       selectedOriginalRingRef.current = null
     }
   }, [map, onZoneCreated, onZoneEdited])
-
-  // Gi? layer ch?nh s?a zone ?ang ch?n ??ng b? m? kh?ng ph?i t?o l?i to?n b? draw control.
+  // Giữ layer chỉnh sửa của zone đang chọn đồng bộ mà không phải tạo lại toàn bộ draw control.
   useEffect(() => {
     const drawnItems = drawnItemsRef.current
     if (!drawnItems) return
@@ -225,16 +220,14 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       .map(([lng, lat]) => [lat, lng] as [number, number])
 
     if (latlngs.length < 3) return
-
-    // QUAN TR?NG: ph?i t??ng t?c ???c ?? c?c tay n?m s?a c?a Leaflet.Draw ho?t ??ng.
-    // If interactive is false, the vùng will not receive pointer events and edits feel "non-clickable".
+    // QUAN TRỌNG: phải tương tác được để các tay nắm sửa của Leaflet.Draw hoạt động.
+    // Nếu interactive là false, vùng sẽ không nhận pointer events và cảm giác sửa sẽ như "không bấm được".
     const layer = leaflet.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
     ;(layer as any).__zoneId = selectedZone.id
     selectedLayerRef.current = layer
     selectedOriginalRingRef.current = layerToRing(layer)
     drawnItems.addLayer(layer)
   }, [selectedZone])
-
   // Component chỉ dùng hook - không có JSX output
   return null
 }

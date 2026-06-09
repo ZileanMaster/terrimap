@@ -1,9 +1,3 @@
-/**
- * ClusterLayer — MarkerCluster overlay for zone centroids.
- * Only renders when zones.length > CLUSTER_THRESHOLD.
- * Hook-only component (returns null) — same pattern as DrawingToolbar.
- */
-
 import { useEffect } from 'react'
 import { useMap } from 'react-leaflet'
 import * as L from 'leaflet'

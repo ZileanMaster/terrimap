@@ -25,8 +25,8 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
 
   const zones = propZones ?? storeZones
 
-  // Giai ?o?n 3: l?c nh?n s? theo v?ng (n?u c? regionId)
-  // Ghi ch? 4: n?u nh?n s? ch?a c? regionId ? hi?n ? t?t c? v?ng
+
+
   const filteredAgents = useMemo(() => {
     if (!regionId) return agents
     return agents.filter((a) => {
@@ -35,14 +35,14 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
     })
   }, [agents, regionId])
 
-  // T?nh th?ng k? c?a c?m
+
   const districts = useMemo(() => {
     const ids = [...new Set(assignments.map((a) => a.districtId))].sort((a, b) => a - b)
     return ids.map((d) => {
       const distAssignments = assignments.filter((a) => a.districtId === d)
       const distZones       = zones.filter((z) => distAssignments.some((a) => a.zoneId === z.id))
 
-      // T?ng s? kh?ch h?ng
+
       const totalCustomers = distZones.reduce((sum, z) =>
         sum + z.activities
           .filter((act) => act.type === 'CUSTOMER')
@@ -75,7 +75,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
       <h3 style={styles.title}>👥 Phân công nhân viên</h3>
       {districts.map((d) => (
         <div key={d.districtId} style={styles.row}>
-          {/* Th?ng tin c?m */}
+          {
           <div style={styles.colorDot}>
             <span style={{
               ...styles.dot,
@@ -101,7 +101,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
                 {agent.name}
               </option>
             ))}
-            {/* V?n hi?n th? agent hi?n t?i k? c? khi ngo?i v?ng */}
+            {
             {d.currentAgent && !filteredAgents.some((a) => a.id === d.currentAgent) && (
               <option value={d.currentAgent}>
                 {agents.find((a) => a.id === d.currentAgent)?.name ?? d.currentAgent} (ngoài vùng)

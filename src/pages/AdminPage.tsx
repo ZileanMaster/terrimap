@@ -51,7 +51,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const currentUserKey = resolveUserKey(authUser, profile, agents)
 
-  // L?c zones/agents/assignments theo currentRegionId ? B?T BU?C:
+
   // Thuật toán PHẢI chạy độc lập trên từng region.
   const displayZones = currentRegionId
     ? zones.filter((z) => (z as any).regionId === currentRegionId)
@@ -79,7 +79,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     : [21.03, 105.83]
   const mapZoom = selectedRegion?.zoom ?? 12
 
-  // Fly-to khi t?m t?nh (t?m ghi ?? center c?a region)
+
   const [flyTarget, setFlyTarget] = useState<{ lat: number; lng: number; zoom: number } | null>(null)
   const handleFlyTo = useCallback((lat: number, lng: number, zoom: number) => {
     setFlyTarget({ lat, lng, zoom })
@@ -102,7 +102,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
   const isMapTransitioning    = useUIStore((s) => s.isMapTransitioning)
   const setMapTransitioning   = useUIStore((s) => s.setMapTransitioning)
-  // Thanh Leaflet.Draw lu?n hi?n th? v?i admin; kh?ng c?n state b?t/t?t ? ??y.
+
   const ctx                   = useFacade()
   const role                  = useUIStore((s) => s.role)
 

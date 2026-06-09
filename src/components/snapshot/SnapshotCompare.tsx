@@ -15,7 +15,7 @@ interface SnapshotCompareProps {
 }
 
 export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: SnapshotCompareProps) {
-  // T?nh c?c kh?c bi?t
+
   const { diffs, summaryA, summaryB } = useMemo(() => {
     const mapA = new Map(snapshotA.data.assignments.map((a) => [a.zoneId, a.districtId]))
     const mapB = new Map(snapshotB.data.assignments.map((a) => [a.zoneId, a.districtId]))

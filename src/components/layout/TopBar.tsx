@@ -1,10 +1,3 @@
-/**
- * TopBar — Navigation & Controls
- *
- * Online mode: User info + role badge + view-as (admin only) + logout
- * Ch? ?? offline: tab vai tr? (h?nh vi g?c)
- * Both: Theme toggle
- */
 
 import React from 'react'
 import { useTranslation } from 'react-i18next'
@@ -89,7 +82,7 @@ export default function TopBar() {
               </button>
             ))
           ) : (
-            // V?i non-admin: ch? hi?n th? badge vai tr?
+
             <div style={styles.roleBadge}>
               <span>{ROLES.find(r => r.id === actualRole)?.icon}</span>
               <span>{ROLE_LABELS[actualRole]}</span>

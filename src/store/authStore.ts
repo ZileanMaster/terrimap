@@ -294,7 +294,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return
 
-    // L?y c?c project m? user l? ch? s? h?u HO?C th?nh vi?n
+
     const { data: memberData } = await supabase
       .from('project_members')
       .select('project_id')
@@ -309,7 +309,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const owned = (ownedProjects ?? []) as Project[]
 
-    // ??ng th?i l?y project t? membership (n?u ch?a s? h?u)
+
     let memberProjects: Project[] = []
     if (memberProjectIds.length > 0) {
       const ownedIds = new Set(owned.map(p => p.id))
@@ -351,7 +351,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (data) {
       set({ membership: data as ProjectMember })
     } else {
-      // Ki?m tra user c? ph?i ch? d? ?n kh?ng (t? ??ng l? admin)
+
       const projects = get().projects
       const project = projects.find(p => p.id === projectId)
       if (project?.owner_id === user.id) {
@@ -559,7 +559,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           return false
         }
 
-        // Ki?m tra xem ?? l? th?nh vi?n ch?a
+
         const { data: existing } = await client
           .from('project_members')
           .select('id')
@@ -605,7 +605,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return false
 
-    // Guard: n?u ??i T? admin, ??m b?o c?n ?t nh?t 1 admin
+
     const { data: member } = await supabase
       .from('project_members')
       .select('role')
@@ -643,7 +643,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return false
 
-    // Guard: n?u x?a admin, ??m b?o c?n ?t nh?t 1 admin
+
     const { data: member } = await supabase
       .from('project_members')
       .select('role')
@@ -792,8 +792,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       date_of_birth: payload.date_of_birth ?? null,
       phone: payload.phone ?? null,
     }
-    // Kh?ng ???c b?t/t?t `loading` to?n c?c cho ch?nh s?a profile.
-    // `loading` ?i?u khi?n splash to?n m?n h?nh trong App.tsx v? ph?i d?nh cho
+
+
     // auth/session flows (initialize/signIn/signUp), not ordinary profile updates.
     set({ authError: null })
     try {

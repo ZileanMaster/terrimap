@@ -23,7 +23,7 @@ interface SidebarProps {
   /** Live assignments — reflects algorithm results. Passed from Page. */
   zones: Zone[]
   assignments: Assignment[]
-  /** Callback ?? t?o snapshot phi?n b?n. Ch? admin d?ng. */
+
   onCreateSnapshot?: (() => void) | undefined
   /** L4b-2 EC-1: Island zone IDs (no adj neighbors). */
   islandZoneIds?: Set<string> | undefined
@@ -83,8 +83,8 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo, mode = 'assi
     if (onFlyTo) {
       const zone = zones.find(z => z.id === zoneId)
       if (zone) {
-        // T?nh centroid t? v?ng (t?a ?? GeoJSON l? [lng, lat])
-        // Tr?nh d?ng field centroid ?? l?u v? c? th? c?/sai
+
+
         let ring: number[][] = []
         if (zone.polygon.type === 'Polygon') {
           ring = (zone.polygon.coordinates[0] ?? []) as number[][]
@@ -234,7 +234,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 }) {
   const { t } = useTranslation()
   const ctx                = useFacade()
-  // ?? b? ph?n sales team kh?i m?n ph?n chia, nh?ng v?n gi? state/hook n?n b?n d??i
+
   // to avoid large refactors in this file.
   const highlightedSalesId = useUIStore((s) => s.highlightedSalesId)
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)

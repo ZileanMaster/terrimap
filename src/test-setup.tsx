@@ -8,7 +8,7 @@ afterEach(() => {
   cleanup()
 })
 
-// Mock react-leaflet ? kh?ng ch?y ???c trong jsdom
+
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: React.ReactNode }) =>
     React.createElement('div', { 'data-testid': 'map-container' }, children),
@@ -29,7 +29,7 @@ vi.mock('react-leaflet', () => ({
       {
         'data-testid': 'polygon',
         onClick: eventHandlers?.click,
-        // Chuy?n ti?p c?c thu?c t?nh data-* ?? test c? th? ki?m tra
+
         ...Object.fromEntries(
           Object.entries(rest).filter(([k]) => k.startsWith('data-'))
         ),
@@ -43,7 +43,7 @@ vi.mock('react-leaflet', () => ({
   useMap: () => ({ setView: vi.fn(), invalidateSize: vi.fn() }),
 }))
 
-// Mock leaflet (s?a icon g?y l?i trong jsdom)
+
 vi.mock('leaflet', () => ({
   default: {
     Icon: {
@@ -61,7 +61,7 @@ vi.mock('leaflet', () => ({
   },
 }))
 
-// Mock window.matchMedia (jsdom kh?ng h? tr?)
+
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
@@ -76,7 +76,7 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
-// Mock ResizeObserver (jsdom kh?ng h? tr?)
+
 globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),

@@ -61,14 +61,14 @@ interface DataStore {
   agents:          SalesAgent[]
   regions:         Region[]       // danh sách vùng
   currentRegionId: string | null  // vùng đang xem / lọc
-  currentProjectId: string | undefined       // project ?ang t?i d? li?u
+  currentProjectId: string | undefined
   loading:         boolean
-  initialized:     boolean  // true sau l?n t?i th?nh c?ng ??u ti?n
+  initialized:     boolean
   saving:          boolean  // true while awaiting DB write
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  /** T?i t? DB cho project ?? cho. Reset d? li?u khi ??i project. */
+
   init: (projectId?: string) => Promise<void>
 
   /** Bulk setters (used by SnapshotManager restore) */
@@ -110,7 +110,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     const prev = get().currentProjectId
     // If same project already initialized, skip
     if (get().initialized && prev === projectId) return
-    // ??t project hi?n t?i cho ph?m vi localStorage TR??C m?i l?n t?i
+
     setActiveProject(projectId)
     // Reset on project change
     set({ loading: true, initialized: false, currentProjectId: projectId })
@@ -132,12 +132,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
       if ((rg as Region[]).length === 0 && safeRegions.length > 0) {
         console.warn('[DataStore] Regions table empty or unavailable, rebuilt region list from zones')
       }
-      // Gi? nguy?n regionId; null = ch?a g?n (kh?ng ?p m?c ??nh)
+
       set({ zones: z, assignments: a, agents: ag, regions: safeRegions })
     } catch (e) {
       console.error('[DataStore] init error:', e)
       // Important: never leak MOCK data into real accounts/projects when online.
-      // Ch? ?? offline ???c x? l? trong services/db.ts khi Supabase ch?a c?u h?nh.
+
       set({ zones: [], assignments: [], agents: [], regions: [] })
     } finally {
       set({ loading: false, initialized: true })
