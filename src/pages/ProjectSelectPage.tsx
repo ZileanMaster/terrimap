@@ -46,8 +46,11 @@ function ThemeIcon({ theme }: { theme: 'light' | 'dark' | 'system' }) {
 export default function ProjectSelectPage() {
   const projects = useAuthStore((s) => s.projects)
   const profile = useAuthStore((s) => s.profile)
+  const user = useAuthStore((s) => s.user)
   const selectProject = useAuthStore((s) => s.selectProject)
   const createProject = useAuthStore((s) => s.createProject)
+  const updateProject = useAuthStore((s) => s.updateProject)
+  const deleteProject = useAuthStore((s) => s.deleteProject)
   const signOut = useAuthStore((s) => s.signOut)
   const authError = useAuthStore((s) => s.authError)
   const theme = useUIStore((s) => s.theme)
@@ -64,6 +67,10 @@ export default function ProjectSelectPage() {
     name: string
     description: string
   } | null>(null)
+  const [editingProject, setEditingProject] = useState<Project | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDesc, setEditDesc] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const cycleTheme = () => {
     const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
@@ -103,6 +110,46 @@ export default function ProjectSelectPage() {
 
   const handleSelect = async (project: Project) => {
     await selectProject(project.id)
+  }
+
+  const canManageProject = (project: Project) => project.owner_id === user?.id
+
+  const openEditProject = (project: Project) => {
+    setEditingProject(project)
+    setEditName(project.name)
+    setEditDesc(project.description ?? '')
+  }
+
+  const handleUpdateProject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingProject) return
+    if (!editName.trim()) return
+    if (savingEdit) return
+
+    setSavingEdit(true)
+    const ok = await updateProject(editingProject.id, {
+      name: editName.trim(),
+      description: editDesc.trim(),
+    })
+    setSavingEdit(false)
+
+    if (ok) {
+      push({ kind: 'success', title: 'Đã cập nhật dự án', message: editName.trim() })
+      setEditingProject(null)
+    } else {
+      push({ kind: 'error', title: 'Không thể cập nhật dự án', message: useAuthStore.getState().authError || 'Vui lòng thử lại.' })
+    }
+  }
+
+  const handleDeleteProject = async (project: Project) => {
+    if (!window.confirm(`Xóa dự án "${project.name}"? Hành động này sẽ xóa thông tin dự án khỏi danh sách.`)) return
+    const ok = await deleteProject(project.id)
+    if (ok) {
+      push({ kind: 'success', title: 'Đã xóa dự án', message: project.name })
+      if (editingProject?.id === project.id) setEditingProject(null)
+    } else {
+      push({ kind: 'error', title: 'Không thể xóa dự án', message: useAuthStore.getState().authError || 'Vui lòng thử lại.' })
+    }
   }
 
   return (
@@ -165,10 +212,8 @@ export default function ProjectSelectPage() {
           )}
 
           {projects.map((project, index) => (
-            <button
+            <div
               key={project.id}
-              type="button"
-              onClick={() => handleSelect(project)}
               style={{
                 ...styles.projectCard,
                 ...(index === 0 ? styles.projectCardFeatured : {}),
@@ -184,7 +229,22 @@ export default function ProjectSelectPage() {
                 <span>Tạo ngày</span>
                 <strong>{new Date(project.created_at).toLocaleDateString('vi-VN')}</strong>
               </div>
-            </button>
+              <div style={styles.projectActions}>
+                <Button type="button" variant="primary" size="sm" onClick={() => handleSelect(project)} style={styles.openBtn}>
+                  Mở dự án
+                </Button>
+                {canManageProject(project) && (
+                  <>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => openEditProject(project)}>
+                      Sửa
+                    </Button>
+                    <Button type="button" variant="danger" size="sm" onClick={() => handleDeleteProject(project)}>
+                      Xóa
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
           ))}
 
           <button
@@ -241,6 +301,50 @@ export default function ProjectSelectPage() {
               <Textarea
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
+                placeholder="Mô tả ngắn về dự án..."
+                rows={4}
+              />
+            </div>
+          </form>
+        </Modal>
+
+        <Modal
+          open={!!editingProject}
+          onClose={() => (!savingEdit ? setEditingProject(null) : null)}
+          title="Sửa thông tin dự án"
+          description="Cập nhật tên và mô tả của dự án."
+          width={520}
+          footer={(
+            <>
+              <Button type="button" variant="ghost" onClick={() => setEditingProject(null)} disabled={savingEdit}>
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                form="edit-project-form"
+                disabled={savingEdit || !editName.trim()}
+              >
+                {savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </>
+          )}
+        >
+          <form id="edit-project-form" onSubmit={handleUpdateProject} style={styles.form}>
+            <div style={styles.field}>
+              <label style={styles.label}>Tên dự án</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Tên dự án"
+                autoFocus
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Mô tả</label>
+              <Textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
                 placeholder="Mô tả ngắn về dự án..."
                 rows={4}
               />
@@ -391,7 +495,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'color-mix(in srgb, var(--color-surface) 95%, transparent)',
     padding: 18,
     textAlign: 'left',
-    cursor: 'pointer',
     display: 'flex',
     flexDirection: 'column',
     gap: 12,
@@ -451,6 +554,16 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
     fontSize: 12,
     color: 'var(--color-text-2)',
+  },
+  projectActions: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  openBtn: {
+    marginRight: 'auto',
   },
   createCard: {
     border: '1px dashed color-mix(in srgb, var(--color-border) 80%, var(--color-accent))',

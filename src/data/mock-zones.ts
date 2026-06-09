@@ -78,9 +78,9 @@ for (let col = 0; col < COLS; col++) {
     
     hnZones.push(makeZone(id, name, 'region-hn', ring, customers, orders))
     
-    // Assign to 20 districts
+    // Gán vào 20 cụm
     const districtId = (col % 5) + (row % 4) * 5
-    // Map to 20 Hanoi sales agents
+    // Ánh xạ sang 20 nhân sự Hà Nội
     const salesAgentId = districtId === 0 ? 'sales.test@terrimap.vn' : `sales_hn_${districtId}@terrimap.vn`
     
     hnHN_ASSIGNMENTS.push({
@@ -131,7 +131,7 @@ export const MOCK_ZONES: Zone[] = [...hnZones, ...hcmZones]
 
 export const MOCK_ASSIGNMENTS: Assignment[] = [
   ...hnHN_ASSIGNMENTS,
-  // HCM — 2 districts (district 5 and 6, matching 2 mock agents sales_hcm_1 and sales_hcm_2)
+  // HCM — 2 cụm (cụm 5 và 6, khớp với 2 nhân sự mock sales_hcm_1 và sales_hcm_2)
   { zoneId: 'sg01', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
   { zoneId: 'sg02', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
   { zoneId: 'sg05', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },

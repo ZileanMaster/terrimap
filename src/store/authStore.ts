@@ -71,6 +71,8 @@ interface AuthStore {
   loadProjects: () => Promise<void>
   selectProject: (projectId: string) => Promise<void>
   createProject: (name: string, description?: string) => Promise<string | null>
+  updateProject: (projectId: string, data: { name: string; description?: string }) => Promise<boolean>
+  deleteProject: (projectId: string) => Promise<boolean>
 
   // Member management
   inviteMember: (email: string, role: string, regionId?: string) => Promise<boolean>
@@ -117,7 +119,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         set({ user: session.user, session })
-        // Load profile + projects in parallel (faster)
+        // Tải profile + projects song song (nhanh hơn)
         await Promise.all([
           get().loadProfile(),
           get().loadProjects(),
@@ -173,7 +175,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       set({ user: data.user, session: data.session })
-      // Load profile + projects in parallel
+      // Tải profile + projects song song
       await Promise.all([
         get().loadProfile(),
         get().loadProjects(),
@@ -269,7 +271,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   clearError: () => set({ authError: null }),
 
-  // ── Load Profile ────────────────────────────────────────────────────────
+  // ── Tải profile ─────────────────────────────────────────────────────────
   loadProfile: async () => {
     if (!supabase) return
     const user = get().user
@@ -286,13 +288,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // ── Load Projects (user is member of) ───────────────────────────────────
+  // ── Tải projects (nơi user là thành viên) ───────────────────────────────
   loadProjects: async () => {
     if (!supabase) return
     const user = get().user
     if (!user) return
 
-    // Get projects where user is owner OR member
+    // L?y c?c project m? user l? ch? s? h?u HO?C th?nh vi?n
     const { data: memberData } = await supabase
       .from('project_members')
       .select('project_id')
@@ -307,7 +309,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const owned = (ownedProjects ?? []) as Project[]
 
-    // Also fetch projects from membership (if not already owned)
+    // ??ng th?i l?y project t? membership (n?u ch?a s? h?u)
     let memberProjects: Project[] = []
     if (memberProjectIds.length > 0) {
       const ownedIds = new Set(owned.map(p => p.id))
@@ -338,7 +340,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
     localStorage.setItem('terrimap_project', projectId)
 
-    // Load membership (role)
+    // Tải membership (vai trò)
     const { data } = await supabase
       .from('project_members')
       .select('*')
@@ -349,7 +351,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (data) {
       set({ membership: data as ProjectMember })
     } else {
-      // Check if user is owner (auto-admin)
+      // Ki?m tra user c? ph?i ch? d? ?n kh?ng (t? ??ng l? admin)
       const projects = get().projects
       const project = projects.find(p => p.id === projectId)
       if (project?.owner_id === user.id) {
@@ -431,6 +433,93 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return project.id
   },
 
+  updateProject: async (projectId, data) => {
+    const user = get().user
+    const project = get().projects.find((item) => item.id === projectId)
+    if (!user || !project) return false
+    if (project.owner_id !== user.id) {
+      set({ authError: 'Chỉ chủ dự án mới có thể sửa thông tin dự án' })
+      return false
+    }
+
+    const updatedProject: Project = {
+      ...project,
+      name: data.name.trim(),
+      description: data.description?.trim() ?? '',
+    }
+
+    set((state) => ({
+      projects: state.projects.map((item) => (item.id === projectId ? updatedProject : item)),
+      authError: null,
+    }))
+
+    if (!supabase) return true
+
+    void (async () => {
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .upsert(updatedProject, { onConflict: 'id' })
+
+        if (error) {
+          console.warn('[AuthStore] updateProject sync warning:', error)
+        }
+      } catch (error) {
+        console.warn('[AuthStore] updateProject unexpected:', error)
+      }
+    })()
+
+    return true
+  },
+
+  deleteProject: async (projectId) => {
+    const user = get().user
+    const project = get().projects.find((item) => item.id === projectId)
+    if (!user || !project) return false
+    if (project.owner_id !== user.id) {
+      set({ authError: 'Chỉ chủ dự án mới có thể xoá dự án' })
+      return false
+    }
+
+    if (get().currentProjectId === projectId) {
+      get().deselectProject()
+      useDataStore.getState().setCurrentRegion(null)
+    }
+
+    set((state) => ({
+      projects: state.projects.filter((item) => item.id !== projectId),
+      authError: null,
+    }))
+
+    if (!supabase) return true
+
+    void (async () => {
+      try {
+        const { error: membersError } = await supabase
+          .from('project_members')
+          .delete()
+          .eq('project_id', projectId)
+
+        if (membersError) {
+          console.warn('[AuthStore] deleteProject members warning:', membersError)
+        }
+
+        const { error: projectError } = await supabase
+          .from('projects')
+          .delete()
+          .eq('id', projectId)
+
+        if (projectError) {
+          console.warn('[AuthStore] deleteProject project warning:', projectError)
+        }
+      } catch (error) {
+        console.warn('[AuthStore] deleteProject unexpected:', error)
+      }
+    })()
+
+    return true
+  },
+
   // ── Invite Member ───────────────────────────────────────────────────────
   inviteMember: async (email, role, regionId) => {
     if (!supabase) { set({ authError: 'Không có kết nối cơ sở dữ liệu' }); return false }
@@ -470,7 +559,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           return false
         }
 
-        // Check if already a member
+        // Ki?m tra xem ?? l? th?nh vi?n ch?a
         const { data: existing } = await client
           .from('project_members')
           .select('id')
@@ -516,7 +605,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return false
 
-    // Guard: if changing FROM admin, ensure at least 1 admin remains
+    // Guard: n?u ??i T? admin, ??m b?o c?n ?t nh?t 1 admin
     const { data: member } = await supabase
       .from('project_members')
       .select('role')
@@ -554,7 +643,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return false
 
-    // Guard: if removing an admin, ensure at least 1 admin remains
+    // Guard: n?u x?a admin, ??m b?o c?n ?t nh?t 1 admin
     const { data: member } = await supabase
       .from('project_members')
       .select('role')
@@ -586,25 +675,48 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Load Members ───────────────────────────────────────────────────────
+  // ── Tải thành viên ──────────────────────────────────────────────────────
   loadMembers: async () => {
     if (!supabase) return []
+    const client = supabase
     const projectId = get().currentProjectId
     if (!projectId) return []
 
-    const { data, error } = await supabase
-      .from('project_members')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('joined_at', { ascending: true })
+    const readMembers = async (): Promise<ProjectMember[]> => {
+      const { data, error } = await client
+        .from('project_members')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('joined_at', { ascending: true })
 
-    if (error) {
-      console.warn('[AuthStore] loadMembers error:', error.message)
-      return []
+      if (error) {
+        console.warn('[AuthStore] loadMembers error:', error.message)
+        return []
+      }
+
+      return (data ?? []) as ProjectMember[]
     }
 
-    let members = (data ?? []) as ProjectMember[]
-    const project = get().projects.find((p) => p.id === projectId)
+    const loadProjectById = async (): Promise<Project | null> => {
+      const localProject = get().projects.find((p) => p.id === projectId)
+      if (localProject) return localProject
+
+      const { data: remoteProject, error } = await client
+        .from('projects')
+        .select('id, name, description, owner_id, created_at')
+        .eq('id', projectId)
+        .maybeSingle()
+
+      if (error) {
+        console.warn('[AuthStore] loadMembers project lookup warning:', error)
+        return null
+      }
+
+      return (remoteProject as Project | null) ?? null
+    }
+
+    let members = await readMembers()
+    const project = await loadProjectById()
 
     if (project?.owner_id) {
       const ownerExists = members.some((member) => member.user_id === project.owner_id)
@@ -617,17 +729,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           joined_at: project.created_at ?? new Date().toISOString(),
         }
 
-        const { error: repairError } = await supabase
+        const { error: repairError } = await client
           .from('project_members')
           .upsert(ownerMember, { onConflict: 'project_id,user_id' })
 
         if (!repairError) {
-          const { data: repaired } = await supabase
-            .from('project_members')
-            .select('*')
-            .eq('project_id', projectId)
-            .order('joined_at', { ascending: true })
-          members = (repaired ?? []) as ProjectMember[]
+          members = await readMembers()
         } else {
           console.warn('[AuthStore] owner membership repair warning:', repairError.message)
           members = [
@@ -685,8 +792,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       date_of_birth: payload.date_of_birth ?? null,
       phone: payload.phone ?? null,
     }
-    // Do not toggle global `loading` for profile edits.
-    // `loading` drives the full-page splash in App.tsx and must be reserved for
+    // Kh?ng ???c b?t/t?t `loading` to?n c?c cho ch?nh s?a profile.
+    // `loading` ?i?u khi?n splash to?n m?n h?nh trong App.tsx v? ph?i d?nh cho
     // auth/session flows (initialize/signIn/signUp), not ordinary profile updates.
     set({ authError: null })
     try {

@@ -1,8 +1,8 @@
 /**
- * SalesPage — Read-only district view
- * Layout: [Sidebar | Map]
+ * SalesPage — Màn xem cụm chỉ đọc
+ * Bố cục: [Sidebar | Map]
  *
- * State: reads from global useDataStore — no local DB init needed.
+ * State: đọc từ useDataStore toàn cục — không cần init DB local.
  */
 
 import React, { useMemo } from 'react'
@@ -34,7 +34,7 @@ export default function SalesPage() {
   const selectZone     = useUIStore((s) => s.selectZone)
   const ctx            = useFacade()
 
-  // Filter to this sales agent's district (safe — SalesFacade may throw)
+  // Lọc về cụm của sales hiện tại (an toàn — SalesFacade có thể ném lỗi)
   const { myZones, myAssignments } = useMemo<{
     myZones:       Zone[]
     myAssignments: Assignment[]
@@ -98,7 +98,7 @@ export default function SalesPage() {
           zones={myZones}
           assignments={myAssignments}
           districtCount={new Set(myAssignments.map((a) => a.districtId)).size || 0}
-          // No onAssign — Sales is read-only
+          // Không có onAssign — Sales chỉ đọc
         />
 
       </div>

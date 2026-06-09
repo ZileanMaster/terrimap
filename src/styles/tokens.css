@@ -128,7 +128,7 @@ html, body, #root {
   filter: var(--map-tile-filter) !important;
 }
 
-/* Leaflet.Draw toolbar: place at top-right but below the app's Save/Load controls. */
+/* Thanh Leaflet.Draw: ??t ? g?c ph?i tr?n nh?ng th?p h?n c?c n?t L?u/T?i c?a app. */
 .leaflet-top.leaflet-right .leaflet-draw {
   /* SnapshotManager sits at top:60px; this pushes the draw toolbar below it. */
   margin-top: 112px;

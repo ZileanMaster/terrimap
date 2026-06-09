@@ -1,9 +1,9 @@
 /**
- * Web Worker entry point for Simulated Annealing.
- * Receives: { zones, m, opts }
- * Posts: { type: 'progress', iter, cost } | { type: 'done', assignments } | { type: 'error', message }
+ * Điểm vào Web Worker cho Simulated Annealing.
+ * Nhận: { zones, m, opts }
+ * Gửi: { type: 'progress', iter, cost } | { type: 'done', assignments } | { type: 'error', message }
  *
- * Worker CAN import from L0/L1 directly — it is sandboxed execution, not an L4 component.
+ * Worker CÓ THỂ import trực tiếp từ L0/L1 — đây là môi trường thực thi sandbox, không phải component L4.
  */
 
 import { partitionSimulatedAnnealing } from '../../lib/partition.js'
@@ -29,7 +29,7 @@ self.onmessage = (e: MessageEvent) => {
     const assignments = partitionSimulatedAnnealing(zones, m, {
       ...opts,
       onProgress: (iter, cost) => {
-        // Throttle: only post progress every 100 iterations to avoid message flooding
+        // Gi?i h?n t?n su?t: ch? g?i progress m?i 100 v?ng ?? tr?nh spam message
         if (iter % 100 === 0 || iter === maxIter - 1) {
           self.postMessage({ type: 'progress', iter, cost, total: maxIter })
         }

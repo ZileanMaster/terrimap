@@ -25,7 +25,7 @@ export default function ProgressBar({ isRunning, progress, currentCost }: Progre
       setDisplayProgress(progress)
       return
     }
-    // Pseudo animation: slowly fill to 85% while running
+    // Animation gi? l?p: t? t? t?ng t?i 85% khi ?ang ch?y
     timerRef.current = setInterval(() => {
       setDisplayProgress((v) => {
         if (v >= 85) return 85

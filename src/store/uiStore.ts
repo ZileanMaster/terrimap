@@ -18,7 +18,7 @@ function persistTheme(theme: Theme) {
   try {
     localStorage.setItem(THEME_KEY, theme)
   } catch {
-    // ignore storage errors
+    // b? qua l?i l?u tr?
   }
 }
 
@@ -27,15 +27,15 @@ interface UIStore {
   selectedZoneId:      string | null
   isAlgorithmRunning:  boolean
   theme:               Theme
-  highlightedSalesId:  string | null      // L4b-1: click agent card → highlight district
-  isMapTransitioning:  boolean            // L4b-1: flash effect after algorithm run
-  selectedDistrictId:  number | null      // Map legend: focus a cluster/district
-  showPolygons:        boolean            // Map layer toggle
+  highlightedSalesId:  string | null      // L4b-1: bấm thẻ nhân sự → tô sáng cụm
+  isMapTransitioning:  boolean            // L4b-1: hi?u ?ng ch?p sau khi ch?y thu?t to?n
+  selectedDistrictId:  number | null      // Ch? gi?i b?n ??: t?p trung v?o m?t c?m
+  showPolygons:        boolean            // B?t/t?t l?p b?n ??
   /** Per-zone visibility toggle (hide selected vùng without hiding all). */
   hiddenZoneIds:       Record<string, true>
   /** Enable Leaflet-Draw toolbar for vùng editing (admin UI). */
   polygonEditEnabled:  boolean
-  // Actions
+  // H?nh ??ng
   setRole:                (role: Role) => void
   selectZone:             (id: string | null) => void
   setAlgorithmRunning:    (v: boolean) => void
@@ -67,7 +67,7 @@ export const useUIStore = create<UIStore>((set) => ({
   theme:              (() => {
     const initial = getInitialTheme()
     persistTheme(initial)
-    // Apply on first load so the whole app (including DashboardLayout) matches.
+    // ?p d?ng ngay l?n t?i ??u ?? to?n b? app (k? c? DashboardLayout) ??ng b?.
     try { applyTheme(initial) } catch { /* ignore */ }
     return initial
   })(),
@@ -99,7 +99,7 @@ export const useUIStore = create<UIStore>((set) => ({
   },
 
   // Toggle: click same agent → deselect; click different → select new
-  // Also clear selectedZoneId to avoid conflicting highlights
+  // ??ng th?i x?a selectedZoneId ?? tr?nh xung ??t highlight
   setHighlightedSalesId: (id) =>
     set((s) => ({
       highlightedSalesId: s.highlightedSalesId === id ? null : id,
@@ -109,7 +109,7 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setMapTransitioning: (v) => set({ isMapTransitioning: v }),
 
-  // Toggle: click same district -> clear focus
+  // Toggle: b?m c?ng c?m ? x?a focus
   setSelectedDistrictId: (id) =>
     set((s) => ({
       selectedDistrictId: s.selectedDistrictId === id ? null : id,

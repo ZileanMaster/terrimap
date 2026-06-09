@@ -4,7 +4,7 @@
  * Offline fallback: project-scoped localStorage.
  * Online: Supabase table district_reports (see docs/migration-district-reports.sql).
  *
- * NOTE: This module is designed to be safe even if the Supabase table does not exist yet.
+ * L?u ?: module n?y ???c thi?t k? ?? an to?n ngay c? khi b?ng Supabase ch?a t?n t?i.
  * In that case, it will log and behave like offline mode (localStorage only).
  */
 
@@ -60,7 +60,7 @@ function upsertLocal(next: DistrictReport, projectId?: string) {
 }
 
 /**
- * Save (upsert) a district report for (period, userId, regionId, districtId).
+ * L?u (upsert) b?o c?o c?m cho (period, userId, regionId, districtId).
  * Always writes localStorage first.
  */
 export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'updatedAt'> & { id?: string }): Promise<void> {
@@ -127,7 +127,7 @@ export async function saveDistrictReport(input: Omit<DistrictReport, 'id' | 'upd
 }
 
 /**
- * Load reports (merged local + remote) for a period.
+ * T?i b?o c?o (g?p local + remote) cho m?t k?.
  * If table missing/unavailable, returns local only.
  */
 export async function loadDistrictReports(period: string, projectId?: string): Promise<DistrictReport[]> {
