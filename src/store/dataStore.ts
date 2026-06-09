@@ -24,6 +24,36 @@ import { MOCK_AGENTS } from '../data/mock-agents.js'
 import type { Region } from '../data/regions.js'
 import { assertNoPolygonTopologyViolations } from '../../lib/geometry.js'
 
+function buildRegionsFromZones(zones: Zone[], existingRegions: Region[]): Region[] {
+  if (existingRegions.length > 0 || zones.length === 0) return existingRegions
+
+  const groups = new Map<string, Array<{ lat: number; lng: number }>>()
+
+  for (const zone of zones as Array<Zone & { regionId?: string }>) {
+    const regionId = zone.regionId
+    if (!regionId) continue
+    if (!groups.has(regionId)) groups.set(regionId, [])
+    groups.get(regionId)!.push(zone.centroid)
+  }
+
+  return Array.from(groups.entries()).map(([regionId, centroids]) => {
+    const center = centroids.reduce(
+      (acc, point) => ({ lat: acc.lat + point.lat, lng: acc.lng + point.lng }),
+      { lat: 0, lng: 0 },
+    )
+
+    return {
+      id: regionId,
+      name: regionId.startsWith('region-') ? `Khu vực ${regionId.slice(-4)}` : regionId,
+      center: {
+        lat: center.lat / centroids.length,
+        lng: center.lng / centroids.length,
+      },
+      zoom: 12,
+    }
+  })
+}
+
 interface DataStore {
   // ── State ──────────────────────────────────────────────────────────────────────
   zones:           Zone[]
@@ -98,8 +128,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
         ]),
         timeout,
       ]) as [typeof MOCK_ZONES, typeof MOCK_ASSIGNMENTS, typeof MOCK_AGENTS, never[]]
+      const safeRegions = buildRegionsFromZones(z as Zone[], (rg as Region[]) ?? [])
+      if ((rg as Region[]).length === 0 && safeRegions.length > 0) {
+        console.warn('[DataStore] Regions table empty or unavailable, rebuilt region list from zones')
+      }
       // Gi? nguy?n regionId; null = ch?a g?n (kh?ng ?p m?c ??nh)
-      set({ zones: z, assignments: a, agents: ag, regions: rg })
+      set({ zones: z, assignments: a, agents: ag, regions: safeRegions })
     } catch (e) {
       console.error('[DataStore] init error:', e)
       // Important: never leak MOCK data into real accounts/projects when online.
