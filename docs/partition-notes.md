@@ -57,9 +57,9 @@ Hiện engine ưu tiên:
 
 Nếu cần lựa chọn cho demo hoặc mặc định vận hành:
 
-- `greedy` → xem nhanh
-- `local-search` → mặc định an toàn
-- `sa` → khi muốn tìm phương án chất lượng cao hơn
+- `greedy` -> xem nhanh
+- `local-search` -> mặc định an toàn
+- `sa` -> khi muốn tìm phương án chất lượng cao hơn
 
 ---
 
@@ -67,7 +67,7 @@ Nếu cần lựa chọn cho demo hoặc mặc định vận hành:
 
 Hiện tại:
 
-- `Phân chia thuật toán` chỉ chạy khi bấm nút
+- `Thuật toán phân chia` chỉ chạy khi bấm nút
 - thay đổi thuật toán / số cụm sẽ không tự sinh lại kết quả ngay
 - SA được chạy qua worker ở màn so sánh để tránh chặn main thread
 - overlay “Thuật toán đang chạy” được hiển thị để người dùng biết hệ thống vẫn đang xử lý

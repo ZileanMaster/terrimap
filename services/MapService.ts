@@ -1,11 +1,3 @@
-/**
- * services/MapService.ts — L2 Domain Service
- *
- * Import/export GeoJSON, tính adjacency/distance matrices.
- * Import từ types/domain.ts, lib/geometry.ts.
- * Pure class — không import UI framework.
- */
-
 import type { Zone, GeoJSONPolygon } from '../types/domain.js';
 import {
   polygonCentroid,
@@ -19,7 +11,7 @@ import {
 import type { Assignment } from '../lib/partition.js';
 import { ServiceError } from './errors.js';
 
-// ─── GeoJSON types (minimal, self-contained) ──────────────────────────────────
+//  GeoJSON types (minimal, self-contained) 
 
 interface GeoJSONFeature {
   type: 'Feature';
@@ -37,19 +29,19 @@ interface GeoJSONFeatureCollection {
 
 export type FeatureCollection = GeoJSONFeatureCollection;
 
-// ─── MapService ───────────────────────────────────────────────────────────────
+//  MapService 
 
 export class MapService {
 
   /**
-   * Import GeoJSON FeatureCollection → Zone[].
+   * Import GeoJSON FeatureCollection -> Zone[].
    *
    * Rules:
    *  - Phải có type === 'FeatureCollection'.
    *  - Mỗi Feature: geometry.type === 'Polygon'.
    *  - Zone.id lấy từ properties.id hoặc properties.zone_id.
    *  - Centroid tính bằng polygonCentroid() từ lib/geometry.ts.
-   *  - Thiếu id → throw ServiceError INVALID_INPUT.
+   *  - Thiếu id -> throw ServiceError INVALID_INPUT.
    *
    * @throws {ServiceError} INVALID_INPUT
    */
@@ -132,12 +124,12 @@ export class MapService {
   }
 
   /**
-   * Export zones + assignments → GeoJSON FeatureCollection.
+   * Export zones + assignments -> GeoJSON FeatureCollection.
    *
    * Properties mỗi Feature: { id, districtId, customers, orders }.
-   * Zone không có assignment → districtId = null.
+   * Zone không có assignment -> districtId = null.
    *
-   * @complexity O(n) — n = zones.length.
+   * @complexity O(n) - n = zones.length.
    */
   exportGeoJSON(zones: Zone[], assignments: Assignment[]): FeatureCollection {
     const districtMap = new Map<string, number>(
@@ -174,7 +166,7 @@ export class MapService {
    * Tính adjacency + distance matrices cho zones.
    * adjThresholdKm = 50 (chuẩn Việt Nam).
    *
-   * @complexity O(n²) — n = zones.length.
+   * @complexity O(n²) - n = zones.length.
    */
   computeMatrices(zones: Zone[]): { adj: AdjMatrix; dist: DistMatrix } {
     assertNoPolygonTopologyViolations(zones);

@@ -1,5 +1,5 @@
 -- ============================================================
--- TERRIMAP — Setup đầy đủ tài khoản test + dữ liệu mẫu
+-- TERRIMAP - Setup đầy đủ tài khoản test + dữ liệu mẫu
 --
 -- Chạy SAU KHI đã tạo 3 users trong Supabase Dashboard:
 --   admin.test@terrimap.vn  / Test@2025!
@@ -17,22 +17,22 @@ DECLARE
   v_region_hcm TEXT := 'test-region-hcm';
 BEGIN
 
-  -- ── 1. Lấy user IDs từ auth ──────────────────────────────────
+  --  1. Lấy user IDs từ auth 
   SELECT id INTO v_admin_id FROM auth.users WHERE email = 'admin.test@terrimap.vn';
   SELECT id INTO v_coord_id FROM auth.users WHERE email = 'coord.test@terrimap.vn';
   SELECT id INTO v_sales_id FROM auth.users WHERE email = 'sales.test@terrimap.vn';
 
   IF v_admin_id IS NULL THEN
-    RAISE EXCEPTION 'Không tìm thấy user admin.test@terrimap.vn — hãy tạo user trong Auth Dashboard trước!';
+    RAISE EXCEPTION 'Không tìm thấy user admin.test@terrimap.vn - hãy tạo user trong Auth Dashboard trước!';
   END IF;
   IF v_coord_id IS NULL THEN
-    RAISE EXCEPTION 'Không tìm thấy user coord.test@terrimap.vn — hãy tạo user trong Auth Dashboard trước!';
+    RAISE EXCEPTION 'Không tìm thấy user coord.test@terrimap.vn - hãy tạo user trong Auth Dashboard trước!';
   END IF;
   IF v_sales_id IS NULL THEN
-    RAISE EXCEPTION 'Không tìm thấy user sales.test@terrimap.vn — hãy tạo user trong Auth Dashboard trước!';
+    RAISE EXCEPTION 'Không tìm thấy user sales.test@terrimap.vn - hãy tạo user trong Auth Dashboard trước!';
   END IF;
 
-  -- ── 2. Tạo profiles ──────────────────────────────────────────
+  --  2. Tạo profiles 
   INSERT INTO public.profiles (id, email, full_name)
   VALUES
     (v_admin_id, 'admin.test@terrimap.vn',  'Admin Terrimap'),
@@ -42,7 +42,7 @@ BEGIN
     full_name = EXCLUDED.full_name,
     email     = EXCLUDED.email;
 
-  -- ── 3. Tạo project test ───────────────────────────────────────
+  --  3. Tạo project test 
   INSERT INTO public.projects (id, name, description, owner_id)
   VALUES (
     v_project_id,
@@ -51,14 +51,14 @@ BEGIN
     v_admin_id
   ) ON CONFLICT (id) DO NOTHING;
 
-  -- ── 4. Tạo regions ────────────────────────────────────────────
+  --  4. Tạo regions 
   INSERT INTO public.regions (id, name, center, zoom, project_id)
   VALUES
     (v_region_hn,  'Hà Nội',       '{"lat":21.0285,"lng":105.8542}', 11, v_project_id),
     (v_region_hcm, 'Hồ Chí Minh',  '{"lat":10.7769,"lng":106.7009}', 11, v_project_id)
   ON CONFLICT (id) DO NOTHING;
 
-  -- ── 5. Thêm thành viên vào project ───────────────────────────
+  --  5. Thêm thành viên vào project 
   INSERT INTO public.project_members (project_id, user_id, role, region_id)
   VALUES
     (v_project_id, v_admin_id, 'admin',       NULL),           -- Admin: toàn quyền
@@ -68,7 +68,7 @@ BEGIN
     role      = EXCLUDED.role,
     region_id = EXCLUDED.region_id;
 
-  -- ── 6. Tạo sales agents mẫu ──────────────────────────────────
+  --  6. Tạo sales agents mẫu 
   INSERT INTO public.sales_agents (id, name, active_region, capacity, region_id, project_id)
   VALUES
     ('agent-test-01', 'Nguyễn Văn A',  'Hà Nội',       150, v_region_hn,  v_project_id),
@@ -79,7 +79,7 @@ BEGIN
     ('agent-test-06', 'Ngô Thị F',     'Hồ Chí Minh',  110, v_region_hcm, v_project_id)
   ON CONFLICT (id) DO NOTHING;
 
-  -- ── 7. Tạo zones mẫu (Hà Nội) ────────────────────────────────
+  --  7. Tạo zones mẫu (Hà Nội) 
   INSERT INTO public.zones (id, name, status, polygon, centroid, region_id, project_id)
   VALUES
     ('test-z01', 'Hoàn Kiếm',   'unassigned',
@@ -102,7 +102,7 @@ BEGIN
       '{"lat":21.005,"lng":105.840}', v_region_hn, v_project_id)
   ON CONFLICT (id) DO NOTHING;
 
-  -- ── 8. Tạo activities mẫu ─────────────────────────────────────
+  --  8. Tạo activities mẫu 
   INSERT INTO public.activities (id, zone_id, type, value)
   VALUES
     ('tact-01a', 'test-z01', 'CUSTOMER', 245),
@@ -129,7 +129,7 @@ BEGIN
 
 END $$;
 
--- ── Kiểm tra kết quả ─────────────────────────────────────────────
+--  Kiểm tra kết quả 
 SELECT
   pm.role,
   p.email,

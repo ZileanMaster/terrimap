@@ -1,13 +1,13 @@
 /**
- * e2e/sales.spec.ts — Sales role E2E tests
+ * e2e/sales.spec.ts - Sales role E2E tests
  * Scenario: Read-only district view.
  */
 
 import { test, expect } from '@playwright/test'
 import { AppPage } from './pages/AppPage'
 
-test.describe('Sales — Read-only district view', () => {
-  test('[E2E-S1] switch sang Sales → sidebar hiển thị', async ({ page }) => {
+test.describe('Sales - Read-only district view', () => {
+  test('[E2E-S1] switch sang Sales -> sidebar hiển thị', async ({ page }) => {
     const app = new AppPage(page)
     await app.goto()
     await app.switchRole('sales')

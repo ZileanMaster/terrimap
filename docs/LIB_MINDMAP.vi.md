@@ -101,7 +101,7 @@ mindmap
 
 ## Cách đọc sơ đồ
 
-## 1. `geometry.ts` — hiểu bản đồ
+## 1. `geometry.ts` - hiểu bản đồ
 
 Bạn có thể nói ngắn gọn:
 
@@ -116,7 +116,7 @@ Bạn có thể nói ngắn gọn:
 - phát hiện polygon bị lỗi;
 - tính độ rộng của một cụm.
 
-## 2. `partition.ts` — chia cụm
+## 2. `partition.ts` - chia cụm
 
 Bạn có thể nói ngắn gọn:
 
@@ -132,7 +132,7 @@ Bạn có thể nói ngắn gọn:
 - đảm bảo các cụm vẫn liền thông;
 - tính `cost` để biết phương án nào tốt hơn.
 
-## 3. `validator.ts` — chấm chất lượng
+## 3. `validator.ts` - chấm chất lượng
 
 Bạn có thể nói ngắn gọn:
 

@@ -23,7 +23,7 @@ import {
   ActivityService,
 } from '../services/index.js';
 
-// ─── Mock service instances ───────────────────────────────────────────────────
+//  Mock service instances 
 
 const mockTerritory = {
   runPartition: vi.fn(),
@@ -43,7 +43,7 @@ const mockActivity = {
   importActivitiesFromCSV: vi.fn(),
 };
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
+//  Fixtures 
 
 const zones4 = [
   {
@@ -85,7 +85,7 @@ beforeEach(() => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// AdminFacade — PERMISSION MATRIX
+// AdminFacade - PERMISSION MATRIX
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('AdminFacade permissions', () => {
@@ -97,7 +97,7 @@ describe('AdminFacade permissions', () => {
     );
   }
 
-  it('[ADM-1] runAlgorithm → gọi territory.runPartition', async () => {
+  it('[ADM-1] runAlgorithm -> gọi territory.runPartition', async () => {
     mockTerritory.runPartition.mockResolvedValue({
       assignments: assignments4, metrics: {}, violations: [],
       algo: 'local-search', durationMs: 10, suggestSA: false,
@@ -108,7 +108,7 @@ describe('AdminFacade permissions', () => {
       .toHaveBeenCalledWith(zones4, 2, 'local-search', [], undefined);
   });
 
-  it('[ADM-1b] runAlgorithm với opts → opts được truyền qua', async () => {
+  it('[ADM-1b] runAlgorithm với opts -> opts được truyền qua', async () => {
     mockTerritory.runPartition.mockResolvedValue({
       assignments: assignments4, metrics: {}, violations: [],
       algo: 'sa', durationMs: 50, suggestSA: false,
@@ -120,7 +120,7 @@ describe('AdminFacade permissions', () => {
       .toHaveBeenCalledWith(zones4, 2, 'sa', [], opts);
   });
 
-  it('[ADM-2] createVersion → gọi version.createSnapshot', async () => {
+  it('[ADM-2] createVersion -> gọi version.createSnapshot', async () => {
     mockVersion.createSnapshot.mockReturnValue({ version: 'v1', label: 'sprint-1' });
     const admin = makeAdmin();
     await admin.createVersion('sprint-1', zones4, assignments4);
@@ -128,7 +128,7 @@ describe('AdminFacade permissions', () => {
       .toHaveBeenCalledWith('sprint-1', zones4, assignments4);
   });
 
-  it('[ADM-3] getVersionHistory → gọi version.listHistory', () => {
+  it('[ADM-3] getVersionHistory -> gọi version.listHistory', () => {
     mockVersion.listHistory.mockReturnValue([]);
     const admin = makeAdmin();
     admin.getVersionHistory();
@@ -171,7 +171,7 @@ describe('AdminFacade permissions', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CoordinatorFacade — PERMISSION MATRIX
+// CoordinatorFacade - PERMISSION MATRIX
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('CoordinatorFacade permissions', () => {
@@ -183,7 +183,7 @@ describe('CoordinatorFacade permissions', () => {
     );
   }
 
-  it('[COORD-1] assignZone → gọi territory.manualSwap', async () => {
+  it('[COORD-1] assignZone -> gọi territory.manualSwap', async () => {
     mockTerritory.manualSwap.mockResolvedValue({
       ok: true, newAssignments: assignments4,
       newMetrics: {}, violations: [],
@@ -207,14 +207,14 @@ describe('CoordinatorFacade permissions', () => {
     expect(result.previousSalesId).toBe('0'); // z1 trước thuộc district 0
   });
 
-  it('[COORD-2] getUpdateHistory → gọi version.listHistory', () => {
+  it('[COORD-2] getUpdateHistory -> gọi version.listHistory', () => {
     mockVersion.listHistory.mockReturnValue([]);
     const coord = makeCoord();
     coord.getUpdateHistory();
     expect(mockVersion.listHistory).toHaveBeenCalled();
   });
 
-  it('[COORD-2b] getUpdateHistory map snapshots → HistoryEntry[]', () => {
+  it('[COORD-2b] getUpdateHistory map snapshots -> HistoryEntry[]', () => {
     mockVersion.listHistory.mockReturnValue([
       { label: 'sprint-1', version: 'v1', timestamp: '2026-01-01T00:00:00.000Z', zones: [{}, {}] },
     ]);
@@ -224,7 +224,7 @@ describe('CoordinatorFacade permissions', () => {
     expect(history[0]).toMatchObject({ label: 'sprint-1', version: 'v1', zoneCount: 2 });
   });
 
-  it('[COORD-3] createVersion → throw PermissionError PERMISSION_DENIED', () => {
+  it('[COORD-3] createVersion -> throw PermissionError PERMISSION_DENIED', () => {
     const coord = makeCoord();
     expect(() => (coord as any).createVersion?.('label', [], []))
       .toThrow(PermissionError);
@@ -241,7 +241,7 @@ describe('CoordinatorFacade permissions', () => {
     }
   });
 
-  it('[COORD-4] runAlgorithm → throw PermissionError PERMISSION_DENIED (async)', async () => {
+  it('[COORD-4] runAlgorithm -> throw PermissionError PERMISSION_DENIED (async)', async () => {
     const coord = makeCoord();
     await expect((coord as any).runAlgorithm?.('local-search', [], 2))
       .rejects.toBeInstanceOf(PermissionError);
@@ -267,7 +267,7 @@ describe('CoordinatorFacade permissions', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SalesFacade — DATA ISOLATION
+// SalesFacade - DATA ISOLATION
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('SalesFacade data isolation', () => {
@@ -286,7 +286,7 @@ describe('SalesFacade data isolation', () => {
     );
   }
 
-  it('[ISO-1] sa0 → _districtId = 0, chỉ thấy z1 và z2', () => {
+  it('[ISO-1] sa0 -> _districtId = 0, chỉ thấy z1 và z2', () => {
     const sales = makeSales('sa0');
     const district = sales.getMyDistrict();
     const ids = district.zones.map((z: any) => z.id);
@@ -296,7 +296,7 @@ describe('SalesFacade data isolation', () => {
     expect(ids).not.toContain('z4');
   });
 
-  it('[ISO-2] sa1 → _districtId = 1, chỉ thấy z3 và z4', () => {
+  it('[ISO-2] sa1 -> _districtId = 1, chỉ thấy z3 và z4', () => {
     mockActivity.getDistrictSummary.mockReturnValue({
       districtId: 1, zoneCount: 2,
       totalCustomers: 200, totalOrders: 100,
@@ -327,7 +327,7 @@ describe('SalesFacade data isolation', () => {
     expect(overlap).toHaveLength(0);
   });
 
-  it('[ISO-4] salesId không tồn tại → throw NOT_AUTHENTICATED', () => {
+  it('[ISO-4] salesId không tồn tại -> throw NOT_AUTHENTICATED', () => {
     expect(() => makeSales('unknown-id'))
       .toThrow(
         expect.objectContaining({
@@ -350,7 +350,7 @@ describe('SalesFacade data isolation', () => {
       .not.toHaveBeenCalledWith(0, expect.anything(), expect.anything());
   });
 
-  it('[ISO-6] _districtId = findIndex risk: salesAgents đổi thứ tự → sai — document known fragility', () => {
+  it('[ISO-6] _districtId = findIndex risk: salesAgents đổi thứ tự -> sai - document known fragility', () => {
     const reorderedAgents = [salesAgents[1]!, salesAgents[0]!];
 
     const salesWithOriginal = makeSales('sa0');    // _districtId = 0
@@ -361,12 +361,12 @@ describe('SalesFacade data isolation', () => {
     });
     const salesWithReordered = new SalesFacade(
       'sa0', mockActivity as any,
-      zones4, assignments4, reorderedAgents,  // sa0 ở index 1 → _districtId = 1
+      zones4, assignments4, reorderedAgents,  // sa0 ở index 1 -> _districtId = 1
     );
 
     const d0 = salesWithOriginal.getMyDistrict().zones.map((z: any) => z.id);
     const d1 = salesWithReordered.getMyDistrict().zones.map((z: any) => z.id);
-    // Cùng salesId nhưng khác array → khác district (known fragility)
+    // Cùng salesId nhưng khác array -> khác district (known fragility)
     expect(d0).not.toEqual(d1);
   });
 
@@ -387,7 +387,7 @@ describe('SalesFacade data isolation', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PERMISSION MATRIX — cross-role
+// PERMISSION MATRIX - cross-role
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('Permission matrix cross-role', () => {
@@ -443,10 +443,10 @@ describe('Permission matrix cross-role', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// BUG-FIX — getTeamOverview salesAgentId lookup (modulo bug)
+// BUG-FIX - getTeamOverview salesAgentId lookup (modulo bug)
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('CoordinatorFacade getTeamOverview — salesAgentId lookup (BUG-FIX)', () => {
+describe('CoordinatorFacade getTeamOverview - salesAgentId lookup (BUG-FIX)', () => {
   const zones4WithActivities = [
     {
       id: 'z1', status: 'unassigned' as const,
@@ -480,7 +480,7 @@ describe('CoordinatorFacade getTeamOverview — salesAgentId lookup (BUG-FIX)', 
   ] as any[];
 
   it('[BUG-FIX] getTeamOverview không gán nhầm khi 4 districts, 2 salesAgents', () => {
-    // 4 districts: D0/D2 → sa0, D1/D3 → sa1
+    // 4 districts: D0/D2 -> sa0, D1/D3 -> sa1
     const assignments = [
       { zoneId: 'z1', districtId: 0, salesAgentId: 'sa0' },
       { zoneId: 'z2', districtId: 1, salesAgentId: 'sa1' },
@@ -495,13 +495,13 @@ describe('CoordinatorFacade getTeamOverview — salesAgentId lookup (BUG-FIX)', 
     );
     const overview = coord.getTeamOverview(zones4WithActivities, assignments, twoAgents);
 
-    // sa0 quản lý z1 (D0) và z3 (D2) — 2 zones
+    // sa0 quản lý z1 (D0) và z3 (D2) - 2 zones
     const sa0 = overview.sales.find((s) => s.salesId === 'sa0');
     expect(sa0?.assignedZones).toHaveLength(2);
     expect(sa0?.assignedZones.map((z) => z.zoneId)).toContain('z1');
     expect(sa0?.assignedZones.map((z) => z.zoneId)).toContain('z3');
 
-    // sa1 quản lý z2 (D1) và z4 (D3) — 2 zones
+    // sa1 quản lý z2 (D1) và z4 (D3) - 2 zones
     const sa1 = overview.sales.find((s) => s.salesId === 'sa1');
     expect(sa1?.assignedZones).toHaveLength(2);
     expect(sa1?.assignedZones.map((z) => z.zoneId)).toContain('z2');
@@ -511,7 +511,7 @@ describe('CoordinatorFacade getTeamOverview — salesAgentId lookup (BUG-FIX)', 
     expect(overview.totalKH).toBe(100);
   });
 
-  it('[BUG-FIX-2] zones không có salesAgentId → bị skip, không crash', () => {
+  it('[BUG-FIX-2] zones không có salesAgentId -> bị skip, không crash', () => {
     const assignments = [
       { zoneId: 'z1', districtId: 0 }, // không có salesAgentId
       { zoneId: 'z2', districtId: 1, salesAgentId: 'sa1' },
@@ -536,13 +536,13 @@ describe('CoordinatorFacade getTeamOverview — salesAgentId lookup (BUG-FIX)', 
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SalesFacade — extended tests
+// SalesFacade - extended tests
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('SalesFacade extended', () => {
   // Helper tạo SalesFacade với district rỗng (không có zone nào được gán)
   function makeSalesNoZones(salesId: string) {
-    // assignments hoàn toàn trống → district nào cũng không có zone
+    // assignments hoàn toàn trống -> district nào cũng không có zone
     return new SalesFacade(
       salesId,
       mockActivity as any,
@@ -585,7 +585,7 @@ describe('SalesFacade extended', () => {
     );
   }
 
-  it('[SAL-DISTRICT-1] getMyDistrict() khi không có zones → throw DISTRICT_NOT_FOUND', () => {
+  it('[SAL-DISTRICT-1] getMyDistrict() khi không có zones -> throw DISTRICT_NOT_FOUND', () => {
     const sales = makeSalesNoZones('sa0');
     expect(() => sales.getMyDistrict()).toThrow(
       expect.objectContaining({
@@ -610,12 +610,12 @@ describe('SalesFacade extended', () => {
   it('[SAL-FORECAST-2] forecastedOrders = round(currentOrders * 1.05)', () => {
     const sales = makeSalesWithActivities('sa0');
     const forecast = sales.getMyOrderForecast();
-    // z1 (districtId=0, sa0): ORDER 40; z2 (districtId=0, sa0): ORDER 60 → total=100
+    // z1 (districtId=0, sa0): ORDER 40; z2 (districtId=0, sa0): ORDER 60 -> total=100
     expect(forecast.currentOrders).toBe(100);
     expect(forecast.forecastedOrders).toBe(Math.round(100 * 1.05)); // 105
   });
 
-  it('[SAL-CUSTOMER-1] getMyCustomers() với activity có location → location field xuất hiện', () => {
+  it('[SAL-CUSTOMER-1] getMyCustomers() với activity có location -> location field xuất hiện', () => {
     const sales = makeSalesWithActivities('sa0');
     const customers = sales.getMyCustomers();
     // z1 có CUSTOMER activity với location
@@ -625,18 +625,18 @@ describe('SalesFacade extended', () => {
       lat: expect.any(Number),
       lng: expect.any(Number),
     });
-    // z2 không có CUSTOMER activity có location → location undefined
+    // z2 không có CUSTOMER activity có location -> location undefined
     const z2Customer = customers.find((c: any) => c.zoneId === 'z2');
     expect(z2Customer?.location).toBeUndefined();
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Error classes — fallback message tests
+// Error classes - fallback message tests
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('ServiceError and VersionError — fallback message', () => {
-  it('[ERR-1] ServiceError dùng code khi không có message → e.message === code', () => {
+describe('ServiceError and VersionError - fallback message', () => {
+  it('[ERR-1] ServiceError dùng code khi không có message -> e.message === code', () => {
     const e = new ServiceError({ code: 'INVALID_INPUT' });
     expect(e.message).toBe('INVALID_INPUT');
     expect(e.details.code).toBe('INVALID_INPUT');
@@ -644,7 +644,7 @@ describe('ServiceError and VersionError — fallback message', () => {
     expect(e.name).toBe('ServiceError');
   });
 
-  it('[ERR-2] VersionError dùng code khi không có message → e.message === code', () => {
+  it('[ERR-2] VersionError dùng code khi không có message -> e.message === code', () => {
     const e = new VersionError({ code: 'DUPLICATE_LABEL' });
     expect(e.message).toBe('DUPLICATE_LABEL');
     expect(e.details.code).toBe('DUPLICATE_LABEL');

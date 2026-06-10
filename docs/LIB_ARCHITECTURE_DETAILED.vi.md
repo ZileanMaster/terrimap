@@ -219,10 +219,10 @@ Hàm tính tâm hình học của polygon bằng công thức shoelace.
 
 ### Xử lý edge-case rất quan trọng
 
-- `0 điểm` → throw lỗi;
-- `1 điểm` → trả về chính điểm đó;
-- `2 điểm` → trả về trung điểm;
-- polygon suy biến, diện tích gần `0` → fallback sang trung bình cộng.
+- `0 điểm` -> throw lỗi;
+- `1 điểm` -> trả về chính điểm đó;
+- `2 điểm` -> trả về trung điểm;
+- polygon suy biến, diện tích gần `0` -> fallback sang trung bình cộng.
 
 ### Vì sao điều này quan trọng?
 
@@ -758,8 +758,8 @@ Hàm này tính các quality metrics cho toàn bộ version đã lưu.
 
 ### Một số contract tốt
 
-- không có district nào → score mặc định an toàn;
-- mọi workload bằng 0 → balanceScore = 100;
+- không có district nào -> score mặc định an toàn;
+- mọi workload bằng 0 -> balanceScore = 100;
 - clamp score vào `[0,100]`;
 - assert tất cả metric phải finite.
 

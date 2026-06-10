@@ -41,7 +41,7 @@ Nav chính của app:
 - `Nhân sự`
 - `Phân chia lãnh thổ`
 - `Vận hành`
-- `Phân chia thuật toán`
+- `Thuật toán phân chia`
 - `Cài đặt`
 
 Nút:
@@ -88,7 +88,7 @@ Nút:
 - Hỗ trợ lọc theo cụm/user/ghi chú.
 - Dữ liệu demo có thể được seed cho project test để demo.
 
-### 7. Phân chia thuật toán
+### 7. Thuật toán phân chia
 
 - Đã đổi theo hướng **manual execution**: chỉ chạy khi bấm nút.
 - SA đang chạy trong web worker để tránh làm đơ UI.
@@ -169,7 +169,7 @@ Các thao tác quan trọng được thiết kế theo hướng:
 
 - Không còn menu đổi ngôn ngữ.
 - `Nhân sự Sales` hiện đã là `Nhân sự`.
-- `Phân chia tự động` trước đây đã đổi thành `Phân chia thuật toán`.
+- `Phân chia tự động` trước đây đã đổi thành `Thuật toán phân chia`.
 - Tránh làm lại luồng tự chạy thuật toán khi thay đổi cấu hình.
 - Nếu sửa thuật toán, không đổi logic cốt lõi nếu chưa có lý do rõ ràng; ưu tiên tối ưu hiệu năng và trải nghiệm người dùng.
 
@@ -186,5 +186,5 @@ Các thao tác quan trọng được thiết kế theo hướng:
    - tổng quan
    - khu vực & bản đồ
    - nhân sự
-   - phân chia thuật toán
+   - Thuật toán phân chia
    - vận hành

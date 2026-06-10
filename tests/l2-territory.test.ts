@@ -11,8 +11,8 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-// ─── Mock toàn bộ L1 ─────────────────────────────────────────────────────────
-// PartitionError được include trong factory — TerritoryService dùng instanceof.
+//  Mock toàn bộ L1 
+// PartitionError được include trong factory - TerritoryService dùng instanceof.
 vi.mock('../lib/partition', () => {
   class PartitionError extends Error {
     readonly code: string;
@@ -40,15 +40,15 @@ vi.mock('../lib/geometry', () => ({
   polygonCentroid: vi.fn(),
 }));
 
-// ─── Imports (sau mock) ───────────────────────────────────────────────────────
+//  Imports (sau mock) 
 import { getPartitionFn, PartitionError } from '../lib/partition';
 import { validatePartition, suggestFix } from '../lib/validator';
 import { TerritoryService, ServiceError } from '../services/index.js';
 import type { PartitionResult, SwapResult } from '../services/TerritoryService.js';
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
+//  Fixtures 
 
-/** 4 zones tối thiểu — L1 đã mock nên không cần full Zone structure. */
+/** 4 zones tối thiểu - L1 đã mock nên không cần full Zone structure. */
 const zones4 = [
   { id: 'z1', centroid: { lat: 21.0, lng: 105.8 } },
   { id: 'z2', centroid: { lat: 21.1, lng: 105.8 } },
@@ -77,7 +77,7 @@ const validValidation = {
 
 const mockPartitionFn = vi.fn().mockReturnValue(validAssignments);
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
+//  Setup 
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -158,21 +158,21 @@ describe('TerritoryService.runPartition', () => {
     expect(result.suggestSA).toBe(false);
   });
 
-  it('[RP-7] m < 2 → ServiceError INVALID_INPUT, không gọi partition', async () => {
+  it('[RP-7] m < 2 -> ServiceError INVALID_INPUT, không gọi partition', async () => {
     const svc = new TerritoryService();
     await expect(svc.runPartition(zones4, 1, 'local-search'))
       .rejects.toMatchObject({ details: { code: 'INVALID_INPUT' } });
     expect(mockPartitionFn).not.toHaveBeenCalled();
   });
 
-  it('[RP-8] zones rỗng → ServiceError INVALID_INPUT', async () => {
+  it('[RP-8] zones rỗng -> ServiceError INVALID_INPUT', async () => {
     const svc = new TerritoryService();
     await expect(svc.runPartition([], 2, 'local-search'))
       .rejects.toMatchObject({ details: { code: 'INVALID_INPUT' } });
   });
 
-  it('[RP-9] PartitionError từ L1 → wrap thành PARTITION_FAILED, validatePartition không gọi', async () => {
-    // PartitionError từ cùng mock factory → instanceof check hoạt động đúng
+  it('[RP-9] PartitionError từ L1 -> wrap thành PARTITION_FAILED, validatePartition không gọi', async () => {
+    // PartitionError từ cùng mock factory -> instanceof check hoạt động đúng
     mockPartitionFn.mockImplementation(() => {
       throw new (PartitionError as any)('zones too large', 'M_TOO_LARGE');
     });
@@ -182,7 +182,7 @@ describe('TerritoryService.runPartition', () => {
     expect(validatePartition).not.toHaveBeenCalled();
   });
 
-  it('[RP-10] validatePartition throw → wrap thành VALIDATION_FAILED', async () => {
+  it('[RP-10] validatePartition throw -> wrap thành VALIDATION_FAILED', async () => {
     // Đảm bảo partition fn thành công (không ảnh hưởng từ RP-9)
     mockPartitionFn.mockReturnValue(validAssignments);
     vi.mocked(validatePartition).mockImplementation(() => {
@@ -217,7 +217,7 @@ describe('TerritoryService.runPartition', () => {
   });
 
   it('[RP-13] KHÔNG emit partition:complete nếu operation throw', async () => {
-    // Non-PartitionError → re-thrown trực tiếp, không emit
+    // Non-PartitionError -> re-thrown trực tiếp, không emit
     mockPartitionFn.mockImplementation(() => { throw new Error('fail'); });
     const svc = new TerritoryService();
     const events: any[] = [];
@@ -234,21 +234,21 @@ describe('TerritoryService.runPartition', () => {
 
 describe('TerritoryService.manualSwap', () => {
 
-  it('[MS-1] zoneId không tồn tại → ZONE_NOT_FOUND', async () => {
+  it('[MS-1] zoneId không tồn tại -> ZONE_NOT_FOUND', async () => {
     const svc = new TerritoryService();
     await expect(
       svc.manualSwap('nonexistent', 1, validAssignments, zones4),
     ).rejects.toMatchObject({ details: { code: 'ZONE_NOT_FOUND' } });
   });
 
-  it('[MS-2] fromDistrict === toDistrict → SAME_DISTRICT (z1 đang ở D0)', async () => {
+  it('[MS-2] fromDistrict === toDistrict -> SAME_DISTRICT (z1 đang ở D0)', async () => {
     const svc = new TerritoryService();
     await expect(
-      svc.manualSwap('z1', 0, validAssignments, zones4), // z1 đang ở D0 → toDistrict=0 same
+      svc.manualSwap('z1', 0, validAssignments, zones4), // z1 đang ở D0 -> toDistrict=0 same
     ).rejects.toMatchObject({ details: { code: 'SAME_DISTRICT' } });
   });
 
-  it('[MS-3] swap hợp lệ → trả SwapResult với ok: true', async () => {
+  it('[MS-3] swap hợp lệ -> trả SwapResult với ok: true', async () => {
     const svc = new TerritoryService();
     const result: SwapResult = await svc.manualSwap('z1', 1, validAssignments, zones4);
     expect(result.ok).toBe(true);
@@ -256,14 +256,14 @@ describe('TerritoryService.manualSwap', () => {
     expect(result.newMetrics).toBeDefined();
   });
 
-  it('[MS-4] swap hợp lệ → z1 bây giờ ở district 1 trong newAssignments', async () => {
+  it('[MS-4] swap hợp lệ -> z1 bây giờ ở district 1 trong newAssignments', async () => {
     const svc = new TerritoryService();
     const result = await svc.manualSwap('z1', 1, validAssignments, zones4);
     const z1 = result.newAssignments.find((a) => a.zoneId === 'z1');
     expect(z1?.districtId).toBe(1);
   });
 
-  it('[MS-5] swap tạo DISCONNECTED ở fromDistrict → SWAP_DISCONNECTS với districtId', async () => {
+  it('[MS-5] swap tạo DISCONNECTED ở fromDistrict -> SWAP_DISCONNECTS với districtId', async () => {
     vi.mocked(validatePartition).mockReturnValue({
       valid: false,
       violations: [{ type: 'DISCONNECTED', districtId: 0 }], // fromDistrict của z1 = 0

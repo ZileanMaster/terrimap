@@ -1,5 +1,5 @@
 /**
- * Test Suite cho L0 — Data Primitives (types/domain.schema.ts)
+ * Test Suite cho L0 - Data Primitives (types/domain.schema.ts)
  *
  * Cấu trúc mỗi describe block:
  *  - NHÓM 1: Happy Path
@@ -39,7 +39,7 @@ import {
 } from '../types/domain.schema.js';
 
 // ==========================================
-// HELPERS — Valid Fixtures dùng chung
+// HELPERS - Valid Fixtures dùng chung
 // ==========================================
 
 const validCoord: Coordinate = { lat: 10.762, lng: 106.660 };
@@ -296,7 +296,7 @@ describe('CoordinateSchema', () => {
     fc.assert(
       fc.property(coordArb, (coord) => {
         const parsed = CoordinateSchema.parse(coord);
-        // Round-trip: serialize → parse lại → phải bằng nhau
+        // Round-trip: serialize -> parse lại -> phải bằng nhau
         const serialized = JSON.stringify(parsed);
         const reparsed = CoordinateSchema.parse(JSON.parse(serialized));
         expect(JSON.stringify(reparsed)).toBe(serialized);
@@ -334,7 +334,7 @@ describe('GeoJSONPolygonSchema', () => {
           [
             [106.6, 10.7],
             [106.7, 10.7],
-            [106.6, 10.7], // chỉ 3 điểm — thiếu 1 điểm để đạt >= 4
+            [106.6, 10.7], // chỉ 3 điểm - thiếu 1 điểm để đạt >= 4
           ],
         ],
       })
@@ -490,7 +490,7 @@ describe('ZoneSchema', () => {
   it('[INV-5] UnassignedZone không được có districtId', () => {
     // Discriminated union: nếu có districtId nhưng status=unassigned thì schema phải fail
     const zone = { ...validUnassignedZone, districtId: 'some-id' };
-    // Parse qua UnassignedZoneSchema (strict) — trường districtId thừa sẽ bị bỏ qua bởi Zod default
+    // Parse qua UnassignedZoneSchema (strict) - trường districtId thừa sẽ bị bỏ qua bởi Zod default
     // Nhưng nếu dùng .strict(), nó sẽ throw. Test behavior document:
     const result = UnassignedZoneSchema.parse(zone);
     expect(result.status).toBe('unassigned');
@@ -675,7 +675,7 @@ describe('AdjacencyMatrixSchema', () => {
   });
 
   // --- NHÓM 2: Invariant Violations ---
-  it('[INV-1] AdjMatrix không symmetric (A→B nhưng B không có A) phải throw', () => {
+  it('[INV-1] AdjMatrix không symmetric (A->B nhưng B không có A) phải throw', () => {
     expect(() =>
       AdjacencyMatrixSchema.parse({
         'zone-1': ['zone-2'],
@@ -734,11 +734,11 @@ describe('DistanceMatrixSchema', () => {
   it('[HP-3] Parse sparse DistanceMatrix (chỉ khai báo 1 phía) thành công', () => {
     // Branch coverage: nhánh `if (!reverseRow) continue` trong superRefine.
     // Ma trận sparse: zone-1 biết khoảng cách tới zone-X, nhưng zone-X không có entry riêng.
-    // Đây là trường hợp hợp lệ — schema chỉ validate symmetry khi cả 2 hàng tồn tại.
+    // Đây là trường hợp hợp lệ - schema chỉ validate symmetry khi cả 2 hàng tồn tại.
     expect(() =>
       DistanceMatrixSchema.parse({
         'zone-1': { 'zone-1': 0, 'zone-X': 3.5 },
-        // zone-X không có entry → reverseRow = undefined → skip, không throw
+        // zone-X không có entry -> reverseRow = undefined -> skip, không throw
       })
     ).not.toThrow();
   });

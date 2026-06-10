@@ -1,4 +1,4 @@
-# TerriMap — Sơ đồ luồng code và kiến trúc
+# TerriMap - Sơ đồ luồng code và kiến trúc
 
 Tài liệu này mô tả **TerriMap chạy như thế nào trong code**, từ lúc app mở lên cho đến khi người dùng thao tác với bản đồ, nhân sự, báo cáo và thuật toán phân chia.
 
@@ -109,13 +109,13 @@ flowchart TD
 ```
 
 ### Ghi nhớ nhanh
-- `overview` → bức tranh tổng quan
-- `regions` → quản lý vùng/bản đồ
-- `users` → nhân sự
-- `ops` → vận hành
-- `assignments` → phân chia lãnh thổ
-- `algorithms` → so sánh thuật toán
-- `settings` → cài đặt
+- `overview` -> bức tranh tổng quan
+- `regions` -> quản lý vùng/bản đồ
+- `users` -> nhân sự
+- `ops` -> vận hành
+- `assignments` -> phân chia lãnh thổ
+- `algorithms` -> so sánh thuật toán
+- `settings` -> cài đặt
 
 ---
 
@@ -400,5 +400,5 @@ flowchart LR
 
 ## 19) Câu chốt để ghi nhớ
 
-> “TerriMap là một app điều phối theo luồng: auth → project → role → tab → store → service/facade → database/worker. Code được tách lớp để vừa dễ bảo trì, vừa đảm bảo UI không bị đơ khi xử lý dữ liệu và thuật toán nặng.”
+> “TerriMap là một app điều phối theo luồng: auth -> project -> role -> tab -> store -> service/facade -> database/worker. Code được tách lớp để vừa dễ bảo trì, vừa đảm bảo UI không bị đơ khi xử lý dữ liệu và thuật toán nặng.”
 

@@ -1,8 +1,3 @@
-/**
- * ResultMetrics — Hiển thị kết quả AlgorithmResultVM
- * Tập trung vào chất lượng: balanceScore, vi phạm, liên thông và đường kính cực đại.
- */
-
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AlgorithmResultVM } from '../../../facades/viewmodels.js'

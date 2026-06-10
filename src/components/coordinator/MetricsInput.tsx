@@ -1,11 +1,3 @@
-/**
- * MetricsInput — Coordinator nhập chỉ số theo tháng
- *
- * Panel bảng editable: zone → customers, orders, revenue, familiarity.
- * QUAN TRỌNG: KHÔNG override store.zones trực tiếp.
- * Tạo bản copy "zonesWithMetrics" rồi pass vào thuật toán.
- */
-
 import React, { useState, useEffect, useCallback } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import {

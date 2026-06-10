@@ -1,13 +1,13 @@
 /**
- * authStore.test.ts — Unit tests for Auth + Project RBAC store
+ * authStore.test.ts - Unit tests for Auth + Project RBAC store
  *
- * Tests: AUTH-1 → AUTH-12
+ * Tests: AUTH-1 -> AUTH-12
  * Strategy: Mock Supabase client, verify store state transitions
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// ── Mock Supabase (hoisted) ───────────────────────────────────────────────────
+//  Mock Supabase (hoisted) 
 
 const mockSupabase = vi.hoisted(() => ({
   auth: {
@@ -28,7 +28,7 @@ vi.mock('../src/lib/supabase.js', () => ({
 
 import { useAuthStore } from '../src/store/authStore.js'
 
-// ── localStorage polyfill (Node environment) ──────────────────────────────────
+//  localStorage polyfill (Node environment) 
 const _store: Record<string, string> = {}
 if (typeof globalThis.localStorage === 'undefined') {
   Object.defineProperty(globalThis, 'localStorage', {
@@ -41,7 +41,7 @@ if (typeof globalThis.localStorage === 'undefined') {
   })
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function resetStore() {
   useAuthStore.setState({
@@ -77,7 +77,7 @@ function mockFromChain(data: unknown, error: unknown = null) {
   return chain
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+//  Tests 
 
 describe('authStore', () => {
   beforeEach(() => {
@@ -86,7 +86,7 @@ describe('authStore', () => {
   })
 
   describe('Initialize', () => {
-    it('[AUTH-1] no session → loading = false, user = null', async () => {
+    it('[AUTH-1] no session -> loading = false, user = null', async () => {
       mockSupabase.auth.getSession.mockResolvedValue({ data: { session: null } })
       await useAuthStore.getState().initialize()
 
@@ -94,7 +94,7 @@ describe('authStore', () => {
       expect(useAuthStore.getState().user).toBeNull()
     })
 
-    it('[AUTH-2] with session → user set, loadProfile called', async () => {
+    it('[AUTH-2] with session -> user set, loadProfile called', async () => {
       const fakeUser = { id: 'u1', email: 'test@test.com' }
       const fakeSession = { user: fakeUser, access_token: 'xxx' }
       mockSupabase.auth.getSession.mockResolvedValue({ data: { session: fakeSession } })
@@ -119,7 +119,7 @@ describe('authStore', () => {
   })
 
   describe('SignIn', () => {
-    it('[AUTH-3] successful signIn → user + profile set', async () => {
+    it('[AUTH-3] successful signIn -> user + profile set', async () => {
       const fakeUser = { id: 'u1', email: 'a@b.com' }
       const fakeSession = { user: fakeUser, access_token: 'tok' }
 
@@ -146,7 +146,7 @@ describe('authStore', () => {
       expect(useAuthStore.getState().loading).toBe(false)
     })
 
-    it('[AUTH-4] failed signIn → authError set, user null', async () => {
+    it('[AUTH-4] failed signIn -> authError set, user null', async () => {
       mockSupabase.auth.signInWithPassword.mockResolvedValue({
         data: { user: null, session: null },
         error: { message: 'Invalid login credentials' },
@@ -161,7 +161,7 @@ describe('authStore', () => {
   })
 
   describe('SignUp', () => {
-    it('[AUTH-5] successful signUp → user set, profile fetched with retry', async () => {
+    it('[AUTH-5] successful signUp -> user set, profile fetched with retry', async () => {
       const fakeUser = { id: 'u2', email: 'new@test.com' }
       mockSupabase.auth.signUp.mockResolvedValue({
         data: { user: fakeUser, session: { user: fakeUser, access_token: 'tok2' } },
@@ -195,7 +195,7 @@ describe('authStore', () => {
       expect(callCount).toBeGreaterThanOrEqual(2)
     })
 
-    it('[AUTH-6] failed signUp → authError set', async () => {
+    it('[AUTH-6] failed signUp -> authError set', async () => {
       mockSupabase.auth.signUp.mockResolvedValue({
         data: { user: null, session: null },
         error: { message: 'User already registered' },
@@ -209,7 +209,7 @@ describe('authStore', () => {
   })
 
   describe('Update profile', () => {
-    it('[AUTH-7] updateProfile → falls back to upsert when update returns no row', async () => {
+    it('[AUTH-7] updateProfile -> falls back to upsert when update returns no row', async () => {
       useAuthStore.setState({
         user: { id: 'u1', email: 'coord.test@terrimap.vn' } as any,
         profile: {
@@ -279,7 +279,7 @@ describe('authStore', () => {
   })
 
   describe('Project RBAC', () => {
-    it('[AUTH-8] selectProject with membership → role from DB', async () => {
+    it('[AUTH-8] selectProject with membership -> role from DB', async () => {
       useAuthStore.setState({ user: { id: 'u1' } as any })
 
       const memberChain = mockFromChain({
@@ -297,7 +297,7 @@ describe('authStore', () => {
       expect(useAuthStore.getState().currentProjectId).toBe('p1')
     })
 
-    it('[AUTH-9] selectProject as owner (no membership record) → auto-admin', async () => {
+    it('[AUTH-9] selectProject as owner (no membership record) -> auto-admin', async () => {
       useAuthStore.setState({
         user: { id: 'u1' } as any,
         projects: [{ id: 'p1', owner_id: 'u1', name: 'Test', description: '', created_at: '2026-01-01' }],
@@ -316,42 +316,16 @@ describe('authStore', () => {
       expect(useAuthStore.getState().membership?.id).toBe('owner')
     })
 
-    it('[AUTH-10] createProject → auto-add owner as admin', async () => {
+    it('[AUTH-10] createProject is temporarily disabled', async () => {
       useAuthStore.setState({ user: { id: 'u1' } as any })
-
-      const insertChain = mockFromChain(
-        { id: 'p-new', name: 'New Project', description: '', owner_id: 'u1', created_at: '2026-01-01' },
-      )
-      const membersInsertChain = mockFromChain(null)
-      const membersChain = mockFromChain([{ project_id: 'p-new' }])
-      const projectsChain = mockFromChain([{ id: 'p-new', name: 'New Project', description: '', owner_id: 'u1', created_at: '2026-01-01' }])
-      const selectMemberChain = mockFromChain({
-        id: 'm1', project_id: 'p-new', user_id: 'u1', role: 'admin', region_id: null, joined_at: '2026-01-01',
-      })
-
-      let insertCalls = 0
-      mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'projects') {
-          insertCalls++
-          // First call: insert, subsequent: select for loadProjects
-          return insertCalls === 1 ? insertChain : projectsChain
-        }
-        if (table === 'project_members') {
-          // Return different chains based on context
-          return insertCalls <= 1 ? membersInsertChain : (insertCalls <= 2 ? membersChain : selectMemberChain)
-        }
-        if (table === 'profiles') return mockFromChain(null)
-        return mockFromChain(null)
-      })
-
       const projectId = await useAuthStore.getState().createProject('New Project')
-
-      expect(projectId).toBeTruthy()
+      expect(projectId).toBeNull()
+      expect(useAuthStore.getState().authError).toContain('tạm tắt')
     })
   })
 
   describe('Member Management', () => {
-    it('[AUTH-11] inviteMember — user not found → error', async () => {
+    it('[AUTH-11] inviteMember - user not found -> error', async () => {
       useAuthStore.setState({
         user: { id: 'u1' } as any,
         currentProjectId: 'p1',

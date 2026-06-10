@@ -1,16 +1,3 @@
-/**
- * services/TerritoryService.ts — L2 Domain Service
- *
- * Orchestrates L1b partition + L1c validation.
- * Import từ types/domain.ts, lib/partition.ts, lib/validator.ts.
- * Extends EventEmitter — không import UI framework.
- *
- * Events:
- *  'partition:progress'  { iter: number, cost: number }
- *  'partition:complete'  PartitionResult
- *  'zone:swapped'        { zoneId, fromDistrict, toDistrict }
- */
-
 import type { Zone, SalesAgent } from '../types/domain.js';
 import {
   getPartitionFn,
@@ -27,7 +14,7 @@ import {
 } from '../lib/validator.js';
 import { ServiceError } from './errors.js';
 
-// ── Tiny browser-compatible EventEmitter (replaces Node.js EventEmitter) ───────
+//  Tiny browser-compatible EventEmitter (replaces Node.js EventEmitter) 
 // Keeps the same .emit() / .on() / .off() API so existing tests pass unchanged.
 class EventEmitter {
   private _listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
@@ -52,7 +39,7 @@ class EventEmitter {
 }
 
 
-/** Kết quả của runPartition() — bao gồm metrics, violations và gợi ý SA. */
+/** Kết quả của runPartition() - bao gồm metrics, violations và gợi ý SA. */
 export interface PartitionResult {
   assignments: Assignment[];
   metrics: PartitionMetrics;
@@ -76,7 +63,7 @@ export interface SwapResult {
   violations: ValidationResult['violations'];
 }
 
-// ─── TerritoryService ─────────────────────────────────────────────────────────
+//  TerritoryService 
 
 export class TerritoryService extends EventEmitter {
 
@@ -129,8 +116,8 @@ export class TerritoryService extends EventEmitter {
         },
       });
 
-      // Wire salesAgentId: districtId → salesAgents[districtId]
-      // Guard: nếu districtId >= salesAgents.length → không set salesAgentId
+      // Wire salesAgentId: districtId -> salesAgents[districtId]
+      // Guard: nếu districtId >= salesAgents.length -> không set salesAgentId
       if (salesAgents.length > 0) {
         assignments = assignments.map((a) => {
           const agentId = salesAgents[a.districtId]?.id;
@@ -183,7 +170,7 @@ export class TerritoryService extends EventEmitter {
    * Swap thủ công một zone sang district khác.
    *
    * Connectivity guard: nếu swap tạo disconnected district nguồn
-   * → throw ServiceError SWAP_DISCONNECTS.
+   * -> throw ServiceError SWAP_DISCONNECTS.
    *
    * @throws {ServiceError} ZONE_NOT_FOUND | SAME_DISTRICT | SWAP_DISCONNECTS | VALIDATION_FAILED
    */
@@ -212,7 +199,7 @@ export class TerritoryService extends EventEmitter {
       });
     }
 
-    // 3. Apply swap — immutable
+    // 3. Apply swap - immutable
     const newAssignments: Assignment[] = currentAssignments.map((a) =>
       a.zoneId === zoneId ? { ...a, districtId: toDistrict } : a,
     );

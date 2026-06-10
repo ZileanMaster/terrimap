@@ -1,4 +1,4 @@
-# TerriMap — Bộ câu hỏi & trả lời để giải trình code
+# TerriMap - Bộ câu hỏi & trả lời để giải trình code
 
 Tài liệu này tập trung vào cách giải trình dự án **từ code**, theo đúng kiểu hội đồng thường hỏi: kiến trúc, luồng dữ liệu, thuật toán phân chia, UI/UX, Supabase, và cách hệ thống tránh làm đơ giao diện.
 

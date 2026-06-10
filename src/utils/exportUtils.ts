@@ -1,12 +1,12 @@
 /**
- * Tiện ích export — CSV, GeoJSON, PDF (in)
+ * Tiện ích export - CSV, GeoJSON, PDF (in)
  * Hàm thuần, không phụ thuộc React.
  * Dùng Blob + URL.createObjectURL gốc của trình duyệt để tải xuống.
  */
 
 import type { Zone, Assignment, AdjMatrix, ReportData } from '../../facades/viewmodels.js'
 
-// ── Escape HTML (chống XSS cho printReport) ─────────────────────────────
+//  Escape HTML (chống XSS cho printReport) 
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => {
@@ -35,7 +35,7 @@ function downloadFile(content: string, filename: string, mimeType: string): void
   URL.revokeObjectURL(url)
 }
 
-// ── Activity helpers ───────────────────────────────────────────────────────────
+//  Activity helpers 
 
 function getCustomers(z: Zone): number {
   return z.activities.filter(a => a.type === 'CUSTOMER').reduce((s, a) => s + a.value, 0)
@@ -45,7 +45,7 @@ function getOrders(z: Zone): number {
   return z.activities.filter(a => a.type === 'ORDER').reduce((s, a) => s + a.value, 0)
 }
 
-/** Escape CSV field — wrap in quotes if contains comma, quote, or newline */
+/** Escape CSV field - wrap in quotes if contains comma, quote, or newline */
 function csvEscape(val: string): string {
   if (val.includes(',') || val.includes('"') || val.includes('\n')) {
     return `"${val.replace(/"/g, '""')}"`
@@ -53,7 +53,7 @@ function csvEscape(val: string): string {
   return val
 }
 
-// ── CSV Exports ────────────────────────────────────────────────────────────────
+//  CSV Exports 
 
 export function exportAssignmentsCSV(zones: Zone[], assignments: Assignment[]): void {
   const zoneMap = new Map(zones.map(z => [z.id, z]))
@@ -90,7 +90,7 @@ export function exportMatrixCSV(adj: AdjMatrix): void {
   downloadFile([header, ...rows].join('\n'), 'matrix.csv', 'text/csv;charset=utf-8')
 }
 
-// ── GeoJSON Export ─────────────────────────────────────────────────────────────
+//  GeoJSON Export 
 
 export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
   const assignMap = new Map(assignments.map(a => [a.zoneId, a]))
@@ -117,7 +117,7 @@ export function exportGeoJSON(zones: Zone[], assignments: Assignment[]): void {
   downloadFile(json, 'territory.geojson', 'application/geo+json;charset=utf-8')
 }
 
-// ── Print Report (PDF via window.print) ────────────────────────────────────────
+//  Print Report (PDF via window.print) 
 
 export function printReport(
   report: ReportData,
@@ -147,7 +147,7 @@ export function printReport(
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Territory Report — ${dateShort}</title>
+  <title>Territory Report - ${dateShort}</title>
   <style>
     body { font-family: 'Roboto', 'Segoe UI', -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px 20px; color: #1a1a1a; }
     h1 { font-size: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }

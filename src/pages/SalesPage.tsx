@@ -1,10 +1,3 @@
-/**
- * SalesPage — Màn xem cụm chỉ đọc
- * Bố cục: [Sidebar | Map]
- *
- * State: đọc từ useDataStore toàn cục — không cần init DB local.
- */
-
 import React, { useMemo } from 'react'
 import { useUIStore } from '../store/uiStore.js'
 import { useDataStore } from '../store/dataStore.js'
@@ -18,7 +11,7 @@ import { useAuthStore } from '../store/authStore.js'
 import { resolveUserKey } from '../utils/userIdentity.js'
 
 export default function SalesPage() {
-  // ── Global store ───────────────────────────────────────────────────────────
+  //  Global store 
   const zones      = useDataStore((s) => s.zones)
   const assignments = useDataStore((s) => s.assignments)
   const loading    = useDataStore((s) => s.loading)
@@ -34,7 +27,7 @@ export default function SalesPage() {
   const selectZone     = useUIStore((s) => s.selectZone)
   const ctx            = useFacade()
 
-  // Lọc về cụm của sales hiện tại (an toàn — SalesFacade có thể ném lỗi)
+  // Lọc về cụm của sales hiện tại (an toàn - SalesFacade có thể ném lỗi)
   const { myZones, myAssignments } = useMemo<{
     myZones:       Zone[]
     myAssignments: Assignment[]
@@ -98,7 +91,7 @@ export default function SalesPage() {
           zones={myZones}
           assignments={myAssignments}
           districtCount={new Set(myAssignments.map((a) => a.districtId)).size || 0}
-          // Không có onAssign — Sales chỉ đọc
+          // Không có onAssign - Sales chỉ đọc
         />
 
       </div>

@@ -1,10 +1,10 @@
 /**
- * Sidebar — Thanh điều hướng thích ứng theo vai trò
+ * Sidebar - Thanh điều hướng thích ứng theo vai trò
  *
  * L4b-1: Hiện nhận prop `assignments` từ Page (phản ánh kết quả thuật toán).
  * - Khối thẻ zone có scroll-into-view khi selectedZoneId thay đổi
- * - Click thẻ agent → setHighlightedSalesId → map tô sáng cụm
- * - Click thẻ zone → selectZone → map tô sáng vùng
+ * - Click thẻ agent -> setHighlightedSalesId -> map tô sáng cụm
+ * - Click thẻ zone -> selectZone -> map tô sáng vùng
  */
 
 import React, { useEffect, useRef, useCallback, useState } from 'react'
@@ -20,7 +20,7 @@ import { AssignmentWorkspacePanel, MapDataWorkspacePanel } from './WorkspacePane
 import type { Assignment, HistoryEntry, Zone } from '../../../facades/viewmodels.js'
 
 interface SidebarProps {
-  /** Live assignments — reflects algorithm results. Passed from Page. */
+  /** Live assignments - reflects algorithm results. Passed from Page. */
   zones: Zone[]
   assignments: Assignment[]
 
@@ -46,7 +46,7 @@ export default function Sidebar({ zones, assignments, onCreateSnapshot, islandZo
   )
 }
 
-// ── Zone Card List (shared across roles) ──────────────────────────────────────
+//  Zone Card List (shared across roles) 
 
 const CARD_HEIGHT = 44        // fixed height per zone card (px)
 const OVERSCAN = 5            // extra cards rendered above/below viewport
@@ -118,7 +118,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo, mode = 'assi
     }
   }, [selectedZoneId, zones])
 
-  // ── Normal rendering (< threshold) ──────────────────────────────────────────
+  //  Normal rendering (< threshold) 
   if (zones.length <= VIRTUAL_THRESHOLD) {
     return (
       <>
@@ -140,7 +140,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo, mode = 'assi
     )
   }
 
-  // ── Virtual scroll rendering (>= threshold) ────────────────────────────────
+  //  Virtual scroll rendering (>= threshold) 
   const containerHeight = 400
   const totalHeight = zones.length * CARD_HEIGHT
   const startIdx = Math.max(0, Math.floor(scrollTop / CARD_HEIGHT) - OVERSCAN)
@@ -173,7 +173,7 @@ function ZoneCardList({ zones, assignments, islandZoneIds, onFlyTo, mode = 'assi
   )
 }
 
-// ── ZoneCard (memoized) ───────────────────────────────────────────────────────
+//  ZoneCard (memoized) 
 
 const ZoneCard = React.memo(function ZoneCard({
   zone, assignment, isSelected, isIsland, onSelect, mode = 'assignments',
@@ -211,7 +211,7 @@ const ZoneCard = React.memo(function ZoneCard({
           {isIsland && (
             <span
               style={styles.islandBadge}
-              title="Vùng cô lập — không kề vùng nào trong bán kính 50km"
+              title="Vùng cô lập - không kề vùng nào trong bán kính 50km"
               data-testid={`island-badge-${zone.id}`}
             >
               🏝️
@@ -219,7 +219,7 @@ const ZoneCard = React.memo(function ZoneCard({
           )}
         </div>
         <div style={styles.zoneMeta}>
-          {mode === 'regions' ? `${customers} KH · ${orders} đơn · ${isAssigned ? 'Đã phân cụm' : 'Chưa phân cụm'}` : `${districtId >= 0 ? `C${districtId}` : '—'} · ${customers} KH`}
+          {mode === 'regions' ? `${customers} KH · ${orders} đơn · ${isAssigned ? 'Đã phân cụm' : 'Chưa phân cụm'}` : `${districtId >= 0 ? `C${districtId}` : '-'} · ${customers} KH`}
         </div>
       </div>
     </div>
@@ -249,39 +249,26 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   const mgmt = ctx.facade.getSalesManagement(zones, assignments, agents)
   const districtCount = new Set(assignments.map((a) => a.districtId)).size
 
-  if (mode === 'regions') {
-    return (
-      <div style={styles.content}>
-        <MapDataWorkspacePanel zones={zones} assignments={assignments} />
-        <div style={styles.divider} />
-        <RegionManager onFlyTo={onFlyTo} />
-        <div style={styles.divider} />
-        <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} mode="regions" />
-      </div>
-    )
-  }
-
-  // Per request: remove the Sales team section from "Phân chia lãnh thổ" sidebar.
   return (
     <div style={styles.content}>
-      <AssignmentWorkspacePanel
-        zoneCount={zones.length}
-        districtCount={new Set(assignments.map((assignment) => assignment.districtId)).size}
-      />
+      <MapDataWorkspacePanel zones={zones} assignments={assignments} />
+      <div style={styles.divider} />
+      <RegionManager onFlyTo={onFlyTo} />
+      <div style={styles.divider} />
+      <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
       <div style={styles.divider} />
       <DistrictAgentAssigner />
 
       <div style={styles.divider} />
-      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} mode="assignments" />
+      <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
 
       <div style={styles.divider} />
       <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot} disabled={!onCreateSnapshot}>
-        📸 {t('sidebar.create_snapshot')}
+        Lưu snapshot
       </button>
     </div>
   )
 }
-
 function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assignments: Assignment[]; mode?: 'regions' | 'assignments' }) {
   const { t } = useTranslation()
   const ctx                    = useFacade()
@@ -295,20 +282,17 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
 
   if (ctx.role !== 'coordinator') return null
   const overview = ctx.facade.getTeamOverview(zones, assignments, agents)
-
-  if (mode === 'regions') {
-    return (
-      <div style={styles.content}>
-        <MapDataWorkspacePanel zones={zones} assignments={assignments} canExport={false} />
-        <div style={styles.divider} />
-        <ZoneCardList zones={zones} assignments={assignments} mode="regions" />
-      </div>
-    )
-  }
+  const districtCount = new Set(assignments.map((assignment) => assignment.districtId)).size
 
   return (
     <div style={styles.content} data-testid="team-overview">
-      <h2 style={styles.sectionTitle}>📋 {t('sidebar.team_overview')}</h2>
+      <MapDataWorkspacePanel zones={zones} assignments={assignments} canExport={false} />
+      <div style={styles.divider} />
+      <RegionManager onFlyTo={undefined} />
+      <div style={styles.divider} />
+      <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
+      <div style={styles.divider} />
+      <h2 style={styles.sectionTitle}>{t('sidebar.team_overview')}</h2>
       <div style={styles.statsGrid}>
         <StatCard label={t('sidebar.customers_total')} value={overview.totalKH} />
         <StatCard label={t('sidebar.orders_total')} value={overview.totalOrders} />
@@ -333,7 +317,7 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
             <div>
               <div style={styles.agentName}>{s.salesName}</div>
               <div style={styles.agentMeta}>
-                {s.assignedZones.length} {t('sidebar.zones_count')} ·{' '}
+                {s.assignedZones.length} {t('sidebar.zones_count')} |{' '}
                 {s.assignedZones.reduce((acc, z) => acc + z.customers, 0)} KH
               </div>
             </div>
@@ -353,9 +337,6 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
     </div>
   )
 }
-
-// ── Coordinator History ────────────────────────────────────────────────────────
-
 function CoordinatorHistory() {
   const { t } = useTranslation()
   const ctx = useFacade()
@@ -388,7 +369,7 @@ function CoordinatorHistory() {
   )
 }
 
-// ── Sales Sidebar ──────────────────────────────────────────────────────────────
+//  Sales Sidebar 
 
 
 function SalesSidebar() {
@@ -451,7 +432,7 @@ function SalesSidebar() {
   )
 }
 
-// ── Shared sub-components ──────────────────────────────────────────────────────
+//  Shared sub-components 
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
@@ -462,7 +443,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
   )
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
+//  Styles 
 
 const styles: Record<string, React.CSSProperties> = {
   sidebar: {

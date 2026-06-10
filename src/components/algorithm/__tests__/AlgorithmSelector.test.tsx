@@ -1,5 +1,5 @@
 /**
- * AlgorithmSelector.test.tsx — Unit tests AS-1 → AS-5
+ * AlgorithmSelector.test.tsx - Unit tests AS-1 -> AS-5
  */
 
 import React from 'react'
@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import AlgorithmSelector from '../AlgorithmSelector'
 
-// ── Module-level mocks ────────────────────────────────────────────────────────
+//  Module-level mocks 
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+//  Tests 
 
 describe('AlgorithmSelector', () => {
   beforeEach(() => {
@@ -45,7 +45,7 @@ describe('AlgorithmSelector', () => {
     expect(screen.queryByText('⚠')).not.toBeInTheDocument()
   })
 
-  it('[AS-3] click Local Search → onChange("local-search")', async () => {
+  it('[AS-3] click Local Search -> onChange("local-search")', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
     render(
@@ -55,7 +55,7 @@ describe('AlgorithmSelector', () => {
     expect(onChange).toHaveBeenCalledWith('local-search')
   })
 
-  it('[AS-4] disabled=true → click không gọi onChange', async () => {
+  it('[AS-4] disabled=true -> click không gọi onChange', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
     render(

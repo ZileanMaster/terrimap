@@ -25,7 +25,7 @@
   "metrics.violations": "Violations",
   "metrics.balance_good": "Good",
   "metrics.balance_medium": "Medium",
-  "metrics.balance_low": "Low — consider SA",
+  "metrics.balance_low": "Low - consider SA",
   "metrics.suggest_sa": "💡 Low balanceScore detected. Try running again with Simulated Annealing for better balance.",
 
   "map.zone_info": "Zone Info",
@@ -64,7 +64,7 @@
 
   "draw.zone_name_prompt": "New zone name:",
 
-  "edge_case.island": "Isolated zone — no adjacent zones",
+  "edge_case.island": "Isolated zone - no adjacent zones",
   "edge_case.disconnected": "Cluster is disconnected",
   "edge_case.suggest_sa_detail": "Low balance. Try Simulated Annealing to improve?",
 

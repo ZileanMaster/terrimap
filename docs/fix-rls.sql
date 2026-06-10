@@ -5,7 +5,7 @@
 -- ═══════════════════════════════════════════════════════════════
 
 -- ══════════════════════════════════
--- 1. PROJECTS — Only use own columns, NO subquery to project_members
+-- 1. PROJECTS - Only use own columns, NO subquery to project_members
 -- ══════════════════════════════════
 DROP POLICY IF EXISTS "members_read_project" ON projects;
 DROP POLICY IF EXISTS "anyone_create_project" ON projects;
@@ -43,7 +43,7 @@ CREATE POLICY "projects_delete" ON projects
   FOR DELETE USING (owner_id = auth.uid());
 
 -- ══════════════════════════════════
--- 2. PROJECT_MEMBERS — Use security-definer function for role check
+-- 2. PROJECT_MEMBERS - Use security-definer function for role check
 -- ══════════════════════════════════
 DROP POLICY IF EXISTS "members_read_members" ON project_members;
 DROP POLICY IF EXISTS "admin_coord_invite" ON project_members;
@@ -106,9 +106,9 @@ CREATE POLICY "pm_delete" ON project_members
   );
 
 -- ══════════════════════════════════
--- 3. PROFILES — Keep simple, no cross-table
+-- 3. PROFILES - Keep simple, no cross-table
 -- ══════════════════════════════════
--- (Already safe — uses auth.uid() = id)
+-- (Already safe - uses auth.uid() = id)
 
 -- VERIFY
 SELECT policyname, tablename, cmd FROM pg_policies 

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- TERRIMAP — Full Migration (Phase 1 + 2 + 3)
+-- TERRIMAP - Full Migration (Phase 1 + 2 + 3)
 -- Chạy TOÀN BỘ block này 1 lần trên Supabase SQL Editor
 -- Project: bsodtlrpulpmlyrcfdap
 -- Date: 2026-04-22
@@ -19,7 +19,7 @@ ALTER TABLE regions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for anon" ON regions;
 CREATE POLICY "Allow all for anon" ON regions FOR ALL USING (true) WITH CHECK (true);
 
--- 2. Snapshots table — đảm bảo có column data + period
+-- 2. Snapshots table - đảm bảo có column data + period
 CREATE TABLE IF NOT EXISTS snapshots (
   id          TEXT PRIMARY KEY,
   label       TEXT NOT NULL DEFAULT 'Untitled',
@@ -62,7 +62,7 @@ ALTER TABLE partition_feedback ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for anon" ON partition_feedback;
 CREATE POLICY "Allow all for anon" ON partition_feedback FOR ALL USING (true) WITH CHECK (true);
 
--- 5. Alter existing tables — thêm region_id
+-- 5. Alter existing tables - thêm region_id
 ALTER TABLE zones       ADD COLUMN IF NOT EXISTS region_id TEXT REFERENCES regions(id);
 ALTER TABLE sales_agents ADD COLUMN IF NOT EXISTS region_id TEXT REFERENCES regions(id);
 

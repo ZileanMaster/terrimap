@@ -18,6 +18,8 @@ interface DrawingToolbarProps {
 export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZones, selectedZone }: DrawingToolbarProps) {
   const map = useMap()
   const leaflet = L as any
+  const DRAW_CREATED = 'draw:created'
+  const DRAW_EDITED = 'draw:edited'
   const drawnItemsRef = useRef<any | null>(null)
   const selectedLayerRef = useRef<any>(null)
   const selectedOriginalRingRef = useRef<[number, number][] | null>(null)
@@ -152,8 +154,10 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         })
       }
 
-      map.on(L.Draw.Event.CREATED, onCreated)
-      map.on(L.Draw.Event.EDITED, onEdited)
+      // leaflet-draw mở rộng Leaflet bằng side-effect; dùng event string trực tiếp
+      // để tránh lỗi khi namespace runtime không có L.Draw.Event.
+      map.on(DRAW_CREATED, onCreated)
+      map.on(DRAW_EDITED, onEdited)
       ;(drawControl as any).__tm_handlers = { onCreated, onEdited }
     }
 
@@ -163,8 +167,8 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       cancelled = true
       if (drawControl && (drawControl as any).__tm_handlers) {
         const { onCreated, onEdited } = (drawControl as any).__tm_handlers
-        map.off(L.Draw.Event.CREATED, onCreated)
-        map.off(L.Draw.Event.EDITED, onEdited)
+        map.off(DRAW_CREATED, onCreated)
+        map.off(DRAW_EDITED, onEdited)
       }
       if (drawControl) {
         try {

@@ -1,15 +1,3 @@
-/**
- * CoordinatorPage — Tổng quan đội ngũ + gán zone thủ công
- * Bố cục: [Sidebar | Map]
- *
- * Bổ sung ở Giai đoạn 2:
- * - Bộ chọn region dạng dropdown (Adjust 4: không auto-detect, dùng dropdown)
- * - Luồng nhập chỉ số theo tháng
- * - Lọc zones theo region đang chọn
- *
- * State: đọc từ useDataStore toàn cục — không cần init DB local.
- */
-
 import React, { useState, useCallback, useMemo } from 'react'
 import { useUIStore } from '../store/uiStore.js'
 import { useDataStore } from '../store/dataStore.js'
@@ -37,7 +25,7 @@ export interface CoordinatorPageProps {
 }
 
 export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPageProps) {
-  // ── Global store ───────────────────────────────────────────────────────────
+  //  Global store 
   const zones              = useDataStore((s) => s.zones)
   const assignments        = useDataStore((s) => s.assignments)
   const regions            = useDataStore((s) => s.regions)
@@ -57,7 +45,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const highlightedSalesId = useUIStore((s) => s.highlightedSalesId)
   const ctx                = useFacade()
 
-  // ── Local UI state ─────────────────────────────────────────────────────────
+  //  Local UI state 
   const [currentPeriod, setCurrentPeriod]       = useState(currentPeriodDefault())
   const [showMetricsInput, setShowMetricsInput] = useState(false)
 
@@ -89,7 +77,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
     if (ctx.role !== 'coordinator') return
 
-    // 3C: kiểm tra liên thông BFS — xác nhận cụm nguồn vẫn liên thông sau khi chuyển
+    // 3C: kiểm tra liên thông BFS - xác nhận cụm nguồn vẫn liên thông sau khi chuyển
     const currentAssignment = displayAssignments.find((a) => a.zoneId === zoneId)
     const fromDistrict = currentAssignment?.districtId ?? -1
 
@@ -113,7 +101,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       }
     }
 
-    // OK — persist
+    // OK - persist
     try {
       const targetSalesAgentId =
         displayAssignments.find((a) => a.districtId === toDistrict)?.salesAgentId
@@ -240,7 +228,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
             </div>
             {mode === 'regions' ? (
               <div style={styles.mapHudRow}>
-                <span style={styles.modeBadgeEdit}>Chế độ: Khu vực & bản đồ</span>
+                <span style={styles.modeBadgeEdit}>Chế độ: Phân chia lãnh thổ</span>
                 <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
                   {showPolygons ? 'Ẩn vùng' : 'Hiện vùng'}
                 </button>

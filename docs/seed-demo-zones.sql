@@ -1,6 +1,6 @@
 -- ============================================================
--- TERRIMAP — Seed Demo: 20 HN + 12 HCM = 32 zones
--- Polygons: RECTANGLE grid — zero overlap, zero gap
+-- TERRIMAP - Seed Demo: 20 HN + 12 HCM = 32 zones
+-- Polygons: RECTANGLE grid - zero overlap, zero gap
 --
 -- Chạy trong Supabase SQL Editor
 -- Project: test-project-terrimap
@@ -14,7 +14,7 @@ DELETE FROM public.sales_agents WHERE project_id = 'test-project-terrimap';
 -- Xóa agents legacy (không có project_id) cùng id để tránh trùng
 DELETE FROM public.sales_agents WHERE id IN ('sa0','sa1','sa2','sa3','sa4','sa5','sa6','sa7') AND project_id IS NULL;
 
--- ── SALES AGENTS — sa0-sa4: Hà Nội, sa5-sa7: HCM ──────────
+--  SALES AGENTS - sa0-sa4: Hà Nội, sa5-sa7: HCM 
 INSERT INTO public.sales_agents (id, name, active_region, capacity, project_id) VALUES
   ('sa0', 'Nguyễn Văn A',  'Hà Nội',      400, 'test-project-terrimap'),
   ('sa1', 'Trần Thị B',    'Hà Nội',      500, 'test-project-terrimap'),
@@ -29,8 +29,8 @@ ON CONFLICT (id) DO UPDATE SET
   capacity = EXCLUDED.capacity, project_id = EXCLUDED.project_id;
 
 -- ══════════════════════════════════════════════════════════════
--- HÀ NỘI — 20 zones (5×4 rectangle grid)
--- Grid: lat 21.000→21.048, lng 105.810→105.860
+-- HÀ NỘI - 20 zones (5×4 rectangle grid)
+-- Grid: lat 21.000->21.048, lng 105.810->105.860
 -- Cell: 0.012 lat × 0.010 lng ≈ 1.3km × 1.0km
 -- ══════════════════════════════════════════════════════════════
 
@@ -103,8 +103,8 @@ ON CONFLICT (id) DO UPDATE SET
   region_id=EXCLUDED.region_id,project_id=EXCLUDED.project_id;
 
 -- ══════════════════════════════════════════════════════════════
--- TP.HCM — 12 zones (4×3 rectangle grid)
--- Grid: lat 10.775→10.811, lng 106.675→106.715
+-- TP.HCM - 12 zones (4×3 rectangle grid)
+-- Grid: lat 10.775->10.811, lng 106.675->106.715
 -- ══════════════════════════════════════════════════════════════
 
 INSERT INTO public.zones (id, name, status, polygon, centroid, region_id, project_id) VALUES
@@ -150,7 +150,7 @@ ON CONFLICT (id) DO UPDATE SET
   name=EXCLUDED.name,polygon=EXCLUDED.polygon,centroid=EXCLUDED.centroid,
   region_id=EXCLUDED.region_id,project_id=EXCLUDED.project_id;
 
--- ── ACTIVITIES ───────────────────────────────────────────────
+--  ACTIVITIES 
 INSERT INTO public.activities (id, zone_id, type, value) VALUES
 ('hn01-c','hn01','CUSTOMER',85), ('hn01-o','hn01','ORDER',55),
 ('hn02-c','hn02','CUSTOMER',120),('hn02-o','hn02','ORDER',80),
@@ -186,7 +186,7 @@ INSERT INTO public.activities (id, zone_id, type, value) VALUES
 ('sg12-c','sg12','CUSTOMER',270),('sg12-o','sg12','ORDER',185)
 ON CONFLICT (id) DO UPDATE SET type=EXCLUDED.type, value=EXCLUDED.value;
 
--- ── VERIFY ───────────────────────────────────────────────────
+--  VERIFY 
 SELECT 'Zones' AS item, COUNT(*) AS count
 FROM public.zones WHERE project_id='test-project-terrimap' AND (id LIKE 'hn%' OR id LIKE 'sg%')
 UNION ALL

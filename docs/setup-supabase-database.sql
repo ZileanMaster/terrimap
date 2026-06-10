@@ -1,9 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════
--- TERRIMAP — Unified Database Initialization Script
+-- TERRIMAP - Unified Database Initialization Script
 -- Chạy script này trên Supabase SQL Editor cho dự án mới.
 -- ═══════════════════════════════════════════════════════════════
 
--- ── 1. CẤU TRÚC BẢNG (TABLES) ──────────────────────────────────
+--  1. CẤU TRÚC BẢNG (TABLES) 
 
 -- Bảng profiles (Tài khoản người dùng)
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.partition_feedback (
   UNIQUE(snapshot_id, agent_id)
 );
 
--- ── 2. CHỈ MỤC (INDEXES) ───────────────────────────────────────
+--  2. CHỈ MỤC (INDEXES) 
 
 CREATE INDEX IF NOT EXISTS idx_zones_project_id ON public.zones(project_id);
 CREATE INDEX IF NOT EXISTS idx_zones_region_id ON public.zones(region_id);
@@ -125,7 +125,7 @@ CREATE INDEX IF NOT EXISTS idx_agents_project_id ON public.sales_agents(project_
 CREATE INDEX IF NOT EXISTS idx_assignments_project_id ON public.assignments(project_id);
 CREATE INDEX IF NOT EXISTS idx_snapshots_project_id ON public.snapshots(project_id);
 
--- ── 3. HÀM VÀ TRÌNH KÍCH HOẠT (TRIGGERS / FUNCTIONS) ─────────────
+--  3. HÀM VÀ TRÌNH KÍCH HOẠT (TRIGGERS / FUNCTIONS) 
 
 -- Trigger tự động tạo profile khi đăng ký tài khoản (Auth)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -207,7 +207,7 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.lookup_profile_by_email(TEXT) TO authenticated;
 
--- ── 4. CHÍNH SÁCH BẢO MẬT (RLS POLICIES) ─────────────────────────
+--  4. CHÍNH SÁCH BẢO MẬT (RLS POLICIES) 
 
 -- Bật Row Level Security cho tất cả các bảng
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -276,7 +276,7 @@ CREATE POLICY "metrics_all" ON public.zone_monthly_metrics FOR ALL USING (true) 
 CREATE POLICY "feedback_all" ON public.partition_feedback FOR ALL USING (true) WITH CHECK (true);
 
 
--- ── 5. NẠP DỮ LIỆU SEED (SEED DATA) ──────────────────────────────
+--  5. NẠP DỮ LIỆU SEED (SEED DATA) 
 
 -- Seed regions
 INSERT INTO public.regions (id, name, center, zoom) VALUES

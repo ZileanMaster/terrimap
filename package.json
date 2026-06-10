@@ -1,7 +1,7 @@
 {
   "name": "commercial-territory-design",
   "version": "1.0.0",
-  "description": "Commercial Territory Design — L0 Data Primitives",
+  "description": "Commercial Territory Design - L0 Data Primitives",
   "type": "module",
   "scripts": {
     "dev": "vite --port 5173 --strictPort",

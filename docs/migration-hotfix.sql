@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- TERRIMAP — HOTFIX: Ensure regions exists + recreate auth trigger
+-- TERRIMAP - HOTFIX: Ensure regions exists + recreate auth trigger
 -- Chạy trên Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════
 
@@ -119,7 +119,7 @@ ALTER TABLE zones   ADD COLUMN IF NOT EXISTS project_id TEXT REFERENCES projects
 ALTER TABLE regions ADD COLUMN IF NOT EXISTS project_id TEXT REFERENCES projects(id);
 
 -- ═══════════════════════════════════════════════════════════════
--- TRIGGER — Auto-create profile on signup
+-- TRIGGER - Auto-create profile on signup
 -- ═══════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION handle_new_user()

@@ -6,7 +6,6 @@ interface VersionHistoryProps {
   snapshots: Snapshot[]
 }
 
-/** Relative time display (simple). */
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const secs = Math.floor(diff / 1000)

@@ -7,7 +7,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  timeout: 30000,           // per-test timeout (30s — needed for Supabase fallback)
+  timeout: 30000,           // per-test timeout (30s - needed for Supabase fallback)
   expect: { timeout: 12000 }, // per-assertion timeout (12s)
 
   use: {

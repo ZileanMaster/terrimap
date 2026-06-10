@@ -1,5 +1,5 @@
 /**
- * L0 — Data Primitives cho hệ thống Commercial Territory Design.
+ * L0 - Data Primitives cho hệ thống Commercial Territory Design.
  * Cung cấp Nguồn Sự Thật Duy Nhất (Single Source of Truth).
  * 
  * Nguyên tắc thiết kế áp dụng:
@@ -83,6 +83,8 @@ export interface SalesAgent {
   name: string;
   /** INVARIANT: Chuỗi quy định vùng hoạt động (VD: 'North', 'South') hoặc ID khu vực địa lý lớn. */
   activeRegion: string;
+  /** INVARIANT: ID khu vực phụ trách, nếu có. Dùng để lọc agent theo vùng trên UI. */
+  regionId?: string | null;
   /** INVARIANT: Số lượng đơn hàng / KH tối đa mà sale có thể handle (>= 0). */
   capacity: number;
 }

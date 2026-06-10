@@ -1,10 +1,3 @@
-/**
- * facades/CoordinatorFacade.ts — L3 Role Façade (không giữ state)
- *
- * Vai trò: Điều phối — xem + gán + lịch sử + chạy phân chia, KHÔNG tạo version.
- * Không lưu state data trong constructor — nhận qua tham số của method.
- */
-
 import type { Zone, SalesAgent, Activity } from '../types/domain.js';
 import type { Assignment, PartitionOpts } from '../lib/partition.js';
 import type { TerritoryService } from '../services/TerritoryService.js';
@@ -21,7 +14,7 @@ import type {
   PartitionResult,
 } from './viewmodels.js';
 
-// ─── Nội bộ ─────────────────────────────────────────────────────────────────
+//  Nội bộ 
 
 interface FlaggedDistrict {
   districtId: number;
@@ -29,7 +22,7 @@ interface FlaggedDistrict {
   flaggedAt: string;
 }
 
-// ─── CoordinatorFacade ────────────────────────────────────────────────────────
+//  CoordinatorFacade 
 
 export class CoordinatorFacade {
   private readonly _role = 'coordinator' as const;
@@ -41,7 +34,7 @@ export class CoordinatorFacade {
     private readonly activitySvc: ActivityService,
   ) {}
 
-  // ─── getTeamOverview ──────────────────────────────────────────────────────────
+  //  getTeamOverview 
 
   getTeamOverview(
     zones: Zone[],
@@ -51,7 +44,7 @@ export class CoordinatorFacade {
     const zoneMap = new Map<string, Zone>(zones.map((z) => [z.id, z]));
 
     // Sửa lỗi: dùng lookup salesAgentId thay vì districtId % salesAgents.length
-    // Loại bỏ mapping modulo — gán chính xác theo salesAgentId trong Assignment
+    // Loại bỏ mapping modulo - gán chính xác theo salesAgentId trong Assignment
     const zonesBySales = new Map<string, Zone[]>(
       salesAgents.map((sa) => [sa.id, []]),
     );
@@ -87,7 +80,7 @@ export class CoordinatorFacade {
     return { sales, totalKH, totalOrders };
   }
 
-  // ─── assignZone — chuyển tiếp sang manualSwap ─────────────────────────────────
+  //  assignZone - chuyển tiếp sang manualSwap 
 
   /**
    * Gán zone sang cụm khác.
@@ -116,7 +109,7 @@ export class CoordinatorFacade {
     };
   }
 
-  // ─── getUpdateHistory ─────────────────────────────────────────────────────────
+  //  getUpdateHistory 
 
   getUpdateHistory(filter?: { period: 'week' | 'month' }): HistoryEntry[] {
     const snapshots = this.versionSvc.listHistory(filter);
@@ -128,7 +121,7 @@ export class CoordinatorFacade {
     }));
   }
 
-  // ─── flagForReview ────────────────────────────────────────────────────────────
+  //  flagForReview 
 
   flagForReview(districtId: number, reason: string): void {
     const existing = this._flags.find((f) => f.districtId === districtId);
@@ -148,7 +141,7 @@ export class CoordinatorFacade {
     return this._flags;
   }
 
-  // ─── BỊ CHẶN — ném đồng bộ ─────────────────────────────────────────────────────
+  //  BỊ CHẶN - ném đồng bộ 
 
   /** @throws {PermissionError} PERMISSION_DENIED */
   createVersion(_label: string, ..._rest: unknown[]): never {
@@ -160,7 +153,7 @@ export class CoordinatorFacade {
     });
   }
 
-  // ─── BỊ CHẶN — ném bất đồng bộ (trả về Promise bị reject) ─────────────────────
+  //  BỊ CHẶN - ném bất đồng bộ (trả về Promise bị reject) 
 
   /**
    * Chạy thuật toán partition cho điều phối viên.
@@ -206,7 +199,7 @@ export class CoordinatorFacade {
       return {
         type: 'CONTIGUITY',
         districtId: v.districtId,
-        message: `District ${v.districtId} bị tách rời — không liên thông`,
+        message: `District ${v.districtId} bị tách rời - không liên thông`,
         severity: 'error',
       };
     }
@@ -220,7 +213,7 @@ export class CoordinatorFacade {
   }
 }
 
-  // ─── Trợ giúp ──────────────────────────────────────────────────────────────────
+  //  Trợ giúp 
 
 function _sumActivity(activities: Activity[], type: Activity['type']): number {
   return activities

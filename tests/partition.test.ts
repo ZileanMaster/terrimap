@@ -1,5 +1,5 @@
 /**
- * Test Suite cho L1b — lib/partition.ts
+ * Test Suite cho L1b - lib/partition.ts
  *
  * API mới: PartitionFn = (zones, m, opts?) => Assignment[]
  * Assignment = { zoneId: string; districtId: number }
@@ -67,11 +67,11 @@ const zones5: Zone[] = [
 
 /**
  * 6 zones có customers phân bố theo 3 vùng địa lý (Nam/Trung/Bắc).
- * Mỗi vùng 2 zones với customers xấp xỉ nhau → khi m=3, stddev / mean << 0.3.
- * Vùng Nam: c1=100, c2=102 → tổng=202
- * Vùng Trung: c3=98, c4=101 → tổng=199
- * Vùng Bắc: c5=100, c6=99 → tổng=199
- * mean=200, stddev≈1.4 → ratio≈0.007
+ * Mỗi vùng 2 zones với customers xấp xỉ nhau -> khi m=3, stddev / mean << 0.3.
+ * Vùng Nam: c1=100, c2=102 -> tổng=202
+ * Vùng Trung: c3=98, c4=101 -> tổng=199
+ * Vùng Bắc: c5=100, c6=99 -> tổng=199
+ * mean=200, stddev≈1.4 -> ratio≈0.007
  */
 function makeZoneWithCustomers(id: string, centroid: { lat: number; lng: number }, customers: number): Zone {
   return {
@@ -131,7 +131,7 @@ const validVersionBase: Omit<TerritoryVersion, 'zones' | 'districts' | 'salesAge
   distanceMatrix: {},
 };
 
-// Helper: chuyển Assignment[] → Record<zoneId, districtId> để dễ assert
+// Helper: chuyển Assignment[] -> Record<zoneId, districtId> để dễ assert
 function toMap(assignments: { zoneId: string; districtId: number }[]): Record<string, number> {
   return Object.fromEntries(assignments.map((a) => [a.zoneId, a.districtId]));
 }
@@ -181,20 +181,20 @@ const zonesArb = (minLen: number, maxLen: number): fc.Arbitrary<Zone[]> =>
 
 describe('partitionLocalSearch', () => {
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] m === zones.length → mỗi zone một cụm riêng', () => {
+  it('[HP-1] m === zones.length -> mỗi zone một cụm riêng', () => {
     const assignments = partitionLocalSearch(zones5, 5);
     const clusters = new Set(assignments.map((a) => a.districtId));
     expect(clusters.size).toBe(5);
   });
 
-  it('[HP-2] m === 2 → tất cả zones vào 1 trong 2 cụm', () => {
+  it('[HP-2] m === 2 -> tất cả zones vào 1 trong 2 cụm', () => {
     const assignments = partitionLocalSearch(zones5, 2);
     const clusters = new Set(assignments.map((a) => a.districtId));
     // phải có đúng 2 cụm (không cụm nào rỗng)
     expect(clusters.size).toBe(2);
   });
 
-  it('[HP-3] iter === 0 → assignment vẫn hợp lệ (không loop)', () => {
+  it('[HP-3] iter === 0 -> assignment vẫn hợp lệ (không loop)', () => {
     const assignments = partitionLocalSearch(zones5, 3, { maxIter: 0 });
     expect(assignments.length).toBe(zones5.length);
     const ids = new Set(assignments.map((a) => a.zoneId));
@@ -211,19 +211,19 @@ describe('partitionLocalSearch', () => {
     }
   });
 
-  it('[HP-5] 2 zones, m=2 → mỗi zone một cụm riêng', () => {
+  it('[HP-5] 2 zones, m=2 -> mỗi zone một cụm riêng', () => {
     const two = [makeZone('za', { lat: 10, lng: 106 }), makeZone('zb', { lat: 21, lng: 105 })];
     const assignments = partitionLocalSearch(two, 2);
     const clusters = new Set(assignments.map((a) => a.districtId));
     expect(clusters.size).toBe(2);
   });
 
-  it('[HP-6] iter lớn (100) → vẫn hội tụ, kết quả finite', () => {
+  it('[HP-6] iter lớn (100) -> vẫn hội tụ, kết quả finite', () => {
     const assignments = partitionLocalSearch(zones5, 3, { maxIter: 100 });
     expect(assignments.every((a) => Number.isFinite(a.districtId))).toBe(true);
   });
 
-  it('[HP-7] Trả về đúng Assignment[] → tất cả zoneIds có trong zones5', () => {
+  it('[HP-7] Trả về đúng Assignment[] -> tất cả zoneIds có trong zones5', () => {
     const assignments = partitionLocalSearch(zones5, 2);
     expect(assignments.length).toBe(zones5.length);
     const zoneIds = assignments.map((a) => a.zoneId);
@@ -238,25 +238,25 @@ describe('partitionLocalSearch', () => {
     const variance = counts.reduce((s, c) => s + (c - mean) ** 2, 0) / counts.length;
     const stdDev = Math.sqrt(variance);
     // population std dev / (mean + 1) phải < 0.3
-    // zones6WithCustomers đều nhau → ratio thực tế << 0.3
+    // zones6WithCustomers đều nhau -> ratio thực tế << 0.3
     expect(stdDev / (mean + 1)).toBeLessThan(0.3);
   });
 
   // --- NHÓM 2: Contract Violations ---
-  it('[INV-1] m > zones.length → throw PartitionError', () => {
+  it('[INV-1] m > zones.length -> throw PartitionError', () => {
     expect(() => partitionLocalSearch(zones5, 6)).toThrow(PartitionError);
     expect(() => partitionLocalSearch(zones5, 6)).toThrow(/must be/);
   });
 
-  it('[INV-2] m === 0 → throw PartitionError', () => {
+  it('[INV-2] m === 0 -> throw PartitionError', () => {
     expect(() => partitionLocalSearch(zones5, 0)).toThrow(PartitionError);
   });
 
-  it('[INV-3] m âm → throw PartitionError', () => {
+  it('[INV-3] m âm -> throw PartitionError', () => {
     expect(() => partitionLocalSearch(zones5, -1)).toThrow(PartitionError);
   });
 
-  it('[INV-4] zones rỗng → throw PartitionError', () => {
+  it('[INV-4] zones rỗng -> throw PartitionError', () => {
     expect(() => partitionLocalSearch([], 2)).toThrow(PartitionError);
     expect(() => partitionLocalSearch([], 2)).toThrow(/empty/);
   });
@@ -278,7 +278,7 @@ describe('partitionLocalSearch', () => {
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 500 zone arrays → mọi assignment hợp lệ (cluster index trong [0, m))', () => {
+  it('[FUZZ] 500 zone arrays -> mọi assignment hợp lệ (cluster index trong [0, m))', () => {
     fc.assert(
       fc.property(
         zonesArb(2, 10),
@@ -334,7 +334,7 @@ describe('partitionGreedy', () => {
     }
   });
 
-  it('[HP-3] m=2 → zones chia thành 2 districts (không rỗng)', () => {
+  it('[HP-3] m=2 -> zones chia thành 2 districts (không rỗng)', () => {
     const assignments = partitionGreedy(zones5, 2);
     const d0 = assignments.filter((a) => a.districtId === 0);
     const d1 = assignments.filter((a) => a.districtId === 1);
@@ -371,20 +371,20 @@ describe('partitionGreedy', () => {
     expect(stdDev / (mean + 1)).toBeLessThan(0.3);
   });
 
-  it('[INV-1] m > zones.length → throw PartitionError', () => {
+  it('[INV-1] m > zones.length -> throw PartitionError', () => {
     expect(() => partitionGreedy(zones5, 6)).toThrow(PartitionError);
   });
 
-  it('[INV-2] m < 2 → throw PartitionError', () => {
+  it('[INV-2] m < 2 -> throw PartitionError', () => {
     expect(() => partitionGreedy(zones5, 1)).toThrow(PartitionError);
     expect(() => partitionGreedy(zones5, 0)).toThrow(PartitionError);
   });
 
-  it('[INV-3] zones rỗng → throw PartitionError', () => {
+  it('[INV-3] zones rỗng -> throw PartitionError', () => {
     expect(() => partitionGreedy([], 2)).toThrow(PartitionError);
   });
 
-  it('[FUZZ] 300 zone arrays → assignment hợp lệ', () => {
+  it('[FUZZ] 300 zone arrays -> assignment hợp lệ', () => {
     fc.assert(
       fc.property(
         zonesArb(2, 10),
@@ -438,7 +438,7 @@ describe('partitionSimulatedAnnealing', () => {
     expect(costs.every((c) => Number.isFinite(c))).toBe(true);
   });
 
-  it('[HP-4] Với maxIter=0 → không crash, trả về kết quả hợp lệ', () => {
+  it('[HP-4] Với maxIter=0 -> không crash, trả về kết quả hợp lệ', () => {
     const assignments = partitionSimulatedAnnealing(zones5, 2, { maxIter: 0 });
     expect(assignments.length).toBe(zones5.length);
   });
@@ -455,23 +455,23 @@ describe('partitionSimulatedAnnealing', () => {
     expect(stdDev / (mean + 1)).toBeLessThan(0.3);
   });
 
-  it('[INV-1] m > zones.length → throw PartitionError', () => {
+  it('[INV-1] m > zones.length -> throw PartitionError', () => {
     expect(() => partitionSimulatedAnnealing(zones5, 6)).toThrow(PartitionError);
   });
 
-  it('[INV-2] cooling >= 1 → throw PartitionError', () => {
+  it('[INV-2] cooling >= 1 -> throw PartitionError', () => {
     expect(() =>
       partitionSimulatedAnnealing(zones5, 2, { cooling: 1.0 })
     ).toThrow(PartitionError);
   });
 
-  it('[INV-3] initialTemp <= 0 → throw PartitionError', () => {
+  it('[INV-3] initialTemp <= 0 -> throw PartitionError', () => {
     expect(() =>
       partitionSimulatedAnnealing(zones5, 2, { initialTemp: 0 })
     ).toThrow(PartitionError);
   });
 
-  it('[INV-4] zones rỗng → throw PartitionError', () => {
+  it('[INV-4] zones rỗng -> throw PartitionError', () => {
     expect(() => partitionSimulatedAnnealing([], 2)).toThrow(PartitionError);
   });
 });
@@ -525,7 +525,7 @@ describe('getPartitionFn', () => {
     expect(assignments.length).toBe(zones5.length);
   });
 
-  it('[INV-1] getPartitionFn("invalid") → throw PartitionError', () => {
+  it('[INV-1] getPartitionFn("invalid") -> throw PartitionError', () => {
     expect(() => getPartitionFn('invalid' as never)).toThrow(PartitionError);
   });
 });
@@ -538,7 +538,7 @@ describe('getPartitionFn', () => {
 
 describe('validateAll', () => {
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Version không có district nào → balanceScore = 100, tất cả metrics = 0', () => {
+  it('[HP-1] Version không có district nào -> balanceScore = 100, tất cả metrics = 0', () => {
     const version: TerritoryVersion = {
       ...validVersionBase,
       zones: {},
@@ -553,7 +553,7 @@ describe('validateAll', () => {
     expect(metrics.totalDiameter).toBe(0);
   });
 
-  it('[HP-2] Tất cả districts có 0 workload → balanceScore = 100 (không /0)', () => {
+  it('[HP-2] Tất cả districts có 0 workload -> balanceScore = 100 (không /0)', () => {
     const version: TerritoryVersion = {
       ...validVersionBase,
       zones: { z1: { ...zones5[0]!, status: 'assigned', districtId: 'd1' } },
@@ -564,7 +564,7 @@ describe('validateAll', () => {
     expect(metrics.balanceScore).toBe(100);
   });
 
-  it('[HP-3] 1 district → balanceScore = 100 (variance = 0)', () => {
+  it('[HP-3] 1 district -> balanceScore = 100 (variance = 0)', () => {
     const version: TerritoryVersion = {
       ...validVersionBase,
       zones: { z1: { ...zones5[0]!, status: 'assigned', districtId: 'd1' } },
@@ -578,7 +578,7 @@ describe('validateAll', () => {
     expect(metrics.meanWorkload).toBe(50);
   });
 
-  it('[HP-4] 2 districts cân bằng → balanceScore = 100', () => {
+  it('[HP-4] 2 districts cân bằng -> balanceScore = 100', () => {
     const version: TerritoryVersion = {
       ...validVersionBase,
       zones: {
@@ -595,7 +595,7 @@ describe('validateAll', () => {
     expect(metrics.balanceScore).toBe(100);
   });
 
-  it('[HP-5] 2 districts mất cân bằng hoàn toàn (0 vs 100) → balanceScore = 0', () => {
+  it('[HP-5] 2 districts mất cân bằng hoàn toàn (0 vs 100) -> balanceScore = 0', () => {
     const version: TerritoryVersion = {
       ...validVersionBase,
       zones: {
@@ -657,7 +657,7 @@ describe('validateAll', () => {
     expect(Number.isFinite(metrics.balanceScore)).toBe(true);
   });
 
-  it('[INV-3] District có zoneId không tồn tại trong zones → không throw (graceful)', () => {
+  it('[INV-3] District có zoneId không tồn tại trong zones -> không throw (graceful)', () => {
     const version: TerritoryVersion = {
       ...validVersionBase,
       zones: {},
@@ -670,7 +670,7 @@ describe('validateAll', () => {
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 500 workload arrays → balanceScore luôn finite và trong [0, 100]', () => {
+  it('[FUZZ] 500 workload arrays -> balanceScore luôn finite và trong [0, 100]', () => {
     fc.assert(
       fc.property(
         fc.array(fc.double({ min: 0, max: 1_000_000, noNaN: true }), {
@@ -708,7 +708,7 @@ describe('validateAll', () => {
     );
   });
 
-  it('[FUZZ] Khi tất cả workloads = 0 → balanceScore luôn = 100', () => {
+  it('[FUZZ] Khi tất cả workloads = 0 -> balanceScore luôn = 100', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 1, max: 10 }),
@@ -740,7 +740,7 @@ describe('validateAll', () => {
 });
 
 // ==========================================
-// PHẦN 1 — CORRECTNESS (zones20, m=4)
+// PHẦN 1 - CORRECTNESS (zones20, m=4)
 // ==========================================
 
 const ALGOS = [
@@ -750,7 +750,7 @@ const ALGOS = [
 ] as const;
 
 for (const { name, fn } of ALGOS) {
-  describe(`${name} — Correctness (zones20)`, () => {
+  describe(`${name} - Correctness (zones20)`, () => {
     it('[CORRECT-1] mọi zone được assign đúng 1 lần (không duplicate, không bỏ sót)', () => {
       const result = fn(zones20, 4);
       expect(result).toHaveLength(20);
@@ -777,26 +777,26 @@ for (const { name, fn } of ALGOS) {
 }
 
 // ==========================================
-// PHẦN 2 — DEFENSIVE CONTRACTS (zones20)
+// PHẦN 2 - DEFENSIVE CONTRACTS (zones20)
 // ==========================================
 
 describe('Defensive Contracts (zones20)', () => {
-  it('[GUARD-1] m < 2 → throw PartitionError M_TOO_SMALL (Greedy)', () => {
+  it('[GUARD-1] m < 2 -> throw PartitionError M_TOO_SMALL (Greedy)', () => {
     expect(() => partitionGreedy(zones20, 1))
       .toThrow(expect.objectContaining({ code: 'M_TOO_SMALL' }));
   });
 
-  it('[GUARD-1] m < 2 → throw PartitionError M_TOO_SMALL (LocalSearch)', () => {
+  it('[GUARD-1] m < 2 -> throw PartitionError M_TOO_SMALL (LocalSearch)', () => {
     expect(() => partitionLocalSearch(zones20, 1))
       .toThrow(expect.objectContaining({ code: 'M_TOO_SMALL' }));
   });
 
-  it('[GUARD-1] m < 2 → throw PartitionError M_TOO_SMALL (SA)', () => {
+  it('[GUARD-1] m < 2 -> throw PartitionError M_TOO_SMALL (SA)', () => {
     expect(() => partitionSA(zones20, 1))
       .toThrow(expect.objectContaining({ code: 'M_TOO_SMALL' }));
   });
 
-  it('[GUARD-2] m > zones.length → throw PartitionError M_TOO_LARGE', () => {
+  it('[GUARD-2] m > zones.length -> throw PartitionError M_TOO_LARGE', () => {
     expect(() => partitionGreedy(zones20, 21))
       .toThrow(expect.objectContaining({ code: 'M_TOO_LARGE' }));
     expect(() => partitionLocalSearch(zones20, 21))
@@ -805,7 +805,7 @@ describe('Defensive Contracts (zones20)', () => {
       .toThrow(expect.objectContaining({ code: 'M_TOO_LARGE' }));
   });
 
-  it('[GUARD-3] zones rỗng → throw PartitionError NO_ZONES', () => {
+  it('[GUARD-3] zones rỗng -> throw PartitionError NO_ZONES', () => {
     expect(() => partitionGreedy([], 2))
       .toThrow(expect.objectContaining({ code: 'NO_ZONES' }));
     expect(() => partitionLocalSearch([], 2))
@@ -814,7 +814,7 @@ describe('Defensive Contracts (zones20)', () => {
       .toThrow(expect.objectContaining({ code: 'NO_ZONES' }));
   });
 
-  it('[GUARD-4] LocalSearch iter=0 → return ngay, không loop (< 50ms)', () => {
+  it('[GUARD-4] LocalSearch iter=0 -> return ngay, không loop (< 50ms)', () => {
     const start = performance.now();
     partitionLocalSearch(zones20, 4, { maxIter: 0 });
     expect(performance.now() - start).toBeLessThan(50);
@@ -822,16 +822,16 @@ describe('Defensive Contracts (zones20)', () => {
 });
 
 // ==========================================
-// PHẦN 3 — QUALITY THRESHOLD (zones20, m=4)
+// PHẦN 3 - QUALITY THRESHOLD (zones20, m=4)
 // ==========================================
 
 describe('Quality Threshold (zones20)', () => {
   for (const { name, fn } of ALGOS) {
     /**
-     * LocalSearch là thuật toán purely spatial — cluster theo khoảng cách,
+     * LocalSearch là thuật toán purely spatial - cluster theo khoảng cách,
      * không tối ưu customers. Threshold nới lên 0.5.
-     * Greedy ưu tiên zone nhiều customers → tốt hơn, threshold 0.3.
-     * SA tối ưu cả balance + contiguity → đánh đổi chút balance cho connectivity,
+     * Greedy ưu tiên zone nhiều customers -> tốt hơn, threshold 0.3.
+     * SA tối ưu cả balance + contiguity -> đánh đổi chút balance cho connectivity,
      * threshold 0.35 (nới hơn greedy một chút nhưng vẫn chặt chẽ).
      */
     const balanceThreshold = name === 'partitionLocalSearch' ? 0.5
@@ -863,17 +863,17 @@ describe('Quality Threshold (zones20)', () => {
 });
 
 // ==========================================
-// PHẦN 4 — DETERMINISM
+// PHẦN 4 - DETERMINISM
 // ==========================================
 
 describe('Determinism', () => {
-  it('[DET-1] partitionGreedy: cùng input → cùng output', () => {
+  it('[DET-1] partitionGreedy: cùng input -> cùng output', () => {
     const r1 = partitionGreedy(zones20, 4);
     const r2 = partitionGreedy(zones20, 4);
     expect(r1).toEqual(r2);
   });
 
-  it('[DET-2] partitionLocalSearch: cùng input → cùng output', () => {
+  it('[DET-2] partitionLocalSearch: cùng input -> cùng output', () => {
     const r1 = partitionLocalSearch(zones20, 4);
     const r2 = partitionLocalSearch(zones20, 4);
     expect(r1).toEqual(r2);
@@ -885,14 +885,14 @@ describe('Determinism', () => {
       partitionSA(zones20, 4, { maxIter: 500 }).map((a) => a.districtId).join(','),
     );
     const unique = new Set(results);
-    // SA phải có randomness — nếu tất cả giống nhau thì chấp nhận với small input
+    // SA phải có randomness - nếu tất cả giống nhau thì chấp nhận với small input
     // Hard constraint (BFS) có thể giới hạn đường đi, relax assertion
     expect(unique.size).toBeGreaterThanOrEqual(1);
   });
 });
 
 // ==========================================
-// PHẦN 5 — REGRESSION (Golden Output)
+// PHẦN 5 - REGRESSION (Golden Output)
 // ==========================================
 
 import { readFileSync, existsSync } from 'fs';
@@ -907,7 +907,7 @@ const __goldenPath = resolve(
 describe('Regression (Golden Output)', () => {
   it('[REG-1] Greedy output không đổi so với golden', () => {
     if (!existsSync(__goldenPath)) {
-      console.warn('⚠️  Golden file not found — skip regression. Run generate-golden.ts first.');
+      console.warn('⚠️  Golden file not found - skip regression. Run generate-golden.ts first.');
       return;
     }
     const golden = JSON.parse(readFileSync(__goldenPath, 'utf8')) as {
@@ -919,7 +919,7 @@ describe('Regression (Golden Output)', () => {
 
   it('[REG-2] LocalSearch output không đổi so với golden', () => {
     if (!existsSync(__goldenPath)) {
-      console.warn('⚠️  Golden file not found — skip regression. Run generate-golden.ts first.');
+      console.warn('⚠️  Golden file not found - skip regression. Run generate-golden.ts first.');
       return;
     }
     const golden = JSON.parse(readFileSync(__goldenPath, 'utf8')) as {

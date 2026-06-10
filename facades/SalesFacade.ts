@@ -1,13 +1,3 @@
-/**
- * facades/SalesFacade.ts — L3 Role Façade
- *
- * Vai trò: Sales — chỉ đọc trên cụm của mình.
- *
- * Các phương thức bị chặn (runAlgorithm, createVersion, assignZone) KHÔNG tồn tại
- * trên class này — không phải throw, mà là thực sự không có method.
- * Lý do: tests kiểm tra bằng `(sales as any).method === undefined`.
- */
-
 import type { Zone, SalesAgent, Activity } from '../types/domain.js';
 import type { Assignment } from '../lib/partition.js';
 import type { ActivityService } from '../services/ActivityService.js';
@@ -45,7 +35,7 @@ export class SalesFacade {
     this._districtId = idx >= 0 ? idx : -1;
   }
 
-  // ─── getMyDistrict ────────────────────────────────────────────────────────────
+  //  getMyDistrict 
 
   /**
    * @throws {PermissionError} DISTRICT_NOT_FOUND nếu không có zones được gán
@@ -77,7 +67,7 @@ export class SalesFacade {
     return { zones: myZones, summary };
   }
 
-  // ─── getMyCustomers ───────────────────────────────────────────────────────────
+  //  getMyCustomers 
 
   getMyCustomers(): Customer[] {
     const myZoneIds = new Set(
@@ -102,7 +92,7 @@ export class SalesFacade {
     });
   }
 
-  // ─── getMyOrderForecast ───────────────────────────────────────────────────────
+  //  getMyOrderForecast 
 
   getMyOrderForecast(): OrderForecast {
     const myZoneIds = new Set(
@@ -131,6 +121,6 @@ export class SalesFacade {
   }
 
   // Lưu ý: không có runAlgorithm / createVersion / assignZone
-  // SalesFacade chỉ đọc — các method đó không tồn tại trên class này.
+  // SalesFacade chỉ đọc - các method đó không tồn tại trên class này.
   // Test kiểm tra: `(sales as any).method === undefined`
 }

@@ -1,19 +1,8 @@
-/**
- * services/VersionService.ts — L2 Domain Service
- *
- * Quản lý snapshot history của Territory partitions.
- * Import từ types/domain.ts, lib/partition.ts.
- * Extends EventEmitter — không import UI framework.
- *
- * Events:
- *  'snapshot:created'  Snapshot
- */
-
 import type { Zone } from '../types/domain.js';
 import type { Assignment } from '../lib/partition.js';
 import { VersionError } from './errors.js';
 
-// ── Tiny browser-compatible EventEmitter ────────────────────────────────────
+//  Tiny browser-compatible EventEmitter 
 class EventEmitter {
   private _listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
   on(event: string, fn: (...args: unknown[]) => void): this {
@@ -32,7 +21,7 @@ class EventEmitter {
 
 
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 /** Một snapshot bất biến của territory partition tại một thời điểm. */
 export interface Snapshot {
@@ -59,7 +48,7 @@ export interface SnapshotDiff {
   };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers 
 
 /** Tổng customers của một zone. @internal */
 function _totalCustomers(zone: Zone): number {
@@ -68,7 +57,7 @@ function _totalCustomers(zone: Zone): number {
     .reduce((s, a) => s + a.value, 0);
 }
 
-// ─── VersionService ───────────────────────────────────────────────────────────
+//  VersionService 
 
 const MAX_SNAPSHOTS = 50;
 
@@ -76,14 +65,7 @@ export class VersionService extends EventEmitter {
   private _snapshots: Snapshot[] = [];
 
   /**
-   * Tạo snapshot mới từ zones + assignments hiện tại.
-   *
-   * Contracts:
-   *  - Label trùng → throw VersionError DUPLICATE_LABEL.
-   *  - Deep copy zones + assignments (không giữ reference).
-   *  - snapshots.length > 50 → xóa snapshot cũ nhất.
-   *  - Emit 'snapshot:created' SAU khi thêm vào list.
-   *
+   * Tạo snapshot mới từ zones + assignments hiện tại
    * @throws {VersionError} DUPLICATE_LABEL
    */
   createSnapshot(label: string, zones: Zone[], assignments: Assignment[]): Snapshot {
@@ -99,14 +81,14 @@ export class VersionService extends EventEmitter {
       label,
       version: `v${this._snapshots.length + 1}`,
       timestamp: new Date().toISOString(),
-      // Deep copy — tránh mutation từ bên ngoài
+      // Deep copy - tránh mutation từ bên ngoài
       zones: JSON.parse(JSON.stringify(zones)) as Zone[],
       assignments: assignments.map((a) => ({ ...a })),
     };
 
     this._snapshots.push(snapshot);
 
-    // Giới hạn 50 snapshots — xóa cũ nhất (FIFO)
+    // Giới hạn 50 snapshots - xóa cũ nhất (FIFO)
     if (this._snapshots.length > MAX_SNAPSHOTS) {
       this._snapshots.shift();
     }
@@ -119,8 +101,7 @@ export class VersionService extends EventEmitter {
 
   /**
    * So sánh 2 snapshots, trả về diff chi tiết.
-   *
-   * @complexity O(n) — n = tổng zones trong cả 2 snapshots.
+   * @complexity O(n) - n = tổng zones trong cả 2 snapshots.
    */
   diffSnapshots(v1: Snapshot, v2: Snapshot): SnapshotDiff {
     const map1 = new Map<string, number>(v1.assignments.map((a) => [a.zoneId, a.districtId]));

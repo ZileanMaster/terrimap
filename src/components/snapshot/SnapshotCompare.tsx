@@ -1,10 +1,3 @@
-/**
- * SnapshotCompare — Giai đoạn 3D
- *
- * So sánh 2 snapshots: hiển thị summary table + danh sách zones thay đổi district.
- * Chỉ so sánh assignments, không render 2 maps (quá nặng).
- */
-
 import React, { useMemo } from 'react'
 import type { SnapshotItem } from './SnapshotManager.js'
 

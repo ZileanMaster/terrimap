@@ -1,28 +1,5 @@
-/**
- * L1b — Partition Engine
- *
- * Pure functions cho hệ thống Commercial Territory Design.
- * Import từ types/domain.ts (L0) và lib/geometry.ts (L1a).
- *
- * Contracts:
- *  - Không có side effects — mọi hàm là pure function (trừ callback onProgress).
- *  - Kết quả luôn bao gồm tất cả zones (không zone nào bị bỏ sót).
- *  - districtId ∈ [0, m-1] với mọi Assignment.
- *  - Các tham số không hợp lệ → throw PartitionError ngay lập tức.
- *
- * @module partition
- */
-
-import type { Zone as DomainZone } from '../types/domain.js';
-import { haversineDistance, buildAdjacencyMatrix, meanCoordinate } from './geometry.js';
-
-type Zone = DomainZone;
-
-type AdjacencyMatrix = Record<string, string[]>;
-
-// ==========================================
-// ERROR TYPE
-// ==========================================
+import { AdjacencyMatrix, Zone } from "../types/domain.schema";
+import { buildAdjacencyMatrix, haversineDistance, meanCoordinate } from "./geometry";
 
 /** Error codes cho từng loại vi phạm contract. */
 export type PartitionErrorCode =
@@ -47,24 +24,14 @@ export class PartitionError extends Error {
   }
 }
 
-// ==========================================
-// PUBLIC TYPES
-// ==========================================
-
 /** Kết quả gán một zone vào một district. */
 export interface Assignment {
   zoneId: string;
-  /** INVARIANT: districtId ∈ [0, m-1] */
   districtId: number;
-  /**
-   * Explicit SalesAgent ID — undefined tại L1 (algorithms không biết về salesAgents).
-   * Được wire bởi L2 TerritoryService.runPartition() sau khi pagination hoàn tất.
-   * Dùng cho L2/L3 lookup thay vì modulo index.
-   */
   salesAgentId?: string;
 }
 
-/** Callback để log tiến trình — không ảnh hưởng logic thuật toán. */
+// Callback để log tiến trình
 export type ProgressCallback = (iter: number, cost: number) => void;
 
 /** Tùy chọn chung cho mọi thuật toán phân vùng. */
@@ -80,23 +47,20 @@ export interface PartitionOpts {
   initialTemp?: number;
   /** Hệ số làm nguội (0 < cooling < 1). Default: 0.997. */
   cooling?: number;
-  /** Trọng số cho thành phần dispersion trong objective. Default: 0.35. */
+  // Trọng số cho thành phần dispersion trong objective. Default: 0.35
   alpha?: number;
-  /** Trọng số cho thành phần imbalance trong objective. Default: 0.65. */
+  // Trọng số cho thành phần imbalance trong objective. Default: 0.65
   beta?: number;
   /**
-   * Gap threshold (km) để bổ sung adjacency khi polygon có khe hở nhỏ.
-   * Default: 0.12 km (~120m). Giá trị lớn dễ "nối tắt" qua vùng khác → làm sai liên thông.
+   * Gap threshold (km) để bổ sung adjacency khi polygon có khe hở nhỏ
+   * Default: 0.12 km
    */
   adjThresholdKm?: number;
-  /** Balance weights — default: { customers: 1.0, orders: 1.0 } */
   balanceWeights?: { customers: number; orders: number };
-  /** Objective function: 'p-median' (minimize tổng distance — recommended, Salazar-Aguilar et al. 2011) hoặc 'p-center' (minimize max diameter). Default: 'p-median'. */
   objective?: 'p-center' | 'p-median';
 }
 
 /**
- * Interface chung cho mọi thuật toán phân vùng.
  * @param zones  - Các zone cần phân vùng. Phải có ít nhất m zones.
  * @param m      - Số districts cần tạo. Phải >= 1.
  * @param opts   - Tùy chọn bổ sung.
@@ -107,10 +71,6 @@ export type PartitionFn = (
   m: number,
   opts?: PartitionOpts,
 ) => Assignment[];
-
-// ==========================================
-// INTERNAL HELPERS
-// ==========================================
 
 function getGraphComponents(zones: Zone[], adjMatrix: AdjacencyMatrix): string[][] {
   const visited = new Set<string>();
@@ -157,11 +117,9 @@ function ensureConnectedInputGraph(zones: Zone[], adjMatrix: AdjacencyMatrix): v
  * @internal
  */
 function zoneCustomers(zone: Zone): number {
-  let total = 0;
-  for (const activity of zone.activities) {
-    if (activity.type === 'CUSTOMER') total += activity.value;
-  }
-  return total;
+  return zone.activities
+    .filter((a) => a.type === 'CUSTOMER')
+    .reduce((sum, a) => sum + a.value, 0);
 }
 
 /**
@@ -169,11 +127,9 @@ function zoneCustomers(zone: Zone): number {
  * @internal
  */
 function zoneOrders(zone: Zone): number {
-  let total = 0;
-  for (const activity of zone.activities) {
-    if (activity.type === 'ORDER') total += activity.value;
-  }
-  return total;
+  return zone.activities
+    .filter((a) => a.type === 'ORDER')
+    .reduce((sum, a) => sum + a.value, 0);
 }
 
 interface ZoneActivityTotals {
@@ -204,7 +160,7 @@ function buildZoneActivityTotals(zones: Zone[]): ZoneActivityTotals {
 
 /**
  * Chọn m seeds xa nhau nhất bằng greedy farthest-point.
- * Seed đầu tiên = zone index 0 (arbitrary).
+ * Seed đầu tiên = zone index 0.
  *
  * @complexity O(m × n)
  * @internal
@@ -266,32 +222,32 @@ function selectFarthestSeeds(zones: Zone[], m: number): number[] {
  * Tính objective cost của một assignment.
  * cost = alpha × dispersion + beta × totalImbalance + gamma × fragmentPenalty
  *
- * dispersion: p-center (max diameter) hoặc p-median (tổng distance → center).
+ * dispersion: p-center (max diameter) hoặc p-median (tổng distance đến center).
  * totalImbalance: weighted sum of std-dev per activity measure.
  * fragmentPenalty = số connected-component thừa trong mỗi district.
  * @internal
  */
 function computeCost(
   zones: Zone[],
-  assignment: ArrayLike<number>, // assignment[i] = districtId c?a zones[i]
+  assignment: ArrayLike<number>, // assignment[i] = districtId của zones[i]
   m: number,
   alpha: number,
   beta: number,
-  adjMatrix?: AdjacencyMatrix, // optional ? khi c? ? t?nh contiguity penalty
+  adjMatrix?: AdjacencyMatrix, // cần để tính penalty liên thông
   balanceWeights?: { customers: number; orders: number },
   objective?: 'p-center' | 'p-median',
   activityTotals?: ZoneActivityTotals,
 ): number {
   const weights = balanceWeights ?? { customers: 1.0, orders: 1.0 }
-  const obj = objective ?? 'p-median' // p-median ???c khuy?n ngh? theo Salazar-Aguilar et al. (2011)
+  const obj = objective ?? 'p-median'
 
-  // Nh?m c?c zones theo district
+  // Nhóm zones theo districtId, đồng thời tính tổng customers/orders mỗi district
   const groups: Zone[][] = Array.from({ length: m }, () => [])
   const customerTotals = new Float64Array(m)
   const orderTotals = new Float64Array(m)
   for (let i = 0; i < zones.length; i++) {
     const dId = assignment[i]!
-    if (dId < 0 || dId >= m) continue  // skip unassigned (dId=-1 mid-BFS)
+    if (dId < 0 || dId >= m) continue 
     const zone = zones[i]!
     groups[dId]!.push(zone)
     const customerTotal = activityTotals ? activityTotals.customers[i]! : zoneCustomers(zone)
@@ -300,10 +256,10 @@ function computeCost(
     orderTotals[dId] = (orderTotals[dId] ?? 0) + orderTotal
   }
 
-  // T?nh dispersion theo objective
+  // Tính dispersion theo objective
   let dispersion: number
   if (obj === 'p-median') {
-    // p-Median: t?ng kho?ng c?ch t? m?i zone ??n center district
+    // p-Median: tổng khoảng cách từ mỗi zone đến center district
     dispersion = 0
     for (let d = 0; d < m; d++) {
       const group = groups[d]!
@@ -330,22 +286,22 @@ function computeCost(
     }
   }
 
-  // T?nh imbalance cho T?NG activity (weighted)
+  // Tính imbalance cho tổng activity 
   let totalImbalance = 0
 
   if (weights.customers > 0) {
-    const mean = customerTotals.reduce<number>((sum, value) => sum + value, 0) / m
+    const mean = customerTotals.reduce((s, c) => s + c, 0) / m
     const variance = customerTotals.reduce((s, c) => s + (c - mean) ** 2, 0) / m
     totalImbalance += weights.customers * Math.sqrt(variance)
   }
 
   if (weights.orders > 0) {
-    const mean = orderTotals.reduce<number>((sum, value) => sum + value, 0) / m
+    const mean = orderTotals.reduce((s, c) => s + c, 0) / m
     const variance = orderTotals.reduce((s, c) => s + (c - mean) ** 2, 0) / m
     totalImbalance += weights.orders * Math.sqrt(variance)
   }
 
-  // Contiguity penalty: ??m connected components th?a (BFS)
+  // Tính penalty liên thông: mỗi district có k components đến +k-1 penalty
   let totalFragments = 0
   if (adjMatrix) {
     for (let d = 0; d < m; d++) {
@@ -373,24 +329,18 @@ function computeCost(
     }
   }
 
-  const gamma = 500 // Very heavy penalty per disconnected fragment
-                     // Connectivity is HARD CONSTRAINT per Salazar-Aguilar et al. (2011)
+  const gamma = 500 
   return alpha * dispersion + beta * totalImbalance + gamma * totalFragments
 }
-// ==========================================
-// INTERNAL: BFS SHORTEST PATH TO ASSIGNED
-// ==========================================
-
 /**
- * BFS trên full adjacency graph G=(V,E) để tìm đường đi ngắn nhất
- * từ zone `startIdx` đến zone đã-assigned gần nhất.
+ * BFS trên full adjacency graph G=(V,E) để tìm đường đi ngắn nhất từ zone bắt đầu đến zone đã assigned gần nhất.
  *
- * Trả về path (danh sách index từ start → target) và districtId của target.
+ * Trả về path (danh sách index từ start đến target) và districtId của target.
  * Nếu không có path (zone hoàn toàn cô lập), trả về null.
  *
  * Đây là cốt lõi của "Grow-to-Reach" strategy theo paper:
  * khi frontier BFS bị kẹt, tìm đường nối zone cô lập đến district gần nhất
- * qua graph adjacency, rồi gán toàn bộ đường đi → đảm bảo liên thông.
+ * qua graph adjacency, rồi gán toàn bộ đường đi để đảm bảo liên thông.
  *
  * @internal
  */
@@ -401,9 +351,7 @@ function bfsShortestPathToAssigned(
   assignment: Int32Array,
   startIdx: number,
 ): { path: number[]; targetDistrict: number } | null {
-  // BFS from startIdx on the full adjacency graph
   const visited = new Set<number>([startIdx]);
-  // Each entry: [currentIdx, pathFromStart]
   const queue: Array<[number, number[]]> = [[startIdx, [startIdx]]];
 
   while (queue.length > 0) {
@@ -417,7 +365,6 @@ function bfsShortestPathToAssigned(
 
       const newPath = [...path, nIdx];
 
-      // Found an assigned zone → return path
       if (assignment[nIdx] !== -1) {
         return {
           path: newPath,
@@ -425,23 +372,14 @@ function bfsShortestPathToAssigned(
         };
       }
 
-      // Continue BFS through unassigned zones
       queue.push([nIdx, newPath]);
     }
   }
-
-  // No path found — zone is truly isolated in graph G
   return null;
 }
 
-// ==========================================
-// QUALITY-FIRST REFINE HELPERS
-// ==========================================
+//Best-improvement refinement cho local search.
 
-/**
- * Best-improvement refinement: qu?t to?n b? move h?p l? v? ch?n move t?t nh?t
- * ? m?i v?ng l?p. ?u ti?n ch?t l??ng h?n t?c ??.
- */
 function refineByBestImprovement(
   zones: Zone[],
   initialAssignment: number[] | Int32Array,
@@ -545,27 +483,15 @@ function refineByBestImprovement(
   return { assignment, cost: currentCost };
 }
 
-// ==========================================
-// THUẬT TOÁN 1 — GREEDY SEED EXPANSION
-// ==========================================
 
-/**
- * Phân vùng bằng Greedy Seed Expansion.
- *
- * Thuật toán:
- * 1. Chọn m seeds xa nhau nhất → làm "hạt nhân" của m districts.
- * 2. Vòng lặp BFS: mở rộng district theo adjacency matrix.
- *    - Với mỗi district, chọn neighbor zone chưa gán có nhiều customers nhất.
- * 3. Dừng khi tất cả zones đã được gán.
- *
- * @complexity O(m×n + n×k) — k = số lân cận trung bình.
- */
+// GREEDY SEED EXPANSION
+
 export function partitionGreedy(
   zones: Zone[],
   m: number,
   opts: PartitionOpts = {},
 ): Assignment[] {
-  // --- PRECONDITIONS ---
+  // ---  Tiền điều kiện ---
   if (zones.length === 0) throw new PartitionError('zones must not be empty', 'NO_ZONES');
   if (m < 2) throw new PartitionError(`m must be >= 2, got ${m}`, 'M_TOO_SMALL');
   if (m > zones.length)
@@ -575,15 +501,13 @@ export function partitionGreedy(
 
   const { onProgress, adjThresholdKm = 0.12 } = opts;
 
-  // Build strict adjacency matrix. Artificial bridge edges are intentionally not allowed.
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
   ensureConnectedInputGraph(zones, adjMatrix);
 
-  // Map id → index để tra cứu O(1)
+  // Map id đến index để tra cứu
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
   const activityTotals = buildZoneActivityTotals(zones);
 
-  // assignment[i] = districtId (-1 = chưa gán)
   const assignment = new Int32Array(zones.length).fill(-1);
 
   // Chọn seeds và gán district
@@ -593,7 +517,6 @@ export function partitionGreedy(
   }
 
   // BFS Queues: một queue mỗi district, chứa các zone chưa gán lân cận
-  // Dùng Set để dedup
   const frontiers: Set<number>[] = Array.from({ length: m }, () => new Set());
   for (let d = 0; d < m; d++) {
     const seedIdx = seedIndices[d]!;
@@ -652,22 +575,16 @@ export function partitionGreedy(
       }
     }
 
-    // ── GROW-TO-REACH (Paper-compliant) ──────────────────────────────
-    // When BFS frontiers are exhausted but unassigned zones remain,
-    // find the shortest path on the adjacency graph G=(V,E) from each
-    // unassigned zone to the nearest assigned zone. Assign the entire
-    // path to that district → guarantees contiguity.
+    // GROW-TO-REACH
+
     if (!progress) {
-      // Collect all unassigned zone indices
       const unassignedIdxs: number[] = [];
       for (let i = 0; i < zones.length; i++) {
         if (assignment[i] === -1) unassignedIdxs.push(i);
       }
 
       for (const startIdx of unassignedIdxs) {
-        if (assignment[startIdx] !== -1) continue; // already reached by a previous path
-
-        // BFS on full adjacency graph to find shortest path to any assigned zone
+        if (assignment[startIdx] !== -1) continue;
         const pathResult = bfsShortestPathToAssigned(
           zones, adjMatrix, idToIdx, assignment, startIdx,
         );
@@ -722,11 +639,7 @@ export function partitionGreedy(
     districtId: assignment[i]!,
   }));
 }
-
-// ==========================================
 // INTERNAL: BFS CONNECTIVITY CHECK
-// ==========================================
-
 /**
  * BFS kiểm tra 1 district có liên thông không.
  * @internal
@@ -762,33 +675,15 @@ export function isDistrictConnected(
   return visited.size === memberSet.size;
 }
 
-// ==========================================
-// THUẬT TOÁN 2 — LOCAL SEARCH (2-OPT)
-// ==========================================
 
-/**
- * Phân vùng bằng Local Search 2-opt improvement.
- *
- * Thuật toán:
- * 1. Khởi tạo solution bằng partitionGreedy.
- * 2. Lặp đến convergence (hoặc maxIter):
- *    a. Với mỗi zone ở biên district:
- *       - Thử swap sang district lân cận
- *       - BFS verify district nguồn vẫn liên thông
- *       - Tính Δcost → nếu giảm → accept swap
- * 3. Dừng khi KHÔNG có swap nào cải thiện cost (local optimum).
- *
- * Đảm bảo: 100% connectivity (chỉ accept swap an toàn).
- * Deterministic (không random).
- *
- * @complexity O(maxIter × boundary_size × neighbor_count)
- */
+// LOCAL SEARCH
+
 export function partitionLocalSearch(
   zones: Zone[],
   m: number,
   opts: PartitionOpts = {},
 ): Assignment[] {
-  // --- PRECONDITIONS ---
+  // ---  Tiền điều kiện ---
   if (zones.length === 0) throw new PartitionError('zones must not be empty', 'NO_ZONES');
   if (m < 2) throw new PartitionError(`m must be >= 2, got ${m}`, 'M_TOO_SMALL');
   if (m > zones.length)
@@ -801,7 +696,7 @@ export function partitionLocalSearch(
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
   const activityTotals = buildZoneActivityTotals(zones);
 
-  // Kh?i t?o t? Greedy solution
+  // Khoi tao solution bang Greedy
   const greedyResult = partitionGreedy(zones, m, { adjThresholdKm });
   const assignment = new Array<number>(zones.length);
   for (const { zoneId, districtId } of greedyResult) {
@@ -835,7 +730,7 @@ export function partitionSimulatedAnnealing(
   m: number,
   opts: PartitionOpts = {},
 ): Assignment[] {
-  // --- PRECONDITIONS ---
+  // ---  Tiền điều kiện ---
   if (zones.length === 0) throw new PartitionError('zones must not be empty', 'NO_ZONES');
   if (m < 2) throw new PartitionError(`m must be >= 2, got ${m}`, 'M_TOO_SMALL');
   if (m > zones.length)
@@ -865,7 +760,7 @@ export function partitionSimulatedAnnealing(
   const idToIdx = new Map<string, number>(zones.map((z, i) => [z.id, i]));
   const activityTotals = buildZoneActivityTotals(zones);
 
-  // Kh?i t?o t? Greedy solution r?i refine ch?t l??ng tr??c khi anneal
+  // Khởi tạo từ Greedy solution rồii refine chất lượng trước khi anneal
   const initialResult = partitionGreedy(zones, m, { adjThresholdKm });
   const warmupBudget = Math.max(0, Math.min(maxIter, Math.floor(maxIter * 0.1)));
   const warmupAssignment = new Array<number>(zones.length);
@@ -1001,9 +896,7 @@ export function partitionSimulatedAnnealing(
   }));
 }
 
-// ==========================================
-// FACTORY — getPartitionFn
-// ==========================================
+// FACTORY   getPartitionFn
 
 /** Tên các thuật toán phân vùng được hỗ trợ. */
 export type AlgorithmName = 'greedy' | 'local-search' | 'sa';
@@ -1042,7 +935,7 @@ export const partitionSA = partitionSimulatedAnnealing;
 
 /**
  * Helper: nhóm lại các zones theo cluster từ Assignment[].
- * @returns Map từ districtId → danh sách Zone.
+ * @returns Map từ districtId đến danh sách Zone.
  */
 export function groupZonesByCluster(
   assignments: Assignment[],

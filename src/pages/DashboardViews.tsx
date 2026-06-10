@@ -74,7 +74,7 @@ const MOCK_MEMBERS = [
   },
 ];
 
-// ── 1. TỔNG QUAN (OverviewView) ───────────────────────────────────────────────
+//  1. TỔNG QUAN (OverviewView) 
 export function OverviewView() {
   const zones = useDataStore((s) => s.zones);
   const agents = useDataStore((s) => s.agents);
@@ -287,7 +287,7 @@ export function OverviewView() {
     </div>
   );
 }
-// ── 2. QUẢN LÝ USER (UsersView) ──────────────────────────────────────────────
+//  2. QUẢN LÝ USER (UsersView) 
 export function UsersView() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
   const loadMembers = useAuthStore((s) => s.loadMembers);
@@ -297,7 +297,7 @@ export function UsersView() {
   const [loading, setLoading] = useState(false);
 
   const formatDob = (dob?: string | null) => {
-    if (!dob) return '—';
+    if (!dob) return '-';
     const s = String(dob).slice(0, 10); // YYYY-MM-DD
     const [y, m, d] = s.split('-');
     if (!y || !m || !d) return s;
@@ -530,7 +530,7 @@ export function UsersView() {
                       </td>
                       <td style={styles.td}>{m.profile?.full_name}</td>
                       <td style={styles.td}>{formatDob(m.profile?.date_of_birth)}</td>
-                      <td style={styles.td}>{m.profile?.phone || '—'}</td>
+                      <td style={styles.td}>{m.profile?.phone || '-'}</td>
                       <td style={styles.td}>
                         {isEditing ? (
                           <select
@@ -565,7 +565,7 @@ export function UsersView() {
                               <option key={r.id} value={r.id}>{r.name}</option>
                             ))}
                           </select>
-                        ) : '—'
+                        ) : '-'
                       ) : (
                         m.role === 'admin' ? 'Tất cả' : regionName
                       )}
@@ -609,8 +609,8 @@ export function UsersView() {
   );
 }
 
-// ── 3. CÀI ĐẶT HỆ THỐNG (SettingsView) ─────────────────────────────────────────
-// ── 3. VẬN HÀNH (OperationsView) ────────────────────────────────────────────────
+//  3. CÀI ĐẶT HỆ THỐNG (SettingsView) 
+//  3. VẬN HÀNH (OperationsView) 
 // Focus: reporting workflow + completeness + exports.
 export function OperationsView() {
   const regions = useDataStore((s) => s.regions);
@@ -930,8 +930,8 @@ export function OperationsView() {
                     <td style={styles.td}>{r.customers}</td>
                     <td style={styles.td}>{r.orders}</td>
                     <td style={styles.td}>{Number(r.revenue || 0).toLocaleString('vi-VN')}</td>
-                    <td style={styles.td}>{String(r.note || '—')}</td>
-                    <td style={styles.td}>{r.updatedAt ? new Date(r.updatedAt).toLocaleString('vi-VN') : '—'}</td>
+                    <td style={styles.td}>{String(r.note || '-')}</td>
+                    <td style={styles.td}>{r.updatedAt ? new Date(r.updatedAt).toLocaleString('vi-VN') : '-'}</td>
                   </tr>
                 )
               })}
@@ -1084,7 +1084,7 @@ export function SettingsView() {
   );
 }
 
-// ── THỜI TRANG STYLE ────────────────────────────────────────────────────────
+//  THỜI TRANG STYLE 
 const styles: Record<string, React.CSSProperties> = {
   viewContainer: {
     padding: '24px',

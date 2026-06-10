@@ -1,11 +1,3 @@
-/**
- * AdminPage — Bảng điều khiển admin đầy đủ
- * Bố cục: [Sidebar | Map | RightPanel]
- *
- * State: đọc từ useDataStore toàn cục (dùng chung với Coordinator/Sales).
- * Không có useEffect local để init DB — App.tsx xử lý đúng một lần.
- */
-
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { useUIStore } from '../store/uiStore.js'
 import { useDataStore } from '../store/dataStore.js'
@@ -34,7 +26,7 @@ export interface AdminPageProps {
 }
 
 export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
-  // ── Global data store (shared across pages) ────────────────────────────────
+  //  Global data store (shared across pages) 
   const zones              = useDataStore((s) => s.zones)
   const assignments        = useDataStore((s) => s.assignments)
   const agents             = useDataStore((s) => s.agents)
@@ -58,7 +50,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     : zones
 
   const displayAgents = currentRegionId
-    ? agents.filter((a) => (a as any).region_id === currentRegionId)
+    ? agents.filter((a) => (a as any).regionId === currentRegionId || (a as any).region_id === currentRegionId)
     : agents
 
   const displayAssignments = currentRegionId
@@ -89,7 +81,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     : mapCenter
   const effectiveZoom = flyTarget?.zoom ?? mapZoom
 
-  // ── Local UI state (not shared) ────────────────────────────────────────────
+  //  Local UI state (not shared) 
   const [result, setResult]           = useState<AlgorithmResultVM | null>(null)
   const [progress, setProgress]       = useState(0)
   const [currentCost, setCurrentCost] = useState<number | null>(null)
@@ -106,31 +98,31 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const ctx                   = useFacade()
   const role                  = useUIStore((s) => s.role)
 
-  // Default: show draw/edit tools in "Khu vực & bản đồ".
+  // Default: show draw/edit tools inside "Phân chia lãnh thổ".
   // No per-mode enable/disable for drawing toolbar.
 
-  // Tải lịch sử version một lần (facade local — không lấy từ DB)
+  // Tải lịch sử version một lần (facade local - không lấy từ DB)
   useEffect(() => {
     if (ctx.role === 'admin') {
       setSnapshots(ctx.facade.getVersionHistory())
     }
   }, [ctx])
 
-  // ── Matrix data ────────────────────────────────────────────────────────────
+  //  Matrix data 
 
   const matrixData = useMemo((): { adj: AdjMatrix; dist: DistMatrix } | null => {
     if (ctx.role !== 'admin') return null
     try { return ctx.facade.computeMatrices(displayZones) } catch { return null }
   }, [ctx, displayZones])
 
-  // ── Island zones ───────────────────────────────────────────────────────────
+  //  Island zones 
 
   const islandZoneIds = useMemo(() => {
     if (ctx.role !== 'admin') return new Set<string>()
     try { return new Set(ctx.facade.getIslandZones(displayZones)) } catch { return new Set<string>() }
   }, [ctx, displayZones])
 
-  // ── Các cụm mất liên thông ────────────────────────────────────────────────
+  //  Các cụm mất liên thông 
 
   const disconnectedDistrictIds = useMemo(() => {
     if (!result) return new Set<number>()
@@ -141,18 +133,18 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     )
   }, [result])
 
-  // ── Export report ──────────────────────────────────────────────────────────
+  //  Export report 
 
   const reportData = useMemo(() => {
     if (ctx.role !== 'admin') return null
     return ctx.facade.exportReport(displayZones, displayAssignments, displayAgents)
   }, [ctx, displayZones, displayAssignments, displayAgents])
 
-  // ── SA Web Worker ──────────────────────────────────────────────────────────
+  //  SA Web Worker 
 
   const { runSA } = useSAWorker()
 
-  // ── Run algorithm ──────────────────────────────────────────────────────────
+  //  Run algorithm 
 
   const handleRun = useCallback(async (
     algo: 'greedy' | 'local-search' | 'sa',
@@ -207,7 +199,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
       setMapTransitioning(true)
       setTimeout(() => setMapTransitioning(false), 300)
 
-      // Show result IMMEDIATELY — don't wait for DB persist
+      // Show result IMMEDIATELY - don't wait for DB persist
       setResult(partResult)
       setAlgoRunning(false)
 
@@ -221,7 +213,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     }
   }, [ctx, displayZones, displayAgents, currentRegionId, runSA, setAlgoRunning, selectZone, setHighlightedSalesId, setMapTransitioning, persistAssignments])
 
-  // ── Snapshot ───────────────────────────────────────────────────────────────
+  //  Snapshot 
 
   const handleSnapshot = useCallback(async () => {
     if (ctx.role !== 'admin') return
@@ -234,7 +226,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     }
   }, [ctx, displayZones, displayAssignments])
 
-  // ── Update activity ────────────────────────────────────────────────────────
+  //  Update activity 
 
   const handleUpdateActivity = useCallback((
     zoneId: string,
@@ -283,7 +275,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     selectZone(null)
   }, [ctx, displayAssignments, displayAgents, displayZones, assignments, persistAssignments, selectZone])
 
-  // ── Draw zone ──────────────────────────────────────────────────────────────
+  //  Draw zone 
 
   const handleZoneCreated = useCallback(async (
     polygon: GeoJSONPolygon,
@@ -302,7 +294,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
       regionId:   currentRegionId || 'region-hn',
     }
 
-    await addZone(newZone as Zone)  // await — ensures DB write before tab switch
+    await addZone(newZone as Zone)  // await - ensures DB write before tab switch
   }, [addZone, currentRegionId])
 
   const handleZoneEdited = useCallback(async (
@@ -315,7 +307,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     await updateZone({ ...zone, polygon, centroid } as Zone)
   }, [zones, updateZone])
 
-  // ── Delete zone ────────────────────────────────────────────────────────────
+  //  Delete zone 
   const handleDeleteZone = useCallback(async (zoneId: string) => {
     selectZone(null)
     await removeZone(zoneId)  // awaits DB delete
@@ -326,7 +318,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     const showPolygons = useUIStore((s) => s.showPolygons)
     const togglePolygons = useUIStore((s) => s.togglePolygons)
 
-  // ── Trạng thái đang tải ───────────────────────────────────────────────────
+  //  Trạng thái đang tải 
 
   if (loading) {
     return (
@@ -399,7 +391,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
 
             {mode === 'regions' ? (
               <div style={styles.mapHudRow}>
-                <span style={styles.modeBadgeEdit}>Chế độ: Khu vực & bản đồ</span>
+                <span style={styles.modeBadgeEdit}>Chế độ: Phân chia lãnh thổ</span>
                 <button style={styles.mapHudBtnGhost} onClick={togglePolygons}>
                   {showPolygons ? 'Ẩn vùng' : 'Hiện vùng'}
                 </button>

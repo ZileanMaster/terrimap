@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div style={styles.brandKicker}>TerriMap</div>
           <h1 style={styles.brandTitle}>Quản lý lãnh thổ, báo cáo cụm và phân chia khu vực trong một luồng duy nhất.</h1>
           <p style={styles.brandText}>
-            Giao diện được tối ưu cho vận hành hằng ngày: rõ ràng, ít nhiễu, tập trung vào việc chọn dự án và đi thẳng vào màn làm việc.
+            Giao diện được tối ưu cho vận hành hằng ngày: rõ ràng, ít nhiễu, đi thẳng vào dự án làm việc hiện tại.
           </p>
 
           <div style={styles.statRow}>
@@ -49,7 +49,7 @@ export default function LoginPage() {
             </div>
             <div style={styles.statCard}>
               <div style={styles.statValue}>02</div>
-              <div style={styles.statLabel}>Chọn dự án</div>
+              <div style={styles.statLabel}>Vào dự án</div>
             </div>
             <div style={styles.statCard}>
               <div style={styles.statValue}>03</div>

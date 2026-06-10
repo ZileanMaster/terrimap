@@ -99,7 +99,7 @@ export default function MatrixViewer({ zones, adj, dist }: MatrixViewerProps) {
                             title={isDiag ? rowZone.name : `${rowZone.name} ↔ ${colZone.name}: ${isAdj ? 'kề' : 'không kề'}`}
                             data-testid={`matrix-cell-${rowZone.id}-${colZone.id}`}
                           >
-                            {isDiag ? '—' : isAdj ? '✓' : '·'}
+                            {isDiag ? '-' : isAdj ? '✓' : '·'}
                           </td>
                         )
                       }
@@ -114,7 +114,7 @@ export default function MatrixViewer({ zones, adj, dist }: MatrixViewerProps) {
                             background: isDiag ? 'var(--color-surface)' : distColor(km),
                             color: isDiag ? 'var(--color-text-3)' : 'var(--color-text)',
                           }}
-                          title={isDiag ? rowZone.name : `${rowZone.name} → ${colZone.name}: ${km.toFixed(1)} km`}
+                          title={isDiag ? rowZone.name : `${rowZone.name} -> ${colZone.name}: ${km.toFixed(1)} km`}
                           data-testid={`matrix-cell-${rowZone.id}-${colZone.id}`}
                         >
                           {isDiag ? '0' : km.toFixed(1)}

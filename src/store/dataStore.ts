@@ -1,8 +1,8 @@
 /**
- * src/store/dataStore.ts — Kho dữ liệu Zustand toàn cục
+ * src/store/dataStore.ts - Kho dữ liệu Zustand toàn cục
  *
  * Single source of truth cho zones, assignments, agents.
- * Dùng chung giữa AdminPage, CoordinatorPage, SalesPage — không bị mất
+ * Dùng chung giữa AdminPage, CoordinatorPage, SalesPage - không bị mất
  * khi chuyển tab vì Zustand store sống ngoài React component tree.
  *
  * Init chỉ chạy 1 lần (được chặn bằng cờ `initialized`).
@@ -55,7 +55,7 @@ function buildRegionsFromZones(zones: Zone[], existingRegions: Region[]): Region
 }
 
 interface DataStore {
-  // ── State ──────────────────────────────────────────────────────────────────────
+  //  State 
   zones:           Zone[]
   assignments:     Assignment[]
   agents:          SalesAgent[]
@@ -66,7 +66,7 @@ interface DataStore {
   initialized:     boolean
   saving:          boolean  // true while awaiting DB write
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  //  Actions 
 
 
   init: (projectId?: string) => Promise<void>
@@ -181,7 +181,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     assertNoPolygonTopologyViolations([...get().zones, zone] as any)
     // Optimistic update first so map renders immediately
     set((s) => ({ zones: [...s.zones, zone], saving: true }))
-    await saveZone(zone, get().currentProjectId)  // await — ensures DB write before tab switch
+    await saveZone(zone, get().currentProjectId)  // await - ensures DB write before tab switch
     set({ saving: false })
   },
 
@@ -199,7 +199,7 @@ export const useDataStore = create<DataStore>((set, get) => ({
     assertNoPolygonTopologyViolations(
       get().zones.map((z) => z.id === zone.id ? zone : z) as any,
     )
-    // State is source of truth — update immediately, DB syncs async
+    // State is source of truth - update immediately, DB syncs async
     set((s) => ({
       zones: s.zones.map((z) => z.id === zone.id ? zone : z),
     }))

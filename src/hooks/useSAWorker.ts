@@ -19,6 +19,25 @@ interface SAZone {
   activities: Array<{ type: string; value: number }>
 }
 
+type SAWorkerProgressMessage = {
+  type: 'progress'
+  iter: number
+  cost: number
+  total: number
+}
+
+type SAWorkerDoneMessage = {
+  type: 'done'
+  assignments: Assignment[]
+}
+
+type SAWorkerErrorMessage = {
+  type: 'error'
+  message: string
+}
+
+type SAWorkerMessage = SAWorkerProgressMessage | SAWorkerDoneMessage | SAWorkerErrorMessage
+
 export function useSAWorker() {
   const workerRef = useRef<Worker | null>(null)
 
@@ -28,43 +47,41 @@ export function useSAWorker() {
     opts: SAOpts,
     onProgress?: (iter: number, cost: number, total: number) => void,
   ): Promise<Assignment[]> => {
-    return new Promise((resolve, reject) => {
+    // Tạo worker mới cho mỗi lần chạy 
+    return new Promise<Assignment[]>((resolve, reject) => {
       try {
+        // Tạo worker mới cho mỗi lần chạy 
         const worker = new Worker(
           new URL('../workers/sa-worker.ts', import.meta.url),
           { type: 'module' },
         )
         workerRef.current = worker
 
-        worker.onmessage = (e) => {
+        worker.onmessage = (e: MessageEvent<SAWorkerMessage>) => {
           const { type } = e.data
           if (type === 'progress') {
             onProgress?.(e.data.iter, e.data.cost, e.data.total)
-            return
-          }
-
-          if (type === 'done') {
-            resolve(e.data.assignments as Assignment[])
+          } else if (type === 'done') {
+            resolve(e.data.assignments)
             worker.terminate()
             workerRef.current = null
-            return
-          }
-
-          if (type === 'error') {
+          } else if (type === 'error') {
             reject(new Error(e.data.message))
             worker.terminate()
             workerRef.current = null
           }
         }
 
-        worker.onerror = (err) => {
+        worker.onerror = (err: ErrorEvent) => {
           reject(new Error(err.message))
-          worker.terminate()
+          // Gửi dữ liệu để serialize sang worker
           workerRef.current = null
         }
 
+        // Gửi dữ liệu để serialize sang worker
         worker.postMessage({ zones, m, opts })
       } catch {
+
         reject(new Error('Web Worker not available'))
       }
     })

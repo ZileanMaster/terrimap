@@ -1,5 +1,5 @@
 /**
- * Test Suite cho L1 — lib/geometry.ts
+ * Test Suite cho L1 - lib/geometry.ts
  *
  * Cấu trúc mỗi describe block:
  *  - NHÓM 1: Happy Path
@@ -75,13 +75,13 @@ const zonesArb = (minLen = 0): fc.Arbitrary<Zone[]> =>
 
 describe('haversineKm', () => {
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Khoảng cách HCM→Hà Nội xấp xỉ 1140–1170 km', () => {
+  it('[HP-1] Khoảng cách HCM->Hà Nội xấp xỉ 1140–1170 km', () => {
     const d = haversineKm(hcmCoord, hanoiCoord);
     expect(d).toBeGreaterThan(1140);
     expect(d).toBeLessThan(1170);
   });
 
-  it('[HP-2] Cùng tọa độ → 0 (không phải -0)', () => {
+  it('[HP-2] Cùng tọa độ -> 0 (không phải -0)', () => {
     const d = haversineKm(hcmCoord, hcmCoord);
     expect(d).toBe(0);
     expect(Object.is(d, -0)).toBe(false);
@@ -93,11 +93,11 @@ describe('haversineKm', () => {
     expect(ab).toBe(ba);
   });
 
-  it('[HP-4] Tọa độ origin (0,0) tới chính nó → 0', () => {
+  it('[HP-4] Tọa độ origin (0,0) tới chính nó -> 0', () => {
     expect(haversineKm(originCoord, originCoord)).toBe(0);
   });
 
-  it('[HP-5] Khoảng cách hai cực → xấp xỉ nửa chu vi Trái Đất (~20015 km)', () => {
+  it('[HP-5] Khoảng cách hai cực -> xấp xỉ nửa chu vi Trái Đất (~20015 km)', () => {
     const north: Coordinate = { lat: 90, lng: 0 };
     const south: Coordinate = { lat: -90, lng: 0 };
     const d = haversineKm(north, south);
@@ -135,7 +135,7 @@ describe('haversineKm', () => {
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 1000 cặp tọa độ → kết quả finite, >= 0, đối xứng', () => {
+  it('[FUZZ] 1000 cặp tọa độ -> kết quả finite, >= 0, đối xứng', () => {
     fc.assert(
       fc.property(coordArb, coordArb, (a, b) => {
         const ab = haversineKm(a, b);
@@ -159,27 +159,27 @@ describe('haversineKm', () => {
 
 describe('zoneDiameter', () => {
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Empty array → 0 (không throw)', () => {
+  it('[HP-1] Empty array -> 0 (không throw)', () => {
     expect(zoneDiameter([])).toBe(0);
   });
 
-  it('[HP-2] Single zone → 0 (không throw)', () => {
+  it('[HP-2] Single zone -> 0 (không throw)', () => {
     expect(zoneDiameter([zoneHCM])).toBe(0);
   });
 
-  it('[HP-3] Hai zones trùng tọa độ → 0 (không phải -0)', () => {
+  it('[HP-3] Hai zones trùng tọa độ -> 0 (không phải -0)', () => {
     const d = zoneDiameter([zoneHCM, zoneSame]);
     expect(d).toBe(0);
     expect(Object.is(d, -0)).toBe(false);
   });
 
-  it('[HP-4] HCM và Hà Nội → ~1140–1170 km', () => {
+  it('[HP-4] HCM và Hà Nội -> ~1140–1170 km', () => {
     const d = zoneDiameter([zoneHCM, zoneHanoi]);
     expect(d).toBeGreaterThan(1140);
     expect(d).toBeLessThan(1170);
   });
 
-  it('[HP-5] 3 zones → max pairwise distance (không phải tổng)', () => {
+  it('[HP-5] 3 zones -> max pairwise distance (không phải tổng)', () => {
     const zoneOrigin = makeZone('z-origin', originCoord);
     const d = zoneDiameter([zoneHCM, zoneHanoi, zoneOrigin]);
     // Max pairwise là HCM↔Hanoi (~1150 km) hoặc Hanoi↔Origin
@@ -206,7 +206,7 @@ describe('zoneDiameter', () => {
     expect(Number.isFinite(zoneDiameter([zoneHCM, zoneHanoi]))).toBe(true);
   });
 
-  it('[INV-3] Zones ở cực trái ngược → kết quả finite (không overflow)', () => {
+  it('[INV-3] Zones ở cực trái ngược -> kết quả finite (không overflow)', () => {
     const north = makeZone('north', { lat: 90, lng: 0 });
     const south = makeZone('south', { lat: -90, lng: 0 });
     const d = zoneDiameter([north, south]);
@@ -215,14 +215,14 @@ describe('zoneDiameter', () => {
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 1000 zone arrays → diameter finite, >= 0, đơn điệu khi thêm zone', () => {
+  it('[FUZZ] 1000 zone arrays -> diameter finite, >= 0, đơn điệu khi thêm zone', () => {
     fc.assert(
       fc.property(zonesArb(0), (zones) => {
         const d = zoneDiameter(zones);
         expect(Number.isFinite(d)).toBe(true);
         expect(d).toBeGreaterThanOrEqual(0);
 
-        // Thêm 1 zone với centroid giống zone đầu → diameter không giảm
+        // Thêm 1 zone với centroid giống zone đầu -> diameter không giảm
         if (zones.length > 0) {
           const extraZone = makeZone('extra', zones[0]!.centroid);
           const dWithExtra = zoneDiameter([...zones, extraZone]);
@@ -253,13 +253,13 @@ describe('zoneDiameter', () => {
 
 describe('meanCoordinate', () => {
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Single coord → trả về chính nó', () => {
+  it('[HP-1] Single coord -> trả về chính nó', () => {
     const result = meanCoordinate([hcmCoord]);
     expect(result.lat).toBeCloseTo(hcmCoord.lat);
     expect(result.lng).toBeCloseTo(hcmCoord.lng);
   });
 
-  it('[HP-2] Hai tọa độ đối xứng qua gốc → (0, 0)', () => {
+  it('[HP-2] Hai tọa độ đối xứng qua gốc -> (0, 0)', () => {
     const a: Coordinate = { lat: 10, lng: 20 };
     const b: Coordinate = { lat: -10, lng: -20 };
     const result = meanCoordinate([a, b]);
@@ -274,13 +274,13 @@ describe('meanCoordinate', () => {
   });
 
   // --- NHÓM 2: Invariant Violations ---
-  it('[INV-1] Empty array → throw GeometryError', () => {
+  it('[INV-1] Empty array -> throw GeometryError', () => {
     expect(() => meanCoordinate([])).toThrow(GeometryError);
     expect(() => meanCoordinate([])).toThrow(/at least 1/);
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 1000 coord arrays → mean là finite và trong bounds hợp lệ', () => {
+  it('[FUZZ] 1000 coord arrays -> mean là finite và trong bounds hợp lệ', () => {
     fc.assert(
       fc.property(
         fc.array(coordArb, { minLength: 1, maxLength: 50 }),
@@ -317,7 +317,7 @@ describe('haversineDistance', () => {
     expect(haversineDistance(a, b)).toBe(haversineKm(a, b));
   });
 
-  it('[HP-2] Cùng tọa độ → 0 (không phải -0)', () => {
+  it('[HP-2] Cùng tọa độ -> 0 (không phải -0)', () => {
     const a: Coordinate = { lat: 0, lng: 0 };
     expect(haversineDistance(a, a)).toBe(0);
     expect(Object.is(haversineDistance(a, a), -0)).toBe(false);
@@ -335,7 +335,7 @@ describe('haversineDistance', () => {
   });
 
   it('[NaN-1] sqrt clamp guard: 2 điểm gần-antipodal không sinh NaN (h tiệm cận 1)', () => {
-    // lat/lng gần cực đối nhau nhất có thể → h ≈ 1 → Math.max(0,h) và Math.min(1,√h) phải clamp
+    // lat/lng gần cực đối nhau nhất có thể -> h ≈ 1 -> Math.max(0,h) và Math.min(1,√h) phải clamp
     const a: Coordinate = { lat: 89.9999, lng: 0 };
     const b: Coordinate = { lat: -89.9999, lng: 180 };
     const result = haversineDistance(a, b);
@@ -344,8 +344,8 @@ describe('haversineDistance', () => {
     expect(result).toBeLessThan(21_000); // không vượt nửa chu vi Trái Đất
   });
 
-  it('[NaN-2] asin clamp guard: cùng tọa độ với floating-point precision → 0, không NaN', () => {
-    // Đây là trường hợp h = 0 chính xác → sqrt(0) = 0 → asin(0) = 0 → dist = 0
+  it('[NaN-2] asin clamp guard: cùng tọa độ với floating-point precision -> 0, không NaN', () => {
+    // Đây là trường hợp h = 0 chính xác -> sqrt(0) = 0 -> asin(0) = 0 -> dist = 0
     const a: Coordinate = { lat: 45.123456789, lng: 120.987654321 };
     const result = haversineDistance(a, { ...a });
     expect(result).toBe(0); // phải chính xác 0, không phải -0 hay NaN
@@ -361,7 +361,7 @@ describe('haversineDistance', () => {
 
 describe('polygonCentroid', () => {
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Hình vuông đơn vị → centroid tại tâm (0.5, 0.5)', () => {
+  it('[HP-1] Hình vuông đơn vị -> centroid tại tâm (0.5, 0.5)', () => {
     // Hình vuông: (0,0), (1,0), (1,1), (0,1)
     const square: Coordinate[] = [
       { lat: 0, lng: 0 },
@@ -374,7 +374,7 @@ describe('polygonCentroid', () => {
     expect(c.lng).toBeCloseTo(0.5, 8);
   });
 
-  it('[HP-2] Hình vuông đã khép kín (điểm đầu = điểm cuối) → cùng kết quả', () => {
+  it('[HP-2] Hình vuông đã khép kín (điểm đầu = điểm cuối) -> cùng kết quả', () => {
     const squareClosed: Coordinate[] = [
       { lat: 0, lng: 0 },
       { lat: 0, lng: 1 },
@@ -387,7 +387,7 @@ describe('polygonCentroid', () => {
     expect(c.lng).toBeCloseTo(0.5, 8);
   });
 
-  it('[HP-3] Tam giác đều → centroid tại trung điểm', () => {
+  it('[HP-3] Tam giác đều -> centroid tại trung điểm', () => {
     // Tam giác với 3 đỉnh: centroid = trung bình số học
     const tri: Coordinate[] = [
       { lat: 0, lng: 0 },
@@ -400,14 +400,14 @@ describe('polygonCentroid', () => {
     expect(c.lng).toBeCloseTo(3, 5);
   });
 
-  it('[HP-4] 1 điểm → trả về điểm đó', () => {
+  it('[HP-4] 1 điểm -> trả về điểm đó', () => {
     const pt: Coordinate = { lat: 15, lng: 100 };
     const c = polygonCentroid([pt]);
     expect(c.lat).toBeCloseTo(pt.lat);
     expect(c.lng).toBeCloseTo(pt.lng);
   });
 
-  it('[HP-5] 2 điểm → trả về trung điểm', () => {
+  it('[HP-5] 2 điểm -> trả về trung điểm', () => {
     const a: Coordinate = { lat: 0, lng: 0 };
     const b: Coordinate = { lat: 10, lng: 20 };
     const c = polygonCentroid([a, b]);
@@ -415,8 +415,8 @@ describe('polygonCentroid', () => {
     expect(c.lng).toBeCloseTo(10);
   });
 
-  it('[HP-6] Polygon degenerate (tất cả điểm thẳng hàng) → finite (không throw)', () => {
-    // Tất cả point cùng x → area = 0 → fallback mean
+  it('[HP-6] Polygon degenerate (tất cả điểm thẳng hàng) -> finite (không throw)', () => {
+    // Tất cả point cùng x -> area = 0 -> fallback mean
     const collinear: Coordinate[] = [
       { lat: 0, lng: 5 },
       { lat: 1, lng: 5 },
@@ -430,7 +430,7 @@ describe('polygonCentroid', () => {
   });
 
   // --- NHÓM 2: Contract Violations ---
-  it('[INV-1] Empty array → throw GeometryError', () => {
+  it('[INV-1] Empty array -> throw GeometryError', () => {
     expect(() => polygonCentroid([])).toThrow(GeometryError);
     expect(() => polygonCentroid([])).toThrow(/at least 1/);
   });
@@ -447,7 +447,7 @@ describe('polygonCentroid', () => {
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 500 polygons ngẫu nhiên → centroid finite, không throw', () => {
+  it('[FUZZ] 500 polygons ngẫu nhiên -> centroid finite, không throw', () => {
     const coordArb: fc.Arbitrary<Coordinate> = fc.record({
       lat: fc.double({ min: -90, max: 90, noNaN: true }),
       lng: fc.double({ min: -180, max: 180, noNaN: true }),
@@ -466,8 +466,8 @@ describe('polygonCentroid', () => {
     );
   });
 
-  it('[LOGIC-OR] close-polygon: guard || phân biệt closed vs open → centroid hợp lệ', () => {
-    // Nếu guard sai (dùng &&), polygon đã khép sẽ bị push thêm điểm trùng → area lệch
+  it('[LOGIC-OR] close-polygon: guard || phân biệt closed vs open -> centroid hợp lệ', () => {
+    // Nếu guard sai (dùng &&), polygon đã khép sẽ bị push thêm điểm trùng -> area lệch
     // Nếu guard đúng (dùng ||), cả hai đều sinh ra centroid finite trong convex hull
     const closed: Coordinate[] = [
       { lat: 0, lng: 0 }, { lat: 1, lng: 0 },
@@ -505,12 +505,12 @@ describe('polygonCentroid', () => {
    * Adjacent zones share edges; diagonal zones only share a corner point.
    *
    *   col 0      col 1      col 2
-   *  ┌──────┐  ┌──────┐
-   *  │  A   │──│  B   │   row 1   (A-B share edge, A-D only corner)
-   *  └──────┘  └──────┘
-   *  ┌──────┐  ┌──────┐
-   *  │  C   │──│  D   │   row 0
-   *  └──────┘  └──────┘
+   *  ┌┐  ┌┐
+   *  │  A   ││  B   │   row 1   (A-B share edge, A-D only corner)
+   *  └┘  └┘
+   *  ┌┐  ┌┐
+   *  │  C   ││  D   │   row 0
+   *  └┘  └┘
    */
   function mkGridZone(id: string, col: number, row: number): Zone {
     const x0 = 106.0 + col * 0.1;
@@ -542,17 +542,17 @@ describe('polygonCentroid', () => {
   const zFar = mkIsolatedZone('far'); // no shared edges with grid
 
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Zones rỗng → trả về {}', () => {
+  it('[HP-1] Zones rỗng -> trả về {}', () => {
     expect(buildAdjacencyMatrix([])).toEqual({});
   });
 
-  it('[HP-2] Adjacent zones (share edge) → kề nhau', () => {
+  it('[HP-2] Adjacent zones (share edge) -> kề nhau', () => {
     const matrix = buildAdjacencyMatrix([zA, zB]);
     expect(matrix['A']).toContain('B');
     expect(matrix['B']).toContain('A');
   });
 
-  it('[HP-3] Diagonal zones (share only corner) → KHÔNG kề nhau', () => {
+  it('[HP-3] Diagonal zones (share only corner) -> KHÔNG kề nhau', () => {
     // A (col0,row1) and D (col1,row0) only share point (106.1, 10.1)
     const matrix = buildAdjacencyMatrix([zA, zD]);
     expect(matrix['A']).not.toContain('D');
@@ -575,7 +575,7 @@ describe('polygonCentroid', () => {
     expect(matrix['A']).toContain('C');  // vertical
     expect(matrix['B']).toContain('D');  // vertical
     expect(matrix['C']).toContain('D');  // horizontal
-    // Diagonal — NOT adjacent
+    // Diagonal - NOT adjacent
     expect(matrix['A']).not.toContain('D');
     expect(matrix['B']).not.toContain('C');
   });
@@ -603,19 +603,19 @@ describe('polygonCentroid', () => {
     expect(matrix['A']).toContain('B');
   });
 
-  it('[INV-2] Single zone → matrix có 1 entry rỗng', () => {
+  it('[INV-2] Single zone -> matrix có 1 entry rỗng', () => {
     const matrix = buildAdjacencyMatrix([zA]);
     expect(Object.keys(matrix)).toHaveLength(1);
     expect(matrix['A']).toHaveLength(0);
   });
 
-    it('[INV-3] Isolated zones (no shared edges) → not adjacent', () => {
+    it('[INV-3] Isolated zones (no shared edges) -> not adjacent', () => {
       const matrix = buildAdjacencyMatrix([zA, zFar]);
       expect(matrix['A']).not.toContain('far');
       expect(matrix['far']).not.toContain('A');
     });
 
-    it('[HP-8] Near-boundary (small gap) → adjacent by default (gap-bridging)', () => {
+    it('[HP-8] Near-boundary (small gap) -> adjacent by default (gap-bridging)', () => {
       // Two 100m-ish squares with a small gap between them.
       // Default NEAR_BOUNDARY_KM in geometry.ts is 0.12km (~120m),
       // so a ~50-80m gap should be considered adjacent.
@@ -667,14 +667,14 @@ describe('polygonCentroid', () => {
         status: 'unassigned',
       };
 
-      // 0.03km (30m) < gap (~60m) → should NOT connect
+      // 0.03km (30m) < gap (~60m) -> should NOT connect
       const matrix = buildAdjacencyMatrix([left, right], 0.03);
       expect(matrix['left2']).not.toContain('right2');
       expect(matrix['right2']).not.toContain('left2');
     });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] Grid of NxN zones → symmetric, no self-loop, only edge-sharing adjacency', () => {
+  it('[FUZZ] Grid of NxN zones -> symmetric, no self-loop, only edge-sharing adjacency', () => {
     // Create a 4x4 grid
     const zones: Zone[] = [];
     for (let r = 0; r < 4; r++) {
@@ -712,7 +712,7 @@ describe('polygonCentroid', () => {
 
   it('[STR-ID] polygon edge-sharing: adjacent zones share IDs correctly', () => {
     // A (col0,row0), B (col1,row0) share right/left edge
-    // gamma is isolated — no shared edges
+    // gamma is isolated - no shared edges
     const alpha = mkGridZone('alpha', 0, 0);
     const beta  = mkGridZone('beta',  1, 0);
     const gamma = mkIsolatedZone('gamma');
@@ -759,11 +759,11 @@ describe('buildDistanceMatrix', () => {
   const zHanoi = mkZone('hanoi', hanoiCoord);
 
   // --- NHÓM 1: Happy Path ---
-  it('[HP-1] Zones rỗng → trả về {}', () => {
+  it('[HP-1] Zones rỗng -> trả về {}', () => {
     expect(buildDistanceMatrix([])).toEqual({});
   });
 
-  it('[HP-2] 1 zone → { [id]: { [id]: 0 } } (diagonal = 0)', () => {
+  it('[HP-2] 1 zone -> { [id]: { [id]: 0 } } (diagonal = 0)', () => {
     const matrix = buildDistanceMatrix([zHCM]);
     expect(matrix['hcm']!['hcm']).toBe(0);
   });
@@ -796,7 +796,7 @@ describe('buildDistanceMatrix', () => {
     }
   });
 
-  it('[HP-7] N zones → N×N entries (mỗi zone có entry đến mọi zone khác + diagonal)', () => {
+  it('[HP-7] N zones -> N×N entries (mỗi zone có entry đến mọi zone khác + diagonal)', () => {
     const zones = [zHCM, zHanoi, mkZone('z3', { lat: 16, lng: 108 })];
     const matrix = buildDistanceMatrix(zones);
     expect(Object.keys(matrix)).toHaveLength(3);
@@ -821,7 +821,7 @@ describe('buildDistanceMatrix', () => {
   });
 
   // --- NHÓM 3: Fuzz Test ---
-  it('[FUZZ] 300 zone arrays → symmetric, diagonal=0, tất cả finite >= 0', () => {
+  it('[FUZZ] 300 zone arrays -> symmetric, diagonal=0, tất cả finite >= 0', () => {
     const coordArb: fc.Arbitrary<Coordinate> = fc.record({
       lat: fc.double({ min: -90, max: 90, noNaN: true }),
       lng: fc.double({ min: -180, max: 180, noNaN: true }),

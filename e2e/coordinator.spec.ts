@@ -1,13 +1,13 @@
 /**
- * e2e/coordinator.spec.ts — Coordinator role E2E tests
+ * e2e/coordinator.spec.ts - Coordinator role E2E tests
  * Scenario: Team overview workflow.
  */
 
 import { test, expect } from '@playwright/test'
 import { AppPage } from './pages/AppPage'
 
-test.describe('Coordinator — Team overview', () => {
-  test('[E2E-C1] switch sang Coordinator → team-overview xuất hiện', async ({ page }) => {
+test.describe('Coordinator - Team overview', () => {
+  test('[E2E-C1] switch sang Coordinator -> team-overview xuất hiện', async ({ page }) => {
     const app = new AppPage(page)
     await app.goto()
     await app.switchRole('coordinator')

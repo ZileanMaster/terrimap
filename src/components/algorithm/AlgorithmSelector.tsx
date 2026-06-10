@@ -1,7 +1,3 @@
-/**
- * AlgorithmSelector — 3 cards: Greedy | Local Search | SA
- */
-
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 

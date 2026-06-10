@@ -386,11 +386,11 @@ def build_report():
     add_styled_table(doc,
         ['Tầng kiến trúc', 'Thư mục & Tệp tin', 'Nhiệm vụ chi tiết', 'Quy tắc phụ thuộc'],
         [
-            ['L4 — UI Layer', 'src/components/, src/pages/', 'Render giao diện React, vẽ bản đồ Leaflet, biểu đồ Recharts, xử lý sự kiện DOM.', 'Được phép import L3, L2, L1, L0.'],
-            ['L3 — Facades Layer', 'src/context/FacadeContext.tsx', 'Cung cấp API tối giản cho UI sử dụng, che giấu sự phức tạp của dịch vụ database và các stores.', 'Được phép import L2, L1, L0. Nghiêm cấm chứa code UI.'],
-            ['L2 — Services Layer', 'src/services/db.ts, src/store/dataStore.ts', 'Xử lý các nghiệp vụ (Business Rules), điều phối dữ liệu với DB Supabase, quản lý state.', 'Được phép import L1, L0. Không import UI.'],
-            ['L1 — Libraries Layer', 'lib/geometry.ts, lib/partition.ts', 'Chứa các pure functions tính toán hình học, khoảng cách, và các thuật toán lõi.', 'Được phép import L0. Không side effects, không import framework.'],
-            ['L0 — Domain Types', 'src/types/domain.ts', 'Định nghĩa Single Source of Truth cho các kiểu dữ liệu thực thể (Entity Types).', 'Không import bất cứ gì ngoài chính nó (độc lập tuyệt đối).']
+            ['L4 - UI Layer', 'src/components/, src/pages/', 'Render giao diện React, vẽ bản đồ Leaflet, biểu đồ Recharts, xử lý sự kiện DOM.', 'Được phép import L3, L2, L1, L0.'],
+            ['L3 - Facades Layer', 'src/context/FacadeContext.tsx', 'Cung cấp API tối giản cho UI sử dụng, che giấu sự phức tạp của dịch vụ database và các stores.', 'Được phép import L2, L1, L0. Nghiêm cấm chứa code UI.'],
+            ['L2 - Services Layer', 'src/services/db.ts, src/store/dataStore.ts', 'Xử lý các nghiệp vụ (Business Rules), điều phối dữ liệu với DB Supabase, quản lý state.', 'Được phép import L1, L0. Không import UI.'],
+            ['L1 - Libraries Layer', 'lib/geometry.ts, lib/partition.ts', 'Chứa các pure functions tính toán hình học, khoảng cách, và các thuật toán lõi.', 'Được phép import L0. Không side effects, không import framework.'],
+            ['L0 - Domain Types', 'src/types/domain.ts', 'Định nghĩa Single Source of Truth cho các kiểu dữ liệu thực thể (Entity Types).', 'Không import bất cứ gì ngoài chính nó (độc lập tuyệt đối).']
         ])
     
     h2(doc, '2.2. Luồng dữ liệu (Data Flow) và cơ chế Facade pattern')

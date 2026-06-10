@@ -1,19 +1,3 @@
-/**
- * src/store/authStore.ts — Auth + Project Zustand store
- *
- * Manages:
- * - Supabase Auth session (sign in / sign up / sign out)
- * - User profile (from `profiles` table)
- * - Project membership (from `project_members` table)
- * - Current project context
- *
- * Flow:
- * 1. User signs in → session established
- * 2. loadProfile() → fetch from profiles table
- * 3. loadProjects() → fetch all projects user belongs to
- * 4. selectProject(id) → load membership (role) for that project
- */
-
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase.js'
 import type { User, Session } from '@supabase/supabase-js'
@@ -74,7 +58,7 @@ interface AuthStore {
   updateProject: (projectId: string, data: { name: string; description?: string }) => Promise<boolean>
   deleteProject: (projectId: string) => Promise<boolean>
 
-  // Member management
+  // Quản lý thành viên
   inviteMember: (email: string, role: string, regionId?: string) => Promise<boolean>
   updateMemberRole: (memberId: string, newRole: string) => Promise<boolean>
   removeMember: (memberId: string) => Promise<boolean>
@@ -92,6 +76,81 @@ function normalizeDateInput(value?: string | null): string | null {
   return trimmed.slice(0, 10)
 }
 
+const DEFAULT_PROJECT_ID = 'test-project-terrimap'
+const DEFAULT_PROJECT_OWNER_EMAIL = 'admin.test@terrimap.vn'
+
+async function resolveDefaultProject(): Promise<Project | null> {
+  if (!supabase) return null
+
+  const { data: fixedProject } = await supabase
+    .from('projects')
+    .select('id, name, description, owner_id, created_at')
+    .eq('id', DEFAULT_PROJECT_ID)
+    .maybeSingle()
+
+  if (fixedProject) return fixedProject as Project
+
+  const { data: adminProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', DEFAULT_PROJECT_OWNER_EMAIL)
+    .maybeSingle()
+
+  if (!adminProfile?.id) return null
+
+  const { data: adminProject } = await supabase
+    .from('projects')
+    .select('id, name, description, owner_id, created_at')
+    .eq('owner_id', adminProfile.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  return (adminProject as Project | null) ?? null
+}
+
+async function ensureDefaultProjectMembership(userId: string): Promise<void> {
+  if (!supabase) return
+
+  const defaultProject = await resolveDefaultProject()
+  if (!defaultProject) return
+
+  const { data: existing } = await supabase
+    .from('project_members')
+    .select('id')
+    .eq('project_id', defaultProject.id)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (existing) return
+
+  const { error } = await supabase
+    .from('project_members')
+    .upsert({
+      project_id: defaultProject.id,
+      user_id: userId,
+      role: defaultProject.owner_id === userId ? 'admin' : 'sales',
+      region_id: null,
+    }, { onConflict: 'project_id,user_id' })
+
+  if (error) {
+    console.warn('[AuthStore] ensureDefaultProjectMembership warning:', error)
+  }
+}
+
+function pickInitialProject(projects: Project[]): string | null {
+  const lastProject = localStorage.getItem('terrimap_project')
+  const preferred = [lastProject, DEFAULT_PROJECT_ID]
+
+  for (const projectId of preferred) {
+    if (projectId && projects.some((project) => project.id === projectId)) {
+      return projectId
+    }
+  }
+
+  return projects[0]?.id ?? null
+}
+
 export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   session: null,
@@ -102,7 +161,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loading: true,
   authError: null,
 
-  // ── Initialize: check existing session ──────────────────────────────────
+  // Kiểm tra session khi khởi động
   initialize: async () => {
     if (!supabase) {
       set({ loading: false })
@@ -111,7 +170,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     // 8s hard timeout: if Supabase is slow/down, show login instead of infinite splash
     const timeout = setTimeout(() => {
-      console.warn('[AuthStore] initialize timeout (8s) — showing login')
+      console.warn('[AuthStore] initialize timeout (8s) - showing login')
       set({ loading: false })
     }, 8_000)
 
@@ -119,19 +178,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         set({ user: session.user, session })
-        // Tải profile + projects song song (nhanh hơn)
+        await ensureDefaultProjectMembership(session.user.id)
         await Promise.all([
           get().loadProfile(),
           get().loadProjects(),
         ])
 
-        // Auto-select last used project from localStorage
-        const lastProject = localStorage.getItem('terrimap_project')
-        if (lastProject) {
-          const projects = get().projects
-          if (projects.some(p => p.id === lastProject)) {
-            await get().selectProject(lastProject)
-          }
+        const nextProjectId = pickInitialProject(get().projects)
+        if (nextProjectId) {
+          await get().selectProject(nextProjectId)
         }
       }
     } catch (e) {
@@ -147,23 +202,29 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (!session) {
         set({ profile: null, projects: [], currentProjectId: null, membership: null })
       } else {
+        await ensureDefaultProjectMembership(session.user.id)
         await get().loadProfile()
         await get().loadProjects()
+        const nextProjectId = pickInitialProject(get().projects)
+        if (nextProjectId && get().currentProjectId !== nextProjectId) {
+          await get().selectProject(nextProjectId)
+        }
       }
     })
   },
 
-  // ── Sign In ─────────────────────────────────────────────────────────────
+  //  Sign In 
+  //  Sign In 
   signIn: async (email, password) => {
     if (!supabase) {
-      set({ authError: 'Supabase chưa được cấu hình' })
+      set({ authError: 'Supabase ch?a ???c c?u h?nh' })
       return false
     }
     set({ authError: null, loading: true })
 
     // 10s timeout: prevent infinite spinner
     const timeout = setTimeout(() => {
-      set({ authError: 'Đăng nhập quá lâu. Vui lòng thử lại.', loading: false })
+      set({ authError: '??ng nh?p qu? l?u. Vui l?ng th? l?i.', loading: false })
     }, 10_000)
 
     try {
@@ -175,25 +236,32 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       set({ user: data.user, session: data.session })
-      // Tải profile + projects song song
+      if (data.user) {
+        await ensureDefaultProjectMembership(data.user.id)
+      }
       await Promise.all([
         get().loadProfile(),
         get().loadProjects(),
       ])
+      const nextProjectId = pickInitialProject(get().projects)
+      if (nextProjectId) {
+        await get().selectProject(nextProjectId)
+      }
       clearTimeout(timeout)
       set({ loading: false })
       return true
     } catch (e: any) {
       clearTimeout(timeout)
-      set({ authError: e?.message || 'Lỗi đăng nhập', loading: false })
+      set({ authError: e?.message || 'L?i ??ng nh?p', loading: false })
       return false
     }
   },
 
-  // ── Sign Up ─────────────────────────────────────────────────────────────
+  //  Sign Up 
+  //  Sign Up 
   signUp: async (email, password, fullName) => {
     if (!supabase) {
-      set({ authError: 'Supabase chưa được cấu hình' })
+      set({ authError: 'Supabase ch?a ???c c?u h?nh' })
       return false
     }
     set({ authError: null, loading: true })
@@ -211,13 +279,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // If session is null, email confirmation is required
     if (!data.session) {
       set({
-        authError: 'Tài khoản đã được tạo. Vui lòng kiểm tra email và xác nhận tài khoản, sau đó đăng nhập lại.',
+        authError: 'T?i kho?n ?? ???c t?o. Vui l?ng ki?m tra email v? x?c nh?n t?i kho?n, sau ?? ??ng nh?p l?i.',
         loading: false,
       })
       return false
     }
 
     set({ user: data.user, session: data.session })
+    if (data.user) {
+      await ensureDefaultProjectMembership(data.user.id)
+    }
 
     // Wait for the trigger to create the profile (retry loop instead of brittle setTimeout)
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -226,11 +297,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (get().profile) break
     }
     await get().loadProjects()
+    const nextProjectId = pickInitialProject(get().projects)
+    if (nextProjectId) {
+      await get().selectProject(nextProjectId)
+    }
     set({ loading: false })
     return true
   },
 
-  // ── Sign Out ────────────────────────────────────────────────────────────
+  //  Sign Out 
+  //  Sign Out 
   signOut: async () => {
     localStorage.removeItem('terrimap_project')
     set({
@@ -246,7 +322,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!supabase) return
 
     const timeout = setTimeout(() => {
-      console.warn('[AuthStore] signOut timeout — local state already cleared')
+      console.warn('[AuthStore] signOut timeout - local state already cleared')
     }, 5_000)
 
     try {
@@ -271,7 +347,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   clearError: () => set({ authError: null }),
 
-  // ── Tải profile ─────────────────────────────────────────────────────────
+  //  Tải profile 
   loadProfile: async () => {
     if (!supabase) return
     const user = get().user
@@ -288,7 +364,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // ── Tải projects (nơi user là thành viên) ───────────────────────────────
+  //  Tải projects (nơi user là thành viên) 
   loadProjects: async () => {
     if (!supabase) return
     const user = get().user
@@ -326,7 +402,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ projects: [...owned, ...memberProjects] })
   },
 
-  // ── Select Project ──────────────────────────────────────────────────────
+  //  Select Project 
   selectProject: async (projectId) => {
     if (!supabase) return
     const user = get().user
@@ -369,68 +445,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // ── Create Project ──────────────────────────────────────────────────────
+  //  Create Project 
   createProject: async (name, description = '') => {
-    if (!supabase) return null
-    const user = get().user
-    if (!user) return null
-
-    const projectId = globalThis.crypto?.randomUUID?.() ?? `project-${Date.now()}-${Math.random().toString(16).slice(2)}`
-    const project: Project = {
-      id: projectId,
-      name,
-      description,
-      owner_id: user.id,
-      created_at: new Date().toISOString(),
-    }
-
-    localStorage.setItem('terrimap_project', project.id)
-    useDataStore.getState().setCurrentRegion(null)
-    useUIStore.getState().setRole('admin')
-    set((state) => ({
-      projects: state.projects.some((p) => p.id === project.id)
-        ? state.projects
-        : [...state.projects, project],
-      currentProjectId: project.id,
-      membership: {
-        id: 'owner',
-        project_id: project.id,
-        user_id: user.id,
-        role: 'admin',
-        region_id: null,
-        joined_at: new Date().toISOString(),
-      },
-      authError: null,
-    }))
-
-    void (async () => {
-      try {
-        const { error: projectError } = await supabase
-          .from('projects')
-          .upsert(project, { onConflict: 'id' })
-
-        if (projectError) {
-          console.warn('[AuthStore] createProject project sync warning:', projectError)
-          return
-        }
-
-        const { error: memberError } = await supabase
-          .from('project_members')
-          .upsert({
-            project_id: project.id,
-            user_id: user.id,
-            role: 'admin',
-          }, { onConflict: 'project_id,user_id' })
-
-        if (memberError) {
-          console.warn('[AuthStore] createProject member sync warning:', memberError)
-        }
-      } catch (error) {
-        console.warn('[AuthStore] createProject member sync unexpected:', error)
-      }
-    })()
-
-    return project.id
+    void name
+    void description
+    set({ authError: 'Tạo dự án mới đang tạm tắt. Mọi tài khoản mới sẽ tự động vào dự án mặc định.' })
+    return null
   },
 
   updateProject: async (projectId, data) => {
@@ -520,7 +540,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Invite Member ───────────────────────────────────────────────────────
+  //  Invite Member 
   inviteMember: async (email, role, regionId) => {
     if (!supabase) { set({ authError: 'Không có kết nối cơ sở dữ liệu' }); return false }
     const client = supabase
@@ -534,7 +554,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       )
 
       const doInvite = async (): Promise<boolean> => {
-        // Find user by email — try direct query first, fallback to RPC
+        // Find user by email - try direct query first, fallback to RPC
         let profileId: string | null = null
 
         const { data: profile } = await client
@@ -599,7 +619,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  // ── Update Member Role ──────────────────────────────────────────────────
+  //  Update Member Role 
   updateMemberRole: async (memberId, newRole) => {
     if (!supabase) return false
     const projectId = get().currentProjectId
@@ -637,7 +657,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Remove Member ──────────────────────────────────────────────────────
+  //  Remove Member 
   removeMember: async (memberId) => {
     if (!supabase) return false
     const projectId = get().currentProjectId
@@ -675,7 +695,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
-  // ── Tải thành viên ──────────────────────────────────────────────────────
+  //  Tải thành viên 
   loadMembers: async () => {
     if (!supabase) return []
     const client = supabase
@@ -751,7 +771,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return members
   },
 
-  // ── Update Profile ───────────────────────────────────────────────────────
+  //  Update Profile 
   updateProfile: async (data) => {
     const payload = typeof data === 'string'
       ? { full_name: data }

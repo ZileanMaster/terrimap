@@ -27,7 +27,7 @@ interface UIStore {
   selectedZoneId:      string | null
   isAlgorithmRunning:  boolean
   theme:               Theme
-  highlightedSalesId:  string | null      // L4b-1: bấm thẻ nhân sự → tô sáng cụm
+  highlightedSalesId:  string | null      // L4b-1: bấm thẻ nhân sự -> tô sáng cụm
   isMapTransitioning:  boolean
   selectedDistrictId:  number | null
   showPolygons:        boolean
@@ -98,7 +98,7 @@ export const useUIStore = create<UIStore>((set) => ({
     applyTheme(theme)
   },
 
-  // Toggle: click same agent → deselect; click different → select new
+  // Toggle: click same agent -> deselect; click different -> select new
 
   setHighlightedSalesId: (id) =>
     set((s) => ({

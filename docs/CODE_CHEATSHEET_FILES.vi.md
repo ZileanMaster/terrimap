@@ -1,4 +1,4 @@
-# TerriMap — Cheat sheet file/module để học nhanh
+# TerriMap - Cheat sheet file/module để học nhanh
 
 Tài liệu này là bản **cầm tay chỉ việc**: file nào làm gì, nên nhìn ở đâu trước, và nếu bị hỏi thì trả lời ra sao.
 
@@ -537,9 +537,9 @@ Theo thứ tự học nhanh:
 
 ## 5) Ghi nhớ 5 file “đinh” nhất
 
-- `src/App.tsx` → điều phối toàn app
-- `src/store/authStore.ts` → auth/project/member
-- `src/store/dataStore.ts` → zones/assignments/regions
-- `src/components/algorithm/AlgorithmComparator.tsx` → chạy và so sánh thuật toán
-- `src/components/map/TerritoryMap.tsx` → bản đồ trung tâm
+- `src/App.tsx` -> điều phối toàn app
+- `src/store/authStore.ts` -> auth/project/member
+- `src/store/dataStore.ts` -> zones/assignments/regions
+- `src/components/algorithm/AlgorithmComparator.tsx` -> chạy và so sánh thuật toán
+- `src/components/map/TerritoryMap.tsx` -> bản đồ trung tâm
 

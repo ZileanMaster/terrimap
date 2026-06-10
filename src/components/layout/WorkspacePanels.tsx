@@ -107,7 +107,7 @@ export function AssignmentWorkspacePanel({
       <div style={styles.title}>Phân chia lãnh thổ</div>
       <div style={styles.desc}>
         Màn này dành cho phân cụm, gán nhân sự, cân bằng tải và lưu phương án triển khai. Phần dữ liệu nền
-        nên xử lý ở màn Khu vực & bản đồ.
+        được chỉnh ngay trong cùng một màn Phân chia lãnh thổ.
       </div>
       <div style={styles.statsGrid}>
         <TinyStat label="Vùng trong khu vực" value={zoneCount} />

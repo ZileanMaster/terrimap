@@ -55,7 +55,7 @@ Thanh điều hướng chính gồm:
 | Nhân sự | Quản lý thành viên dự án |
 | Phân chia lãnh thổ | Chỉnh tay vùng/cụm theo nghiệp vụ |
 | Vận hành | Theo dõi báo cáo theo tháng và theo khu vực |
-| Phân chia thuật toán | Chạy các thuật toán phân chia và so sánh kết quả |
+| Thuật toán phân chia | Chạy các thuật toán phân chia và so sánh kết quả |
 | Cài đặt | Hồ sơ cá nhân và cấu hình hệ thống |
 
 Vai trò được hiển thị theo ba nhóm chính:
@@ -75,7 +75,7 @@ Thứ tự nên đi:
 4. Vào **Nhân sự** để kiểm tra thành viên và vai trò.
 5. Vào **Phân chia lãnh thổ** để chỉnh tay vùng/cụm nếu cần.
 6. Vào **Vận hành** để theo dõi báo cáo theo tháng.
-7. Vào **Phân chia thuật toán** để chạy thuật toán khi muốn tối ưu.
+7. Vào **Thuật toán phân chia** để chạy thuật toán khi muốn tối ưu.
 8. Lưu map hoặc snapshot nếu cần quay lại trạng thái trước đó.
 
 > Lưu ý: phần thuật toán hiện **chỉ chạy khi bấm nút Chạy phân chia**, không tự chạy khi đổi cấu hình.
@@ -144,7 +144,7 @@ Bạn có thể:
 
 Mục tiêu của màn này là cho người quản lý thấy **khu vực nào đã có dữ liệu, khu vực nào còn thiếu, và mức độ phủ báo cáo ra sao**.
 
-### 5.6 Phân chia thuật toán
+### 5.6 Thuật toán phân chia
 Màn này dùng để chạy thuật toán phân chia lãnh thổ.
 
 Hiện tại:
@@ -190,7 +190,7 @@ Hệ thống sẽ tạo dự án theo cách tối ưu để người dùng thấ
 3. Hệ thống ghi trạng thái mới và cập nhật ngay danh sách snapshot.
 
 ### Chạy thuật toán
-1. Vào `Phân chia thuật toán`.
+1. Vào `Thuật toán phân chia`.
 2. Chọn khu vực.
 3. Chọn thuật toán.
 4. Chọn số cụm.

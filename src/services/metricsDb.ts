@@ -1,5 +1,5 @@
 /**
- * src/services/metricsDb.ts — Lưu trữ chỉ số theo tháng
+ * src/services/metricsDb.ts - Lưu trữ chỉ số theo tháng
  *
  * Lưu/load chỉ số theo tháng (YYYY-MM) cho từng zone.
  * Dự phòng offline: localStorage key 'terrimap_monthly_metrics'.
@@ -41,7 +41,7 @@ function lsKeyScoped(): string {
   return pid ? `${LS_BASE}_${pid}` : LS_BASE
 }
 
-// ── localStorage helpers ────────────────────────────────────────────────────
+//  localStorage helpers 
 
 function lsGet(): Record<string, Record<string, MonthlyMetric[]>> {
   try {
@@ -54,10 +54,10 @@ function lsGet(): Record<string, Record<string, MonthlyMetric[]>> {
 function lsSet(data: Record<string, Record<string, MonthlyMetric[]>>) {
   try {
     localStorage.setItem(lsKeyScoped(), JSON.stringify(data))
-  } catch { /* quota exceeded — ignore */ }
+  } catch { /* quota exceeded - ignore */ }
 }
 
-// ── Lưu ───────────────────────────────────────────────────────────────────
+//  Lưu 
 
 export async function saveMonthlyMetrics(
   zoneId:  string,
@@ -96,7 +96,7 @@ export async function saveMonthlyMetrics(
   }
 }
 
-// ── Tải ───────────────────────────────────────────────────────────────────
+//  Tải 
 
 export async function loadMonthlyMetrics(
   period:   string,

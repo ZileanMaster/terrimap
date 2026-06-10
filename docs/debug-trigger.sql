@@ -24,9 +24,9 @@ DO $$
 BEGIN
   INSERT INTO profiles (id, email, full_name)
   VALUES ('00000000-0000-0000-0000-000000000001'::uuid, 'test@debug.com', 'Debug Test');
-  RAISE NOTICE 'INSERT OK — profiles table works!';
+  RAISE NOTICE 'INSERT OK - profiles table works!';
 EXCEPTION WHEN OTHERS THEN
-  RAISE NOTICE 'INSERT FAILED: % — %', SQLERRM, SQLSTATE;
+  RAISE NOTICE 'INSERT FAILED: % - %', SQLERRM, SQLSTATE;
 END;
 $$;
 -- KỲ VỌNG: "INSERT OK" hoặc lỗi FK (vì uuid không tồn tại trong auth.users)

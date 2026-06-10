@@ -1,17 +1,9 @@
-/**
- * services/ActivityService.ts — L2 Domain Service
- *
- * Quản lý dữ liệu hoạt động (customers, orders) của zones.
- * Import từ types/domain.ts, lib/geometry.ts, lib/partition.ts.
- * Pure class — không extends EventEmitter, không import UI framework.
- */
-
 import type { Zone, Activity } from '../types/domain.js';
 import { zoneDiameter } from '../lib/geometry.js';
 import type { Assignment } from '../lib/partition.js';
 import { ServiceError } from './errors.js';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+//  Types 
 
 /** Tóm tắt metrics của một district. */
 export interface DistrictSummary {
@@ -34,7 +26,7 @@ export interface ActivityRecord {
   orders: number;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function _getActivity(zone: Zone, type: Activity['type']): number {
   return zone.activities
@@ -42,13 +34,13 @@ function _getActivity(zone: Zone, type: Activity['type']): number {
     .reduce((s, a) => s + a.value, 0);
 }
 
-// ─── ActivityService ──────────────────────────────────────────────────────────
+//  ActivityService 
 
 export class ActivityService {
 
   /**
    * Cập nhật customers và/hoặc orders của một zone.
-   * Trả về array zones mới (immutable — không mutate input).
+   * Trả về array zones mới (immutable - không mutate input).
    *
    * @throws {ServiceError} ZONE_NOT_FOUND | INVALID_INPUT
    */
@@ -85,7 +77,7 @@ export class ActivityService {
 
     const zone = zones[idx]!;
 
-    // Build updated activities — filter out old CUSTOMER/ORDER, add new
+    // Build updated activities - filter out old CUSTOMER/ORDER, add new
     const keepActivities = zone.activities.filter((a) => {
       if (data.customers !== undefined && a.type === 'CUSTOMER') return false;
       if (data.orders !== undefined && a.type === 'ORDER') return false;
@@ -111,7 +103,7 @@ export class ActivityService {
    * Tính DistrictSummary cho một district.
    * balanceScore tính dựa trên CV của customers so với tất cả districts.
    *
-   * @complexity O(n) — n = zones.length.
+   * @complexity O(n) - n = zones.length.
    */
   getDistrictSummary(
     districtId: number,
@@ -170,7 +162,7 @@ export class ActivityService {
    * Skip rows có zone_id trống hoặc giá trị không hợp lệ.
    * Log warning (console.warn) cho mỗi row bị skip.
    *
-   * @complexity O(n) — n = số rows.
+   * @complexity O(n) - n = số rows.
    */
   importActivitiesFromCSV(csv: string): ActivityRecord[] {
     const lines = csv.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -192,7 +184,7 @@ export class ActivityService {
 
       // Validate zone_id
       if (!zoneId) {
-        console.warn(`[CSV] Row ${rowNum}: skipped — zone_id is empty.`);
+        console.warn(`[CSV] Row ${rowNum}: skipped - zone_id is empty.`);
         continue;
       }
 
@@ -200,11 +192,11 @@ export class ActivityService {
       const orders = Number(rawOrders);
 
       if (!Number.isFinite(customers) || customers < 0) {
-        console.warn(`[CSV] Row ${rowNum} (${zoneId}): skipped — invalid customers "${rawCustomers}".`);
+        console.warn(`[CSV] Row ${rowNum} (${zoneId}): skipped - invalid customers "${rawCustomers}".`);
         continue;
       }
       if (!Number.isFinite(orders) || orders < 0) {
-        console.warn(`[CSV] Row ${rowNum} (${zoneId}): skipped — invalid orders "${rawOrders}".`);
+        console.warn(`[CSV] Row ${rowNum} (${zoneId}): skipped - invalid orders "${rawOrders}".`);
         continue;
       }
 

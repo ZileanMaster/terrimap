@@ -1,7 +1,3 @@
-/**
- * Mock SalesAgents — 20 agents Hà Nội + 2 agents TP.HCM = 22 total
- */
-
 import type { SalesAgent } from '../../facades/viewmodels.js'
 
 const hnMOCK_AGENTS: SalesAgent[] = [

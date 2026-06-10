@@ -42,7 +42,7 @@ Mỗi dự án test nên có:
 
 ## 2) Thứ tự test đề xuất
 
-### Bước 1 — Mở web
+### Bước 1 - Mở web
 
 **Thao tác**
 - Mở TerriMap.
@@ -55,7 +55,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 2 — Đăng nhập
+### Bước 2 - Đăng nhập
 
 **Thao tác**
 - Đăng nhập bằng tài khoản test.
@@ -66,7 +66,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 3 — Chọn hoặc tạo dự án
+### Bước 3 - Chọn hoặc tạo dự án
 
 **Thao tác**
 - Chọn dự án cũ.
@@ -84,7 +84,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 4 — Tổng quan
+### Bước 4 - Tổng quan
 
 **Thao tác**
 - Vào `Tổng quan`.
@@ -102,7 +102,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 5 — Khu vực & bản đồ
+### Bước 5 - Khu vực & bản đồ
 
 **Thao tác**
 - Vào `Khu vực & bản đồ`.
@@ -122,7 +122,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 6 — Nhân sự
+### Bước 6 - Nhân sự
 
 **Thao tác**
 - Vào `Nhân sự`.
@@ -140,7 +140,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 7 — Phân chia lãnh thổ
+### Bước 7 - Phân chia lãnh thổ
 
 **Thao tác**
 - Vào `Phân chia lãnh thổ`.
@@ -154,7 +154,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 8 — Vận hành
+### Bước 8 - Vận hành
 
 **Thao tác**
 - Vào `Vận hành`.
@@ -169,10 +169,10 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 9 — Phân chia thuật toán
+### Bước 9 - Thuật toán phân chia
 
 **Thao tác**
-- Vào `Phân chia thuật toán`.
+- Vào `Thuật toán phân chia`.
 - Chọn khu vực.
 - Chọn thuật toán.
 - Chọn số cụm.
@@ -190,7 +190,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 10 — Cài đặt
+### Bước 10 - Cài đặt
 
 **Thao tác**
 - Vào `Cài đặt`.
@@ -203,7 +203,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 11 — Đổi giao diện sáng/tối
+### Bước 11 - Đổi giao diện sáng/tối
 
 **Thao tác**
 - Bấm nút theme trên màn chọn dự án.
@@ -215,7 +215,7 @@ Mỗi dự án test nên có:
 
 ---
 
-### Bước 12 — Đổi dự án / đăng xuất
+### Bước 12 - Đổi dự án / đăng xuất
 
 **Thao tác**
 - Bấm `Đổi dự án`.

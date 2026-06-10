@@ -1,9 +1,3 @@
-/**
- * facades/errors.ts
- *
- * Các lỗi có kiểu cho L3 Role Façades.
- */
-
 export type PermissionErrorCode =
   | 'PERMISSION_DENIED'   // phương thức vượt quá quyền của vai trò
   | 'NOT_AUTHENTICATED'   // salesId không hợp lệ
@@ -16,9 +10,7 @@ export interface PermissionErrorDetails {
   message?: string;
 }
 
-/**
- * Ném lỗi khi một vai trò cố gọi phương thức vượt quá quyền.
- */
+// Ném lỗi khi một vai trò cố gọi phương thức vượt quá quyền.
 export class PermissionError extends Error {
   readonly details: PermissionErrorDetails;
 

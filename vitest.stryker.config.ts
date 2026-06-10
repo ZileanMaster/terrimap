@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-// Vitest config stripped-down cho Stryker — không có coverage thresholds
+// Vitest config stripped-down cho Stryker - không có coverage thresholds
 // Stryker tự quản lý test execution, không cần coverage provider
 export default defineConfig({
   test: {

@@ -1,10 +1,10 @@
 /**
- * src/services/db.ts — Lớp CRUD cho database (Supabase ↔ App)
+ * src/services/db.ts - Lớp CRUD cho database (Supabase ↔ App)
  *
  * Tất cả hàm đều async và sẽ fallback mượt sang dữ liệu MOCK khi
  * Supabase chưa được cấu hình (thiếu VITE_SUPABASE_URL).
  *
- * Các hàm SAVE là fire-and-forget (caller không await) — UI cập nhật
+ * Các hàm SAVE là fire-and-forget (caller không await) - UI cập nhật
  * theo kiểu optimistic và DB sync ở nền.
  *
  * Ghi chú kiến trúc: file này nằm ở L4 (src/) và là nơi DUY NHẤT
@@ -19,7 +19,7 @@ import type { Zone, Assignment, SalesAgent } from '../../facades/viewmodels.js'
 import { assertNoPolygonTopologyViolations } from '../../lib/geometry.js'
 
 
-// ── Project-scoped localStorage key helper ────────────────────────────────────
+//  Project-scoped localStorage key helper 
 // Prevents data leakage between different accounts/projects on same browser.
 let _currentProjectId: string | undefined
 
@@ -87,7 +87,7 @@ export function readSnapshotCache(projectId?: string): Array<{
   return readJsonArray<any>(key)
 }
 
-// ── DB row shapes (snake_case) ────────────────────────────────────────────────
+//  DB row shapes (snake_case) 
 
 interface DbZone {
   id:         string
@@ -117,6 +117,7 @@ interface DbSalesAgent {
   id:            string
   name:          string
   active_region: string
+  region_id?:    string | null
   capacity:      number
 }
 
@@ -128,7 +129,7 @@ interface DbRegion {
   zoom:           number
 }
 
-// ── LOAD ──────────────────────────────────────────────────────────────────────
+//  LOAD 
 
 export async function loadZones(projectId?: string): Promise<Zone[]> {
   const localZones = readScopedCollections<Zone>('terrimap_zones', projectId)
@@ -291,7 +292,7 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
 }
 
 /**
- * Tải sales agents (giữ thứ tự canonical — OPEN-4), có thể lọc theo project.
+ * Tải sales agents (giữ thứ tự canonical - OPEN-4), có thể lọc theo project.
  * Offline fallback: MOCK_AGENTS.
  */
 export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
@@ -325,6 +326,7 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
           id:           a.id,
           name:         a.name,
           activeRegion: a.active_region,
+          ...(a.region_id != null ? { regionId: a.region_id } : {}),
           capacity:     a.capacity,
         }))
       }
@@ -332,7 +334,7 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     return []
   }
 
-  // Deduplicate by id — prefer the one WITH project_id
+  // Deduplicate by id - prefer the one WITH project_id
   const agentMap = new Map<string, DbSalesAgent>()
   for (const a of data as DbSalesAgent[]) {
     const existing = agentMap.get(a.id)
@@ -345,11 +347,12 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     id:           a.id,
     name:         a.name,
     activeRegion: a.active_region,
+    ...(a.region_id != null ? { regionId: a.region_id } : {}),
     capacity:     a.capacity,
   }))
 }
 
-// ── SAVE ──────────────────────────────────────────────────────────────────────
+//  SAVE 
 
 /**
  * Upsert a single zone + replace its activities.
@@ -471,7 +474,7 @@ export async function saveSnapshot(
   id: string,
   label: string,
   data: { zones: Zone[]; assignments: Assignment[] } | object,
-  period?: string,  // '2026-04' — tùy chọn, gắn tháng với snapshot
+  period?: string,  // '2026-04' - tùy chọn, gắn tháng với snapshot
   projectId?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const scopedProjectId = projectId ?? _currentProjectId
@@ -608,6 +611,7 @@ export async function saveAgent(agent: SalesAgent, projectId?: string): Promise<
       id:            agent.id,
       name:          agent.name,
       active_region: agent.activeRegion,
+      region_id:     agent.regionId ?? null,
       capacity:      agent.capacity,
     }
     if (projectId) row.project_id = projectId
@@ -641,7 +645,7 @@ export async function deleteAgent(agentId: string): Promise<void> {
   }
 }
 
-// ── Regions ────────────────────────────────────────────────────────────────────
+//  Regions 
 
 export async function loadRegions(projectId?: string): Promise<Region[]> {
 

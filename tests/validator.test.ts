@@ -1,7 +1,7 @@
 /**
  * tests/validator.test.ts
- * Test suite cho L1c Partition Validator — checkBalance, validateGeometry, suggestFix, validatePartition.
- * Không mock — test trực tiếp implementation.
+ * Test suite cho L1c Partition Validator - checkBalance, validateGeometry, suggestFix, validatePartition.
+ * Không mock - test trực tiếp implementation.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,13 +26,13 @@ import {
 
 describe('checkBalance', () => {
 
-  it('[BAL-1] fixture_ok → violations rỗng (ratio mode)', () => {
+  it('[BAL-1] fixture_ok -> violations rỗng (ratio mode)', () => {
     const v = checkBalance(fixture_ok.zones, fixture_ok.assignments,
       { mode: 'ratio', threshold: 1.5 });
     expect(v).toHaveLength(0);
   });
 
-  it('[BAL-2] fixture_imbalanced → có OVER_LOADED và UNDER_LOADED', () => {
+  it('[BAL-2] fixture_imbalanced -> có OVER_LOADED và UNDER_LOADED', () => {
     const v = checkBalance(fixture_imbalanced.zones, fixture_imbalanced.assignments,
       { mode: 'ratio', threshold: 1.5 });
     const types = v.map((x) => x.type);
@@ -40,7 +40,7 @@ describe('checkBalance', () => {
     expect(types).toContain('UNDER_LOADED');
   });
 
-  it('[BAL-3] threshold cao → fixture_imbalanced pass', () => {
+  it('[BAL-3] threshold cao -> fixture_imbalanced pass', () => {
     const v = checkBalance(fixture_imbalanced.zones, fixture_imbalanced.assignments,
       { mode: 'ratio', threshold: 25 });
     expect(v).toHaveLength(0);
@@ -60,8 +60,8 @@ describe('checkBalance', () => {
     expect(overloaded?.customerCount).toBe(600);
   });
 
-  it('[BAL-6] all-zero customers → không throw, violations rỗng', () => {
-    // Zones không có activity nào → customers = 0 mọi district
+  it('[BAL-6] all-zero customers -> không throw, violations rỗng', () => {
+    // Zones không có activity nào -> customers = 0 mọi district
     const zeroZones = fixture_ok.zones.map((z) => ({ ...z, activities: [] }));
     expect(() =>
       checkBalance(zeroZones, fixture_ok.assignments, { mode: 'ratio', threshold: 1.5 })
@@ -118,13 +118,13 @@ describe('checkBalance', () => {
 
 describe('validateGeometry', () => {
 
-  it('[CON-1] fixture_ok → contiguityViolations rỗng', () => {
+  it('[CON-1] fixture_ok -> contiguityViolations rỗng', () => {
     const v = validateGeometry(fixture_ok.zones, fixture_ok.assignments,
       { adjThresholdKm: 50 });
     expect(v.contiguityViolations).toHaveLength(0);
   });
 
-  it('[CON-2] fixture_disconnected → violation cho D1', () => {
+  it('[CON-2] fixture_disconnected -> violation cho D1', () => {
     const v = validateGeometry(fixture_disconnected.zones, fixture_disconnected.assignments,
       { adjThresholdKm: 50 });
     expect(v.contiguityViolations.length).toBeGreaterThan(0);
@@ -133,7 +133,7 @@ describe('validateGeometry', () => {
     expect(d1viol?.type).toBe('DISCONNECTED');
   });
 
-  it('[CON-3] fixture_large_diameter → diameter violation cho D2', () => {
+  it('[CON-3] fixture_large_diameter -> diameter violation cho D2', () => {
     const v = validateGeometry(fixture_large_diameter.zones, fixture_large_diameter.assignments,
       { adjThresholdKm: 50, maxDiameterKm: 30 });
     const d2viol = v.diameterViolations.find((x) => x.districtId === 2);
@@ -142,20 +142,20 @@ describe('validateGeometry', () => {
     expect(Number.isFinite(d2viol!.diameterKm)).toBe(true);
   });
 
-  it('[CON-4] single-zone district → luôn connected', () => {
+  it('[CON-4] single-zone district -> luôn connected', () => {
     const singleZone = [fixture_ok.zones[0]!];
     const singleAssign = [{ zoneId: fixture_ok.zones[0]!.id, districtId: 0 }];
     const v = validateGeometry(singleZone, singleAssign, { adjThresholdKm: 50 });
     expect(v.contiguityViolations).toHaveLength(0);
   });
 
-  it('[CON-5] không set maxDiameterKm → diameterViolations rỗng dù diameter lớn', () => {
+  it('[CON-5] không set maxDiameterKm -> diameterViolations rỗng dù diameter lớn', () => {
     const v = validateGeometry(fixture_large_diameter.zones, fixture_large_diameter.assignments,
       { adjThresholdKm: 50 }); // không set maxDiameterKm
     expect(v.diameterViolations).toHaveLength(0);
   });
 
-  it('[CON-6] fixture_ok + maxDiameterKm=1000 → không có diameter violation', () => {
+  it('[CON-6] fixture_ok + maxDiameterKm=1000 -> không có diameter violation', () => {
     const v = validateGeometry(fixture_ok.zones, fixture_ok.assignments,
       { adjThresholdKm: 50, maxDiameterKm: 1000 });
     expect(v.diameterViolations).toHaveLength(0);
@@ -180,20 +180,20 @@ describe('validateGeometry', () => {
 
 describe('suggestFix', () => {
 
-  it('[FIX-1] fixture_ok → ít hoặc không có suggestions', () => {
+  it('[FIX-1] fixture_ok -> ít hoặc không có suggestions', () => {
     const suggestions = suggestFix(fixture_ok.zones, fixture_ok.assignments,
       { adjThresholdKm: 50 });
-    // Balance đã tốt → không cần swap nhiều
+    // Balance đã tốt -> không cần swap nhiều
     expect(suggestions.length).toBeLessThanOrEqual(2);
   });
 
-  it('[FIX-2] fixture_imbalanced → có suggestions', () => {
+  it('[FIX-2] fixture_imbalanced -> có suggestions', () => {
     const suggestions = suggestFix(fixture_imbalanced.zones, fixture_imbalanced.assignments,
       { adjThresholdKm: 50 });
     expect(suggestions.length).toBeGreaterThan(0);
   });
 
-  it('[FIX-3] áp dụng swap → balance cải thiện', () => {
+  it('[FIX-3] áp dụng swap -> balance cải thiện', () => {
     const suggestions = suggestFix(fixture_imbalanced.zones, fixture_imbalanced.assignments,
       { adjThresholdKm: 50 });
 
@@ -210,7 +210,7 @@ describe('suggestFix', () => {
     const after = checkBalance(fixture_imbalanced.zones, newAssignments,
       { mode: 'ratio', threshold: 999 });
 
-    // fi fixture đã vi phạm → before.length > 0, after phải có ratio nhỏ hơn
+    // fi fixture đã vi phạm -> before.length > 0, after phải có ratio nhỏ hơn
     const ratioBefore = before[0]?.ratio ?? 0;
     const ratioAfter = after[0]?.ratio ?? 0;
     expect(ratioAfter).toBeLessThanOrEqual(ratioBefore + 1e-9);
@@ -232,7 +232,7 @@ describe('suggestFix', () => {
     }
   });
 
-  it('[FIX-5] single-zone district → không đề xuất swap zone đó ra', () => {
+  it('[FIX-5] single-zone district -> không đề xuất swap zone đó ra', () => {
     // Tạo situation: D0 chỉ có 1 zone, các zone còn lại vào D1-D3
     const zones = fixture_imbalanced.zones;
     const remap = zones.map((_, i) => {
@@ -281,12 +281,12 @@ describe('suggestFix', () => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// validatePartition() — integrated validator
+// validatePartition() - integrated validator
 // ══════════════════════════════════════════════════════════════════════════════
 
 describe('validatePartition', () => {
 
-  it('[VAL-1] fixture_ok → valid=true, violations rỗng', () => {
+  it('[VAL-1] fixture_ok -> valid=true, violations rỗng', () => {
     const result = validatePartition(fixture_ok.zones, fixture_ok.assignments, {
       adjThresholdKm: 50,
       maxDiameterKm: 100,
@@ -297,7 +297,7 @@ describe('validatePartition', () => {
     expect(result.violations).toHaveLength(0);
   });
 
-  it('[VAL-2] fixture_all_bad → valid=false, violations > 0', () => {
+  it('[VAL-2] fixture_all_bad -> valid=false, violations > 0', () => {
     const result = validatePartition(fixture_all_bad.zones, fixture_all_bad.assignments, {
       adjThresholdKm: 50,
       maxDiameterKm: 30,
@@ -334,7 +334,7 @@ describe('validatePartition', () => {
     expect(result.metrics.countsPerDistrict).toHaveLength(4);
   });
 
-  it('[VAL-6] fixture_imbalanced → violations chứa BalanceViolation', () => {
+  it('[VAL-6] fixture_imbalanced -> violations chứa BalanceViolation', () => {
     const result = validatePartition(fixture_imbalanced.zones, fixture_imbalanced.assignments, {
       adjThresholdKm: 50,
       balanceMode: 'ratio',
@@ -344,7 +344,7 @@ describe('validatePartition', () => {
     expect(balViolations.length).toBeGreaterThan(0);
   });
 
-  it('[VAL-7] fixture_disconnected → violations chứa DISCONNECTED', () => {
+  it('[VAL-7] fixture_disconnected -> violations chứa DISCONNECTED', () => {
     const result = validatePartition(fixture_disconnected.zones, fixture_disconnected.assignments, {
       adjThresholdKm: 50,
     });
@@ -352,7 +352,7 @@ describe('validatePartition', () => {
     expect(contViolations.length).toBeGreaterThan(0);
   });
 
-  it('[VAL-8] không set maxDiameterKm → không có diameter violations', () => {
+  it('[VAL-8] không set maxDiameterKm -> không có diameter violations', () => {
     const result = validatePartition(fixture_large_diameter.zones, fixture_large_diameter.assignments, {
       adjThresholdKm: 50,
       // maxDiameterKm không set
@@ -369,7 +369,7 @@ describe('validatePartition', () => {
     const result = validatePartition(fixture_ok.zones, fixture_ok.assignments, {
       adjThresholdKm: 50,
     });
-    // ~100 customers/district → cực kỳ cân bằng → score > 90
+    // ~100 customers/district -> cực kỳ cân bằng -> score > 90
     expect(result.metrics.balanceScore).toBeGreaterThan(90);
   });
 

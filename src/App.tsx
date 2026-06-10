@@ -40,8 +40,6 @@ const AdminPage       = lazyRetry(() => import('./pages/AdminPage.js'))
 const CoordinatorPage = lazyRetry(() => import('./pages/CoordinatorPage.js'))
 const SalesPage       = lazyRetry(() => import('./pages/SalesPage.js'))
 const LoginPage       = lazyRetry(() => import('./pages/LoginPage.js'))
-const ProjectSelectPage = lazyRetry(() => import('./pages/ProjectSelectPage.js'))
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 30_000, retry: 1 },
@@ -89,6 +87,13 @@ export default function App() {
     }
   }, [authUser, currentProjectId, initData])
 
+  React.useEffect(() => {
+    const firstProjectId = projects[0]?.id
+    if (authUser && authSession && !currentProjectId && firstProjectId) {
+      void useAuthStore.getState().selectProject(firstProjectId)
+    }
+  }, [authUser, authSession, currentProjectId, projects])
+
   // Lấy vai trò đang dùng
   React.useEffect(() => {
     const nextRole = activeMembership?.role === 'admin'
@@ -114,7 +119,7 @@ export default function App() {
     return (
       <div style={styles.splash}>
         <div style={styles.splashContent}>
-          <span style={styles.splashIcon}>â¬¡</span>
+          <span style={styles.splashIcon}>⬡</span>
           <span style={styles.splashText}>TerriMap</span>
           <div style={styles.splashSpinner} />
         </div>
@@ -133,11 +138,7 @@ export default function App() {
 
   // Tải dữ liệu khi đã có project
   if (!currentProjectId) {
-    return (
-      <Suspense fallback={<PageLoader />}>
-        <ProjectSelectPage />
-      </Suspense>
-    )
+    return <PageLoader />
   }
 
 
@@ -151,18 +152,12 @@ export default function App() {
               {activeTab === 'overview' && (
                 effectiveRole === 'sales' ? <SalesReportView /> : <OverviewView />
               )}
-              {activeTab === 'regions' && (
-                currentRegionId === null ? <RegionSelector /> :
-                effectiveRole === 'admin' ? <AdminPage mode="regions" /> :
-                effectiveRole === 'coordinator' ? <CoordinatorPage mode="regions" /> :
-                <OverviewView />
-              )}
               {activeTab === 'users' && <UsersView />}
               {activeTab === 'ops' && <OperationsView />}
               {activeTab === 'assignments' && (
                 currentRegionId === null ? <RegionSelector /> :
-                effectiveRole === 'admin' ? <AdminPage mode="assignments" /> :
-                effectiveRole === 'coordinator' ? <CoordinatorPage mode="assignments" /> :
+                effectiveRole === 'admin' ? <AdminPage /> :
+                effectiveRole === 'coordinator' ? <CoordinatorPage /> :
                 <SalesPage />
               )}
               {activeTab === 'algorithms' && <AlgorithmComparator />}
@@ -193,18 +188,12 @@ function OfflineApp() {
               {activeTab === 'overview' && (
                 role === 'sales' ? <SalesReportView /> : <OverviewView />
               )}
-              {activeTab === 'regions' && (
-                currentRegionId === null ? <RegionSelector /> :
-                role === 'admin' ? <AdminPage mode="regions" /> :
-                role === 'coordinator' ? <CoordinatorPage mode="regions" /> :
-                <OverviewView />
-              )}
               {activeTab === 'users' && <UsersView />}
               {activeTab === 'ops' && <OperationsView />}
               {activeTab === 'assignments' && (
                 currentRegionId === null ? <RegionSelector /> :
-                role === 'admin' ? <AdminPage mode="assignments" /> :
-                role === 'coordinator' ? <CoordinatorPage mode="assignments" /> :
+                role === 'admin' ? <AdminPage /> :
+                role === 'coordinator' ? <CoordinatorPage /> :
                 <SalesPage />
               )}
               {activeTab === 'algorithms' && <AlgorithmComparator />}

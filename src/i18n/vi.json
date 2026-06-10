@@ -25,7 +25,7 @@
   "metrics.violations": "Vi phạm",
   "metrics.balance_good": "Tốt",
   "metrics.balance_medium": "Trung bình",
-  "metrics.balance_low": "Thấp — nên dùng SA",
+  "metrics.balance_low": "Thấp - nên dùng SA",
   "metrics.suggest_sa": "💡 Kết quả này có balanceScore thấp. Thử chạy lại với Simulated Annealing để cải thiện.",
 
   "map.zone_info": "Thông tin vùng",
@@ -64,7 +64,7 @@
 
   "draw.zone_name_prompt": "Tên vùng mới:",
 
-  "edge_case.island": "Vùng cô lập — không kề vùng nào",
+  "edge_case.island": "Vùng cô lập - không kề vùng nào",
   "edge_case.disconnected": "Cụm bị tách rời",
   "edge_case.suggest_sa_detail": "Balance thấp. Thử Simulated Annealing để cải thiện?",
 

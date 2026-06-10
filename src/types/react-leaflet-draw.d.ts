@@ -2,7 +2,7 @@
 
 
 declare module 'leaflet-draw' {
-  // Side-effect import — adds L.Draw and L.Control.Draw to leaflet
+  // Side-effect import - adds L.Draw and L.Control.Draw to leaflet
 }
 
 declare module 'leaflet' {

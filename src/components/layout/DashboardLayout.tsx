@@ -10,7 +10,6 @@ interface DashboardLayoutProps {
 
 type NavIconKey =
   | 'overview'
-  | 'regions'
   | 'users'
   | 'assignments'
   | 'ops'
@@ -37,14 +36,6 @@ function NavIcon({ name, active }: { name: NavIconKey; active: boolean }) {
         <path d="M13 21h8V11h-8v10Z" />
         <path d="M13 3h8v6h-8V3Z" />
         <path d="M3 17h8v4H3v-4Z" />
-      </svg>
-    )
-  }
-  if (name === 'regions') {
-    return (
-      <svg {...common}>
-        <path d="M21 10c0 6-9 12-9 12S3 16 3 10a9 9 0 1 1 18 0Z" />
-        <circle cx="12" cy="10" r="3" />
       </svg>
     )
   }
@@ -162,7 +153,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const projects = useAuthStore((s) => s.projects)
   const membership = useAuthStore((s) => s.membership)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
-  const deselectProject = useAuthStore((s) => s.deselectProject)
   const signOut = useAuthStore((s) => s.signOut)
   const role = useUIStore((s) => s.role)
   const theme = useUIStore((s) => s.theme)
@@ -203,11 +193,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           icon: 'overview' as const,
           roles: ['admin', 'coordinator', 'sales'],
         },
-        { id: 'regions', label: 'Khu vực & bản đồ', icon: 'regions' as const, roles: ['admin', 'coordinator'] },
         { id: 'users', label: 'Nhân sự', icon: 'users' as const, roles: ['admin'] },
         { id: 'assignments', label: 'Phân chia lãnh thổ', icon: 'assignments' as const, roles: ['admin', 'coordinator', 'sales'] },
         { id: 'ops', label: 'Vận hành', icon: 'ops' as const, roles: ['admin', 'coordinator'] },
-        { id: 'algorithms', label: 'Phân chia thuật toán', icon: 'algorithms' as const, roles: ['admin', 'coordinator'] },
+        { id: 'algorithms', label: 'Thuật toán phân chia', icon: 'algorithms' as const, roles: ['admin', 'coordinator'] },
         { id: 'settings', label: 'Cài đặt', icon: 'settings' as const, roles: ['admin', 'coordinator', 'sales'] },
       ] as const).filter((x) => (x.roles as any).includes(effectiveRole)),
     [effectiveRole],
@@ -339,9 +328,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <div style={styles.headerRight}>
             {!isOnline() && <span style={styles.statusPill}>Dữ liệu mock/offline</span>}
-            <button onClick={deselectProject} style={styles.projectSwitchBtn} title="Đổi dự án">
-              Đổi dự án
-            </button>
             <div style={styles.controls}>
               <IconButton onClick={cycleTheme} title="Giao diện (Light/Dark/System)" style={styles.controlBtn}>
                 <ThemeIcon theme={theme} />

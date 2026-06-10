@@ -1,9 +1,9 @@
 /**
- * e2e/pages/AppPage.ts — Page Object Model cho TerriMap app
+ * e2e/pages/AppPage.ts - Page Object Model cho TerriMap app
  *
  * Selectors map 1-to-1 với data-testid và id attributes trong components.
  * Tabs: role tab buttons có id="role-tab-{role}" (không phải role="tab").
- * Logo: ⬡ và "TerriMap" trong spans riêng biệt → dùng logo's data-testid.
+ * Logo: ⬡ và "TerriMap" trong spans riêng biệt -> dùng logo's data-testid.
  */
 
 import { type Page, type Locator } from '@playwright/test'
@@ -11,16 +11,16 @@ import { type Page, type Locator } from '@playwright/test'
 export class AppPage {
   readonly page: Page
 
-  // TopBar — logo
+  // TopBar - logo
   readonly logoHex: Locator      // span chứa ⬡
   readonly logoText: Locator     // span chứa "TerriMap"
 
-  // TopBar — role tabs (id="role-tab-{role}")
+  // TopBar - role tabs (id="role-tab-{role}")
   readonly tabAdmin:       Locator
   readonly tabCoordinator: Locator
   readonly tabSales:       Locator
 
-  // TopBar — controls
+  // TopBar - controls
   readonly themeLight:  Locator   // id="theme-btn-light"
   readonly themeDark:   Locator   // id="theme-btn-dark"
   readonly localeToggle: Locator  // data-testid="locale-toggle"

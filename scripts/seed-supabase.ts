@@ -1,7 +1,7 @@
 /**
  * scripts/seed-supabase.ts
  *
- * Serializes zones + agents + assignments for ALL 3 regions → SQL INSERT
+ * Serializes zones + agents + assignments for ALL 3 regions -> SQL INSERT
  * Run: npx tsx scripts/seed-supabase.ts
  * Output: scripts/seed.sql
  */
@@ -10,11 +10,11 @@ import { writeFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
-// ── Import region data ──────────────────────────────────────────
+//  Import region data 
 import { HCM_ZONES, HCM_AGENTS, HCM_ASSIGNMENTS, centroidOf } from './seed-hcm.js'
 import { HUE_ZONES, HUE_AGENTS, HUE_ASSIGNMENTS, centroidOfHue } from './seed-hue.js'
 
-// ── Hanoi data (inline, same as before) ─────────────────────────
+//  Hanoi data (inline, same as before) 
 
 const C0 = 105.72, C1 = 105.80, C2 = 105.88, C3 = 105.96
 const R0 = 20.87,  R1 = 20.94,  R2 = 21.01,  R3 = 21.08, R4 = 21.15
@@ -71,7 +71,7 @@ const HN_ASSIGNMENTS = [
   ['z10',3,'sa3'],['z11',3,'sa3'],['z12',3,'sa3'],
 ] as const
 
-// ── Helpers ──────────────────────────────────────────────────────
+//  Helpers 
 
 function esc(s: string): string {
   return s.replace(/'/g, "''")
@@ -81,18 +81,18 @@ function toJsonb(v: unknown): string {
   return `'${JSON.stringify(v)}'::jsonb`
 }
 
-// ── Generate SQL ─────────────────────────────────────────────────
+//  Generate SQL 
 
 const lines: string[] = [
   '-- ═══════════════════════════════════════════════════════════════',
-  '-- TERRIMAP SEED DATA — ALL 3 REGIONS',
+  '-- TERRIMAP SEED DATA - ALL 3 REGIONS',
   '-- Seed data prepared by scripts/seed-supabase.ts',
   `-- Date: ${new Date().toISOString().slice(0, 10)}`,
   '-- ═══════════════════════════════════════════════════════════════',
   '',
 ]
 
-// ── All agents (3 regions) ──────────────────────────────────────
+//  All agents (3 regions) 
 const allAgents = [
   ...HN_AGENTS.map(a => ({ ...a, regionId: 'region-hn' })),
   ...HCM_AGENTS.map(a => ({ ...a, regionId: 'region-hcm' })),
@@ -106,7 +106,7 @@ const agentLines = allAgents.map((a, i) =>
 )
 lines.push(agentLines.join('\n') + '\nON CONFLICT (id) DO NOTHING;')
 
-// ── All zones (3 regions) ───────────────────────────────────────
+//  All zones (3 regions) 
 type ZoneData = { id: string; name: string; ring: readonly (readonly number[])[] | number[][]; activities: readonly (readonly [string, string, number])[] }
 
 const allZones: Array<ZoneData & { regionId: string }> = [
@@ -128,7 +128,7 @@ const zoneInserts = allZones.map((z, i) => {
 })
 lines.push(zoneInserts.join('\n') + '\nON CONFLICT (id) DO NOTHING;')
 
-// ── Activities ──────────────────────────────────────────────────
+//  Activities 
 lines.push('')
 lines.push('-- Activities (all regions)')
 lines.push('INSERT INTO activities (id, zone_id, type, value) VALUES')
@@ -141,7 +141,7 @@ for (const z of allZones) {
 }
 lines.push(actLines.join(',\n') + '\nON CONFLICT (id) DO NOTHING;')
 
-// ── Assignments ─────────────────────────────────────────────────
+//  Assignments 
 const allAssignments = [
   ...HN_ASSIGNMENTS,
   ...HCM_ASSIGNMENTS,

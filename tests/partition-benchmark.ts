@@ -69,13 +69,13 @@ function benchAlgo(
 
 console.log('\n🔬 Partition Algorithm Benchmark');
 console.log(`   zones=${zones20.length}, m=${M}, runs=${RUNS}\n`);
-console.log('─'.repeat(65));
+console.log(''.repeat(65));
 
 benchAlgo('greedy', () => partitionGreedy(zones20, M));
 benchAlgo('local-search', () => partitionLocalSearch(zones20, M));
 benchAlgo('sa', () => partitionSA(zones20, M, { maxIter: 200 }));
 
-console.log('─'.repeat(65));
+console.log(''.repeat(65));
 console.log('\n📊 Columns:');
 console.log('   avg_balance  = stdDev/(mean+1), lower is better (threshold < 0.3)');
 console.log('   avg_diameter = max district diameter in km, lower is better');

@@ -1,12 +1,3 @@
-/**
- * services/errors.ts
- *
- * Typed error classes cho L2 Domain Services.
- * Không throw raw string hay generic Error.
- */
-
-// ─── ServiceErrorCode ─────────────────────────────────────────────────────────
-
 export type ServiceErrorCode =
   | 'INVALID_INPUT'      // Input không hợp lệ (zones rỗng, giá trị âm, ...)
   | 'PARTITION_FAILED'   // L1b PartitionError được wrap
@@ -15,13 +6,13 @@ export type ServiceErrorCode =
   | 'SAME_DISTRICT'      // manualSwap: from === to
   | 'SWAP_DISCONNECTS';  // manualSwap tạo disconnected district
 
-// ─── VersionErrorCode ─────────────────────────────────────────────────────────
+//  VersionErrorCode 
 
 export type VersionErrorCode =
   | 'DUPLICATE_LABEL'    // Label snapshot đã tồn tại
   | 'SNAPSHOT_NOT_FOUND';// Snapshot không tìm thấy
 
-// ─── ServiceError ─────────────────────────────────────────────────────────────
+//  ServiceError 
 
 export interface ServiceErrorDetails {
   code: ServiceErrorCode;
@@ -44,7 +35,7 @@ export class ServiceError extends Error {
   }
 }
 
-// ─── VersionError ──────────────────────────────────────────────────────────────
+//  VersionError 
 
 export interface VersionErrorDetails {
   code: VersionErrorCode;

@@ -1,26 +1,13 @@
-/**
- * L1 — Validator & Quality Metrics
- *
- * Section 1: validateAll(TerritoryVersion) — QualityMetrics cho version đã commit.
- * Section 2: L1c Partition Validator — violation-based API cho Assignment[] trước khi commit.
- *
- * KHÔNG import gì từ UI layer hay L2+ layer.
- */
-
 import type { TerritoryVersion, Zone, AdjacencyMatrix } from '../types/domain.js';
 import { zoneDiameter, buildAdjacencyMatrix } from './geometry.js';
 import type { Assignment } from './partition.js';
-
-// ==========================================
-// SECTION 1 — TERRITORY VERSION VALIDATOR
-// ==========================================
 
 /**
  * Bộ chỉ số chất lượng của một TerritoryVersion.
  * Tất cả values phải finite và sẵn sàng được lưu vào L0 District.balanceScore.
  */
 export interface QualityMetrics {
-  /** Điểm cân bằng tải (0–100). Cao hơn = phân phối đều hơn. */
+  /** Điểm cân bằng tải */
   balanceScore: number;
   /** Workload nặng nhất trong tất cả districts */
   maxWorkload: number;
@@ -36,10 +23,10 @@ export interface QualityMetrics {
  * Tính toán QualityMetrics cho toàn bộ TerritoryVersion.
  *
  * CONTRACTS:
- *  1. Nếu không có district nào → tất cả metrics = 0, balanceScore = 100.
- *  2. Nếu tất cả districts có totalWorkload = 0 → balanceScore = 100 (không /0).
+ *  1. Nếu không có district nào -> tất cả metrics = 0, balanceScore = 100.
+ *  2. Nếu tất cả districts có totalWorkload = 0 -> balanceScore = 100 (không /0).
  *  3. balanceScore luôn clamp vào [0, 100].
- *  4. Assertion cuối: mọi metric phải Number.isFinite — throw nếu vi phạm.
+ *  4. Assertion cuối: mọi metric phải Number.isFinite - throw nếu vi phạm.
  *
  * @param version - TerritoryVersion đã validate bởi L0 TerritoryVersionSchema.
  * @returns QualityMetrics với mọi field finite.
@@ -80,7 +67,7 @@ export function validateAll(version: TerritoryVersion): QualityMetrics {
     if (!Number.isFinite(val)) {
       throw new Error(
         `validateAll produced non-finite metric "${key}" = ${val}. ` +
-          'This is a programming error — check input data.'
+          'This is a programming error - check input data.'
       );
     }
   }
@@ -89,17 +76,17 @@ export function validateAll(version: TerritoryVersion): QualityMetrics {
 }
 
 // ==========================================
-// SECTION 2 — L1c PARTITION VALIDATOR
+// SECTION 2 - L1c PARTITION VALIDATOR
 //
-// Hoạt động trên Assignment[] từ L1b — giai đoạn TRƯỚC khi commit vào TerritoryVersion.
+// Hoạt động trên Assignment[] từ L1b - giai đoạn TRƯỚC khi commit vào TerritoryVersion.
 // Trả về danh sách violations để coordinator L2 quyết định cần rebalance không.
 // ==========================================
 
-// ─── Error ───────────────────────────────────────────────────────────────────
+//  Error 
 
 /** Error codes cho Partition Validator. */
 export type ValidatorErrorCode =
-  | 'EMPTY_INPUT'       // zones rỗng
+  | 'EMPTY_INPUT'       // zone rỗng
   | 'M_MISMATCH'        // assignments.length !== zones.length
   | 'INVALID_THRESHOLD' // threshold âm hoặc non-finite
   | 'INVALID_MODE';     // mode không hợp lệ
@@ -114,12 +101,10 @@ export class ValidatorError extends Error {
   }
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 /**
  * Mode tính balance.
- *  - `'ratio'`:  (max - min) / (min + 1) — dễ explain cho end-user, default threshold 1.5.
- *  - `'stddev'`: stdDev / (mean + 1)     — consistent với partition engine, default threshold 0.5.
+ *  - `'ratio'`:  (max - min) / (min + 1) - dễ explain cho end-user, default threshold 1.5.
+ *  - `'stddev'`: stdDev / (mean + 1)     - consistent với partition engine, default threshold 0.5.
  */
 export type BalanceMode = 'ratio' | 'stddev';
 
@@ -179,8 +164,6 @@ export interface ValidationResult {
   violations: (BalanceViolation | ContiguityViolation | DiameterViolation)[];
   metrics: PartitionMetrics;
 }
-
-// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 /** Tổng customers của một zone. @internal */
 function _zoneCustomers(zone: Zone): number {
@@ -260,15 +243,13 @@ function _numDistricts(assignments: Assignment[]): number {
   return Math.max(...assignments.map((a) => a.districtId)) + 1;
 }
 
-// ─── checkBalance ─────────────────────────────────────────────────────────────
-
 /**
  * Kiểm tra balance workload giữa các districts.
  *
  * Trả về [] nếu OK, hoặc danh sách BalanceViolation nếu metric > threshold.
- * Logic flag: district max → OVER_LOADED, district(s) min → UNDER_LOADED.
+ * Logic flag: district max -> OVER_LOADED, district(s) min -> UNDER_LOADED.
  *
- * @complexity O(n) — n = zones.length.
+ * @complexity O(n) - n = zones.length.
  *
  * @param opts.mode      'ratio' | 'stddev'. Default: 'ratio'.
  * @param opts.threshold Default: 1.5 (ratio) hoặc 0.5 (stddev).
@@ -321,7 +302,6 @@ export function checkBalance(
   return violations;
 }
 
-// ─── validateGeometry ─────────────────────────────────────────────────────────
 
 /**
  * Kiểm tra connectivity và diameter từng district.
@@ -368,8 +348,6 @@ export function validateGeometry(
   return { contiguityViolations, diameterViolations };
 }
 
-// ─── suggestFix ───────────────────────────────────────────────────────────────
-
 /**
  * Đề xuất các swap zone để cải thiện balance.
  *
@@ -408,10 +386,10 @@ export function suggestFix(
     const fromDistrict = zoneDistrict.get(zone.id);
     if (fromDistrict === undefined) continue;
 
-    // Guard: district nguồn phải còn ≥ 2 zones (no empty district)
+    // Guard: district nguồn phải còn ≥ 2 zones
     if (distZoneIds[fromDistrict]!.size <= 1) continue;
 
-    // Connectivity guard: BFS verify sau khi bỏ zone
+    // BFS verify sau khi bỏ zone
     const remaining = new Set(distZoneIds[fromDistrict]!);
     remaining.delete(zone.id);
     if (!_isConnected(remaining, adj)) continue;
@@ -433,12 +411,8 @@ export function suggestFix(
   return candidates.slice(0, maxSugg);
 }
 
-// ─── validatePartition ────────────────────────────────────────────────────────
-
 /**
  * Validator tổng hợp: chạy checkBalance + validateGeometry, trả về ValidationResult.
- *
- * Dùng ở L2 coordinator để quyết định có chấp nhận kết quả partition không.
  *
  * @param opts.balanceMode       Mode balance. Default: 'ratio'.
  * @param opts.balanceThreshold  Threshold balance. Default: 1.5 (ratio) | 0.5 (stddev).

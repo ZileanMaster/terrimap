@@ -1,14 +1,8 @@
-/**
- * facades/index.ts
- *
- * Re-export toàn bộ L3 Role Façades, ViewModels và PermissionError.
- */
-
-// ─── Lỗi ─────────────────────────────────────────────────────────────────────
+//  Lỗi 
 export { PermissionError } from './errors.js';
 export type { PermissionErrorCode, PermissionErrorDetails } from './errors.js';
 
-// ─── ViewModels ───────────────────────────────────────────────────────────────
+//  ViewModels 
 export type {
   // Cho Admin
   SalesManagement,
@@ -30,7 +24,7 @@ export type {
   DistrictSummary,
 } from './viewmodels.js';
 
-// ─── Façades ─────────────────────────────────────────────────────────────────
+//  Facades 
 export { AdminFacade } from './AdminFacade.js';
 export { CoordinatorFacade } from './CoordinatorFacade.js';
 export { SalesFacade } from './SalesFacade.js';

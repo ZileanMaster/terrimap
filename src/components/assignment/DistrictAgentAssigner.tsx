@@ -1,18 +1,10 @@
-/**
- * DistrictAgentAssigner — cập nhật Giai đoạn 3
- *
- * - Chấm màu + số vùng + tổng khách hàng theo cụm
- * - Dropdown nhân sự được lọc theo regionId của vùng đang chọn
- * - Lưu ngay khi thay đổi
- */
-
 import React, { useCallback, useMemo } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
 import type { Zone } from '../../../facades/viewmodels.js'
 
 interface DistrictAgentAssignerProps {
-  /** Tùy chọn: lọc nhân sự theo regionId này (Giai đoạn 3 — 3B) */
+  /** Tùy chọn: lọc nhân sự theo regionId này (Giai đoạn 3 - 3B) */
   regionId?: string
   zones?:    Zone[]
 }
@@ -88,7 +80,7 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
             </div>
           </div>
 
-          {/* Dropdown nhân sự — đã lọc theo vùng */}
+          {/* Dropdown nhân sự - đã lọc theo vùng */}
           <select
             value={d.currentAgent}
             onChange={(e) => handleChange(d.districtId, e.target.value)}

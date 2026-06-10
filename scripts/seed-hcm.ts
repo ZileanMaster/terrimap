@@ -5,20 +5,20 @@
  * Grid 4×3, polygon grid-aligned (share edges)
  *
  * Layout:
- *   ┌──────┬──────┬──────┐  Row 3: lat 10.84 → 10.88
+ *   ┌┬┬┐  Row 3: lat 10.84 -> 10.88
  *   │ hcm01│ hcm02│ hcm03│
- *   ├──────┼──────┼──────┤  Row 2: lat 10.80 → 10.84
+ *   ├┼┼┤  Row 2: lat 10.80 -> 10.84
  *   │ hcm04│ hcm05│ hcm06│
- *   ├──────┼──────┼──────┤  Row 1: lat 10.76 → 10.80
+ *   ├┼┼┤  Row 1: lat 10.76 -> 10.80
  *   │ hcm07│ hcm08│ hcm09│
- *   ├──────┼──────┼──────┤  Row 0: lat 10.72 → 10.76
+ *   ├┼┼┤  Row 0: lat 10.72 -> 10.76
  *   │ hcm10│ hcm11│ hcm12│
- *   └──────┴──────┴──────┘
+ *   └┴┴┘
  *   Col 0        Col 1        Col 2
- *   106.62→106.68 106.68→106.74 106.74→106.80
+ *   106.62->106.68 106.68->106.74 106.74->106.80
  */
 
-// ── Grid boundaries ──────────────────────────────────────────────
+//  Grid boundaries 
 const C0 = 106.62, C1 = 106.68, C2 = 106.74, C3 = 106.80
 const R0 = 10.72,  R1 = 10.76,  R2 = 10.80,  R3 = 10.84, R4 = 10.88
 
@@ -38,7 +38,7 @@ function centroidOf(ring: number[][]): { lat: number; lng: number } {
   return { lat: Math.round(lat * 1000) / 1000, lng: Math.round(lng * 1000) / 1000 }
 }
 
-// ── Polygon rings [lng, lat] — GeoJSON spec ─────────────────────
+//  Polygon rings [lng, lat] - GeoJSON spec 
 
 // Row 3 (top)
 const hcm01Ring = [[C0,R3],[MC01,R3],[C1,R3],[C1,MR34],[C1,R4],[MC01,R4+0.005],[C0,R4],[C0,MR34],[C0,R3]]

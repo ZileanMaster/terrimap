@@ -3,7 +3,7 @@
  * Nhận: { zones, m, opts }
  * Gửi: { type: 'progress', iter, cost } | { type: 'done', assignments } | { type: 'error', message }
  *
- * Worker CÓ THỂ import trực tiếp từ L0/L1 — đây là môi trường thực thi sandbox, không phải component L4.
+ * Worker CÓ THỂ import trực tiếp từ L0/L1 - đây là môi trường thực thi sandbox, không phải component L4.
  */
 
 import { partitionSimulatedAnnealing } from '../../lib/partition.js'

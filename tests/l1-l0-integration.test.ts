@@ -1,16 +1,16 @@
 /**
- * Test Suite: L1 → L0 Integration Round-Trip
+ * Test Suite: L1 -> L0 Integration Round-Trip
  *
  * MỤC TIÊU: Phát hiện bug mà random fuzz test bỏ sót.
  * NGUYÊN TẮC: Dùng OUTPUT THỰC của L1 functions (partitionLocalSearch, validateAll,
  *              zoneDiameter) làm INPUT cho L0 TerritoryVersionSchema.parse().
  *
  * Nếu L1 functions vi phạm contract (sản sinh NaN, Infinity, -0...) thì
- * L0 schema sẽ throw — phát hiện bug ngay tại ranh giới layer.
+ * L0 schema sẽ throw - phát hiện bug ngay tại ranh giới layer.
  *
  * Đây là phương pháp "Contract-Based Integration Testing":
- *  L1 output → L0 parse → phải thành công (không throw)
- *  Nếu throw → L1 vi phạm invariant của L0
+ *  L1 output -> L0 parse -> phải thành công (không throw)
+ *  Nếu throw -> L1 vi phạm invariant của L0
  */
 
 import { describe, it, expect } from 'vitest';
@@ -70,12 +70,12 @@ const GEO_ZONES_COORDS: Coordinate[] = [
 // ==========================================
 
 /**
- * Dùng partitionLocalSearch → validateAll → xây dựng TerritoryVersion hoàn chỉnh.
- * Đây là luồng THỰC TẾ của ứng dụng — L1 tạo ra data, L0 validate nó.
+ * Dùng partitionLocalSearch -> validateAll -> xây dựng TerritoryVersion hoàn chỉnh.
+ * Đây là luồng THỰC TẾ của ứng dụng - L1 tạo ra data, L0 validate nó.
  *
  * buildVersionFromPartition bỏ qua districts rỗng (zoneIds.length === 0)
  * vì L0 schema yêu cầu District phải có ít nhất 1 zone.
- * Đây là behavior phòng thủ — ứng dụng thực tế phải handle merge/reassign.
+ * Đây là behavior phòng thủ - ứng dụng thực tế phải handle merge/reassign.
  */
 function buildVersionFromPartition(
   rawZones: Zone[],
@@ -93,7 +93,7 @@ function buildVersionFromPartition(
   const districts: Record<string, ReturnType<typeof Object.assign>> = {};
 
   for (let k = 0; k < m; k++) {
-    // BUG 3 FIX: groups là Map<number, Zone[]> → dùng .get() không phải []
+    // BUG 3 FIX: groups là Map<number, Zone[]> -> dùng .get() không phải []
     const zoneGroup = groups.get(k) ?? [];
     const zoneIds = zoneGroup.map((z) => z.id);
 
@@ -107,7 +107,7 @@ function buildVersionFromPartition(
     agents[agentId] = { ...agentBase, id: agentId };
 
     // Tạo zone assigned với districtId chính xác
-    // groups.get(k) đã là Zone[] → không cần rawZones.find() nữa
+    // groups.get(k) đã là Zone[] -> không cần rawZones.find() nữa
     for (const zone of zoneGroup) {
       zonesRecord[zone.id] = makeZone(zone.id, zone.centroid, districtId);
     }
@@ -160,11 +160,11 @@ function buildVersionFromPartition(
 // TEST SUITE
 // ==========================================
 
-describe('L1 → L0 Integration Round-Trip', () => {
+describe('L1 -> L0 Integration Round-Trip', () => {
 
   // --- FIXED INPUT TESTS (địa lý thực) ---
 
-  it('[INT-1] 10 zones địa lý VN → partitionLocalSearch(m=3) → L0 parse thành công', () => {
+  it('[INT-1] 10 zones địa lý VN -> partitionLocalSearch(m=3) -> L0 parse thành công', () => {
     const zones = GEO_ZONES_COORDS.map((c, i) => makeZone(`z${i}`, c));
     const version = buildVersionFromPartition(zones, 3, 10);
 
@@ -175,13 +175,13 @@ describe('L1 → L0 Integration Round-Trip', () => {
     expect(Object.keys(parsed.districts).length).toBeLessThanOrEqual(3);
   });
 
-  it('[INT-2] iter === 0 (round-robin) → output vẫn qua L0 parse (không NaN)', () => {
+  it('[INT-2] iter === 0 (round-robin) -> output vẫn qua L0 parse (không NaN)', () => {
     const zones = GEO_ZONES_COORDS.map((c, i) => makeZone(`z${i}`, c));
     const version = buildVersionFromPartition(zones, 5, 0);
     expect(() => TerritoryVersionSchema.parse(version)).not.toThrow();
   });
 
-  it('[INT-3] m === zones.length (mỗi zone 1 district) → L0 parse thành công', () => {
+  it('[INT-3] m === zones.length (mỗi zone 1 district) -> L0 parse thành công', () => {
     const zones = GEO_ZONES_COORDS.slice(0, 5).map((c, i) => makeZone(`z${i}`, c));
     const version = buildVersionFromPartition(zones, 5, 5);
     expect(() => TerritoryVersionSchema.parse(version)).not.toThrow();
@@ -191,15 +191,15 @@ describe('L1 → L0 Integration Round-Trip', () => {
     }
   });
 
-  it('[INT-4] m === 1 → partitionLocalSearch throw M_TOO_SMALL (contract guard)', () => {
+  it('[INT-4] m === 1 -> partitionLocalSearch throw M_TOO_SMALL (contract guard)', () => {
     // partitionLocalSearch requires m >= 2 per contract.
-    // buildVersionFromPartition với m=1 propagates PartitionError — đây là behavior đúng.
+    // buildVersionFromPartition với m=1 propagates PartitionError - đây là behavior đúng.
     const zones = GEO_ZONES_COORDS.map((c, i) => makeZone(`z${i}`, c));
     expect(() => buildVersionFromPartition(zones, 1, 10))
       .toThrow('m must be >= 2');
   });
 
-  it('[INT-5] Zones trùng tọa độ + iter=0 → diameterScore=0, balanceScore finite → L0 parse OK', () => {
+  it('[INT-5] Zones trùng tọa độ + iter=0 -> diameterScore=0, balanceScore finite -> L0 parse OK', () => {
     // Dùng iter=0 để kiểm tra đường chạy ngắn nhất vẫn tạo dữ liệu hợp lệ
     const sameCoord = { lat: 10.762, lng: 106.660 };
     const zones = Array.from({ length: 6 }, (_, i) => makeZone(`z${i}`, sameCoord));
@@ -209,14 +209,14 @@ describe('L1 → L0 Integration Round-Trip', () => {
 
     const parsed = TerritoryVersionSchema.parse(version);
     for (const d of Object.values(parsed.districts)) {
-      // Tất cả zones trùng tọa độ → diameter = 0
+      // Tất cả zones trùng tọa độ -> diameter = 0
       expect(d.diameterScore).toBe(0);
       expect(Number.isFinite(d.balanceScore)).toBe(true);
     }
   });
 
-  it('[INT-5b] Zones trùng tọa độ + iter>0 → L0 parse OK (số districts có thể <= m)', () => {
-    // Districts rỗng bị skip → version cuối hợp lệ với L0
+  it('[INT-5b] Zones trùng tọa độ + iter>0 -> L0 parse OK (số districts có thể <= m)', () => {
+    // Districts rỗng bị skip -> version cuối hợp lệ với L0
     const sameCoord = { lat: 10.762, lng: 106.660 };
     const zones = Array.from({ length: 6 }, (_, i) => makeZone(`z${i}`, sameCoord));
 
@@ -246,7 +246,7 @@ describe('L1 → L0 Integration Round-Trip', () => {
   });
 
   it('[INT-7] validateAll output balanceScore luôn pass DistrictSchema.parse', () => {
-    // Dùng GEO zones thực, tính balanceScore thực → parse với L0 schema
+    // Dùng GEO zones thực, tính balanceScore thực -> parse với L0 schema
     const zones = GEO_ZONES_COORDS.map((c, i) => makeZone(`z${i}`, c, 'd1'));
     const zonesRecord: Record<string, Zone> = {};
     for (const z of zones) zonesRecord[z.id] = z;
@@ -284,7 +284,7 @@ describe('L1 → L0 Integration Round-Trip', () => {
 
   // --- FUZZ INPUT TESTS (random geography) ---
 
-  it('[FUZZ-INT] 300 random zone configs → L1 output luôn pass L0 TerritoryVersionSchema.parse', () => {
+  it('[FUZZ-INT] 300 random zone configs -> L1 output luôn pass L0 TerritoryVersionSchema.parse', () => {
     const coordArb: fc.Arbitrary<Coordinate> = fc.record({
       lat: fc.double({ min: -90, max: 90, noNaN: true }),
       lng: fc.double({ min: -180, max: 180, noNaN: true }),
@@ -299,13 +299,13 @@ describe('L1 → L0 Integration Round-Trip', () => {
         fc.integer({ min: 0, max: 20 }),
         (coords, mRaw, iter) => {
           const zones = coords.map((c, i) => makeZone(`z${i}`, c));
-          // Clamp m vào [2, zones.length] — đảm bảo contract
+          // Clamp m vào [2, zones.length] - đảm bảo contract
           const m = Math.min(mRaw, zones.length);
           if (m < 2) return; // skip nếu zones.length < 2 (không thể xảy ra do minLength: 2)
 
           const version = buildVersionFromPartition(zones, m, iter);
 
-          // KEY ASSERTION: L1 output phải pass L0 schema — không có NaN, Infinity, -0
+          // KEY ASSERTION: L1 output phải pass L0 schema - không có NaN, Infinity, -0
           expect(() => TerritoryVersionSchema.parse(version)).not.toThrow();
 
           const parsed = TerritoryVersionSchema.parse(version);
@@ -325,7 +325,7 @@ describe('L1 → L0 Integration Round-Trip', () => {
     );
   });
 
-  it('[FUZZ-INT] 200 samples: iter=0 (round-robin) → L0 parse + finite invariants', () => {
+  it('[FUZZ-INT] 200 samples: iter=0 (round-robin) -> L0 parse + finite invariants', () => {
     const coordArb: fc.Arbitrary<Coordinate> = fc.record({
       lat: fc.double({ min: -90, max: 90, noNaN: true }),
       lng: fc.double({ min: -180, max: 180, noNaN: true }),

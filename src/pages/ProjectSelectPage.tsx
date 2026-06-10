@@ -48,7 +48,6 @@ export default function ProjectSelectPage() {
   const profile = useAuthStore((s) => s.profile)
   const user = useAuthStore((s) => s.user)
   const selectProject = useAuthStore((s) => s.selectProject)
-  const createProject = useAuthStore((s) => s.createProject)
   const updateProject = useAuthStore((s) => s.updateProject)
   const deleteProject = useAuthStore((s) => s.deleteProject)
   const signOut = useAuthStore((s) => s.signOut)
@@ -58,15 +57,6 @@ export default function ProjectSelectPage() {
 
   const { push } = useToast()
 
-  const [showCreate, setShowCreate] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newDesc, setNewDesc] = useState('')
-  const [creating, setCreating] = useState(false)
-  const [pendingProject, setPendingProject] = useState<{
-    id: string
-    name: string
-    description: string
-  } | null>(null)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [editName, setEditName] = useState('')
   const [editDesc, setEditDesc] = useState('')
@@ -75,49 +65,6 @@ export default function ProjectSelectPage() {
   const cycleTheme = () => {
     const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system'
     setTheme(next)
-  }
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newName.trim()) return
-    if (creating) return
-
-    const projectName = newName.trim()
-    const projectDesc = newDesc.trim()
-    const pendingId = `pending-${Date.now()}`
-
-    setCreating(true)
-    setPendingProject({ id: pendingId, name: projectName, description: projectDesc })
-    setShowCreate(false)
-    setNewName('')
-    setNewDesc('')
-
-    void (async () => {
-      const id = await createProject(projectName, projectDesc)
-      if (id) {
-        push({ kind: 'success', title: 'Đã tạo dự án', message: projectName })
-        setPendingProject(null)
-      } else {
-        push({ kind: 'error', title: 'Không tạo được dự án', message: useAuthStore.getState().authError || 'Vui lòng thử lại.' })
-        setPendingProject(null)
-        setShowCreate(true)
-        setNewName(projectName)
-        setNewDesc(projectDesc)
-      }
-      setCreating(false)
-    })()
-  }
-
-  const handleSelect = async (project: Project) => {
-    await selectProject(project.id)
-  }
-
-  const canManageProject = (project: Project) => project.owner_id === user?.id
-
-  const openEditProject = (project: Project) => {
-    setEditingProject(project)
-    setEditName(project.name)
-    setEditDesc(project.description ?? '')
   }
 
   const handleUpdateProject = async (e: React.FormEvent) => {
@@ -139,6 +86,18 @@ export default function ProjectSelectPage() {
     } else {
       push({ kind: 'error', title: 'Không thể cập nhật dự án', message: useAuthStore.getState().authError || 'Vui lòng thử lại.' })
     }
+  }
+
+  const handleSelect = async (project: Project) => {
+    await selectProject(project.id)
+  }
+
+  const canManageProject = (project: Project) => project.owner_id === user?.id
+
+  const openEditProject = (project: Project) => {
+    setEditingProject(project)
+    setEditName(project.name)
+    setEditDesc(project.description ?? '')
   }
 
   const handleDeleteProject = async (project: Project) => {
@@ -189,28 +148,6 @@ export default function ProjectSelectPage() {
         )}
 
         <div style={styles.grid}>
-          {pendingProject && (
-            <button
-              type="button"
-              disabled
-              style={{
-                ...styles.projectCard,
-                ...styles.projectCardPending,
-              }}
-            >
-              <div style={styles.projectTop}>
-                <div style={styles.projectIcon}>⏳</div>
-                <span style={styles.projectChip}>Đang tạo</span>
-              </div>
-              <div style={styles.projectName}>{pendingProject.name}</div>
-              {pendingProject.description && <div style={styles.projectDesc}>{pendingProject.description}</div>}
-              <div style={styles.projectMeta}>
-                <span>Vui lòng chờ</span>
-                <strong>Đang lưu...</strong>
-              </div>
-            </button>
-          )}
-
           {projects.map((project, index) => (
             <div
               key={project.id}
@@ -221,25 +158,25 @@ export default function ProjectSelectPage() {
             >
               <div style={styles.projectTop}>
                 <div style={styles.projectIcon}>PR</div>
-                <span style={styles.projectChip}>Mở dự án</span>
+                <span style={styles.projectChip}>M? d? ?n</span>
               </div>
               <div style={styles.projectName}>{project.name}</div>
               {project.description && <div style={styles.projectDesc}>{project.description}</div>}
               <div style={styles.projectMeta}>
-                <span>Tạo ngày</span>
+                <span>T?o ng?y</span>
                 <strong>{new Date(project.created_at).toLocaleDateString('vi-VN')}</strong>
               </div>
               <div style={styles.projectActions}>
                 <Button type="button" variant="primary" size="sm" onClick={() => handleSelect(project)} style={styles.openBtn}>
-                  Mở dự án
+                  M? d? ?n
                 </Button>
                 {canManageProject(project) && (
                   <>
                     <Button type="button" variant="ghost" size="sm" onClick={() => openEditProject(project)}>
-                      Sửa
+                      S?a
                     </Button>
                     <Button type="button" variant="danger" size="sm" onClick={() => handleDeleteProject(project)}>
-                      Xóa
+                      X?a
                     </Button>
                   </>
                 )}
@@ -247,77 +184,36 @@ export default function ProjectSelectPage() {
             </div>
           ))}
 
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            disabled={creating}
-            style={styles.createCard}
+          <div
+            role="note"
+            aria-live="polite"
+            style={{
+              ...styles.createCard,
+              cursor: 'default',
+              borderStyle: 'dashed',
+              opacity: 0.9,
+            }}
           >
-            <div style={styles.createIcon}>+</div>
-            <div style={styles.createTitle}>Tạo dự án mới</div>
-            <div style={styles.createDesc}>Thêm một không gian làm việc mới với tên và mô tả riêng.</div>
-          </button>
+            <div style={styles.createIcon}>?</div>
+            <div style={styles.createTitle}>T?o d? ?n m?i t?m t?t</div>
+            <div style={styles.createDesc}>
+              T?i kho?n m?i s? t? ??ng v?o d? ?n m?c ??nh c?a admin.test@terrimap.vn.
+              {' '}
+              Ch?c n?ng t?o d? ?n m?i hi?n ???c ?n ?? tr?nh ph?t sinh d? li?u r?i r?c.
+            </div>
+          </div>
         </div>
-
-        <Modal
-          open={showCreate}
-          onClose={() => (!creating ? setShowCreate(false) : null)}
-          title="Tạo dự án mới"
-          description="Dùng tên ngắn gọn, dễ nhận diện theo khu vực hoặc thời gian."
-          width={520}
-          footer={(
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setShowCreate(false)}
-                disabled={creating}
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                form="create-project-form"
-                disabled={creating || !newName.trim()}
-              >
-                {creating ? 'Đang tạo...' : 'Tạo dự án'}
-              </Button>
-            </>
-          )}
-        >
-          <form id="create-project-form" onSubmit={handleCreate} style={styles.form}>
-            <div style={styles.field}>
-              <label style={styles.label}>Tên dự án</label>
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Ví dụ: Phân vùng Q1/2026"
-                autoFocus
-              />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Mô tả</label>
-              <Textarea
-                value={newDesc}
-                onChange={(e) => setNewDesc(e.target.value)}
-                placeholder="Mô tả ngắn về dự án..."
-                rows={4}
-              />
-            </div>
-          </form>
-        </Modal>
 
         <Modal
           open={!!editingProject}
           onClose={() => (!savingEdit ? setEditingProject(null) : null)}
-          title="Sửa thông tin dự án"
-          description="Cập nhật tên và mô tả của dự án."
+          title="S?a th?ng tin d? ?n"
+          description="C?p nh?t t?n v? m? t? c?a d? ?n."
           width={520}
           footer={(
             <>
               <Button type="button" variant="ghost" onClick={() => setEditingProject(null)} disabled={savingEdit}>
-                Hủy
+                H?y
               </Button>
               <Button
                 type="submit"
@@ -325,27 +221,27 @@ export default function ProjectSelectPage() {
                 form="edit-project-form"
                 disabled={savingEdit || !editName.trim()}
               >
-                {savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+                {savingEdit ? '?ang l?u...' : 'L?u thay ??i'}
               </Button>
             </>
           )}
         >
           <form id="edit-project-form" onSubmit={handleUpdateProject} style={styles.form}>
             <div style={styles.field}>
-              <label style={styles.label}>Tên dự án</label>
+              <label style={styles.label}>T?n d? ?n</label>
               <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="Tên dự án"
+                placeholder="T?n d? ?n"
                 autoFocus
               />
             </div>
             <div style={styles.field}>
-              <label style={styles.label}>Mô tả</label>
+              <label style={styles.label}>M? t?</label>
               <Textarea
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
-                placeholder="Mô tả ngắn về dự án..."
+                placeholder="M? t? ng?n v? d? ?n..."
                 rows={4}
               />
             </div>
@@ -355,6 +251,7 @@ export default function ProjectSelectPage() {
     </div>
   )
 }
+
 
 const styles: Record<string, React.CSSProperties> = {
   page: {

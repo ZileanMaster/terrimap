@@ -39,23 +39,23 @@ Nếu ví dự án như một ngôi nhà:
 
 ```text
 src/
-├── App.tsx
-├── main.tsx
-├── pages/
-├── components/
-├── store/
-├── services/
-├── lib/
-├── context/
-├── hooks/
-├── data/
-├── styles/
-├── i18n/
-├── utils/
-├── workers/
-├── types/
-├── test-setup.tsx
-└── test-utils.tsx
+├ App.tsx
+├ main.tsx
+├ pages/
+├ components/
+├ store/
+├ services/
+├ lib/
+├ context/
+├ hooks/
+├ data/
+├ styles/
+├ i18n/
+├ utils/
+├ workers/
+├ types/
+├ test-setup.tsx
+└ test-utils.tsx
 ```
 
 ### Ý nghĩa ngắn gọn
@@ -172,7 +172,7 @@ Thường gồm:
 - `Khu vực & bản đồ`
 - `Nhân sự`
 - `Vận hành`
-- `Phân chia thuật toán`
+- `Thuật toán phân chia`
 - `Cài đặt`
 
 File này thường là nơi:
@@ -654,11 +654,11 @@ Các helper đo/ghi nhận hành vi, sự kiện, hoặc chỉ số vận hành 
 
 Thư mục này chứa dữ liệu tham chiếu:
 
-- `district-colors.ts` — bảng màu theo cụm/vùng;
-- `mock-agents.ts` — dữ liệu giả cho agent;
-- `mock-zones.ts` — vùng mẫu;
-- `provinces.ts` — danh sách tỉnh/thành;
-- `regions.ts` — dữ liệu khu vực.
+- `district-colors.ts` - bảng màu theo cụm/vùng;
+- `mock-agents.ts` - dữ liệu giả cho agent;
+- `mock-zones.ts` - vùng mẫu;
+- `provinces.ts` - danh sách tỉnh/thành;
+- `regions.ts` - dữ liệu khu vực.
 
 ### Vai trò
 - phục vụ demo;
@@ -835,7 +835,7 @@ Nếu muốn hiểu nhanh TerriMap, nên đọc theo thứ tự:
 
 ## 22) Kết luận
 
-`src/` chính là toàn bộ frontend của TerriMap: từ màn đăng nhập, chọn dự án, shell chính, bản đồ, nhân sự, báo cáo, đến phân chia thuật toán.
+`src/` chính là toàn bộ frontend của TerriMap: từ màn đăng nhập, chọn dự án, shell chính, bản đồ, nhân sự, báo cáo, đến Thuật toán phân chia.
 
 Nếu cần nhớ một câu ngắn:
 

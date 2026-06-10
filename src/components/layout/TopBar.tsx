@@ -45,11 +45,6 @@ export default function TopBar() {
   const isAdmin    = membership?.role === 'admin'
   const actualRole = membership?.role ?? 'admin'
 
-  function handleBackToProjects() {
-    // Clear current project → go back to project selection
-    useAuthStore.setState({ currentProjectId: null, membership: null })
-  }
-
   return (
     <header style={styles.bar}>
       {/* Logo */}
@@ -133,15 +128,6 @@ export default function TopBar() {
         {/* User menu (online only) */}
         {online && profile && (
           <div style={styles.userSection}>
-            {/* Back to projects */}
-            <button
-              onClick={handleBackToProjects}
-              style={styles.projectBtn}
-              title="Đổi dự án"
-            >
-              📁
-            </button>
-
             {/* User avatar + name */}
             <div style={styles.userInfo}>
               <div style={{

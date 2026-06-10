@@ -1,4 +1,4 @@
-# BÁO CÁO ĐỒ ÁN — TerriMap
+# BÁO CÁO ĐỒ ÁN - TerriMap
 ## Hệ thống thiết kế và vận hành lãnh thổ kinh doanh theo khu vực
 
 > **Phiên bản tài liệu**: cập nhật theo trạng thái hiện tại của dự án  
@@ -65,7 +65,7 @@ Luồng sử dụng chính của hệ thống:
 5. Vào `Nhân sự` để quản lý thành viên dự án.
 6. Vào `Phân chia lãnh thổ` để chỉnh tay vùng/cụm khi cần.
 7. Vào `Vận hành` để theo dõi báo cáo theo tháng và theo khu vực.
-8. Vào `Phân chia thuật toán` để chạy thuật toán phân chia và so sánh kết quả.
+8. Vào `Thuật toán phân chia` để chạy thuật toán phân chia và so sánh kết quả.
 9. Vào `Cài đặt` để cập nhật thông tin cá nhân và cấu hình hệ thống.
 
 ---
@@ -141,7 +141,7 @@ Màn `Vận hành` dùng để:
 
 Màn này dành cho người quản lý muốn biết **khu vực nào đã có dữ liệu, khu vực nào còn thiếu và chất lượng báo cáo ra sao**.
 
-### 5.7 Phân chia thuật toán
+### 5.7 Thuật toán phân chia
 
 Màn này là nơi chạy các thuật toán phân chia.
 
@@ -249,7 +249,7 @@ Quy trình kiểm tra đang dùng:
 5. Vào `Nhân sự` để minh hoạ quản lý thành viên.
 6. Vào `Phân chia lãnh thổ` để cho thấy chỉnh tay cụm/vùng.
 7. Vào `Vận hành` để trình bày báo cáo theo tháng.
-8. Vào `Phân chia thuật toán` để chạy Greedy / Local Search / SA và so sánh chất lượng.
+8. Vào `Thuật toán phân chia` để chạy Greedy / Local Search / SA và so sánh chất lượng.
 
 Thông điệp chính khi demo:
 
@@ -264,7 +264,7 @@ Bản cập nhật hiện tại của TerriMap đã chuyển trọng tâm sang:
 - tiếng Việt cố định,
 - ngôn ngữ sản phẩm rõ ràng hơn,
 - trải nghiệm local-first để giảm cảm giác chờ,
-- phân chia thuật toán chú trọng **chất lượng**,
+- Thuật toán phân chia chú trọng **chất lượng**,
 - luồng sử dụng rõ ràng hơn cho quản lý cấp cao.
 
 Nếu cần tiếp tục phát triển, nên ưu tiên:

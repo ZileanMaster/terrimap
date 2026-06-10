@@ -1,17 +1,3 @@
-/**
- * L1 — Geometry Engine
- *
- * Pure functions cho hệ thống Commercial Territory Design.
- * Import ONLY từ types/domain.ts (L0). Không import UI hay framework nào.
- *
- * Defensive Contracts:
- *  - Mọi hàm trả về `number` → luôn finite (không NaN, không ±Infinity).
- *  - Edge-cases (empty array, degenerate polygon, coincident coords) được xử lý tường minh.
- *  - Không có side effects — mọi hàm là pure function.
- *
- * @module geometry
- */
-
 import type {
   Coordinate,
   Zone,
@@ -19,21 +5,12 @@ import type {
   DistanceMatrix,
 } from '../types/domain.js';
 
-// ==========================================
-// RE-EXPORT: Type alias "LatLng" = Coordinate
-// (Cho phép caller dùng cả hai tên)
-// ==========================================
-
 /** @internal Alias của `Coordinate` để tương thích với convention LatLng. */
 export type LatLng = Coordinate;
 
 // Alias types cho matrix (tên ngắn hơn cho caller bên ngoài)
 export type AdjMatrix = AdjacencyMatrix;
 export type DistMatrix = DistanceMatrix;
-
-// ==========================================
-// ERROR TYPE
-// ==========================================
 
 /**
  * Lỗi do vi phạm contract của Geometry Engine.
@@ -46,35 +23,25 @@ export class GeometryError extends Error {
   }
 }
 
-// ==========================================
-// INTERNAL HELPERS
-// ==========================================
 
 /** @internal Convert degrees to radians. O(1). */
 function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
 
-// ==========================================
-// 1. HAVERSINE DISTANCE
-// ==========================================
-
 /**
  * Tính khoảng cách giữa 2 điểm trên mặt cầu theo công thức Haversine.
- *
- * @complexity O(1) — hằng số 7 phép tính lượng giác.
- *
  * Contracts:
- *  - a === b (cùng tọa độ) → 0 (không phải -0).
- *  - Cực Nam ↔ Cực Bắc → ~20 015 km (nửa chu vi Trái Đất).
+ *  - a === b (cùng tọa độ) -> 0
+ *  - Cực Nam <-> Cực Bắc -> ~20 015 km (nửa chu vi Trái Đất).
  *  - Kết quả luôn finite và thuộc [0, ~20 015].
  *
- * @param a - Tọa độ điểm A (đã validate ở L0).
- * @param b - Tọa độ điểm B (đã validate ở L0).
+ * @param a - Tọa độ điểm A 
+ * @param b - Tọa độ điểm B 
  * @returns Khoảng cách tính bằng km, finite, >= 0.
  */
 export function haversineDistance(a: LatLng, b: LatLng): number {
-  const R = 6_371; // Bán kính Trái Đất (km), WGS-84 mean radius
+  const R = 6_371; // Bán kính trái đất (km)
 
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
@@ -91,7 +58,7 @@ export function haversineDistance(a: LatLng, b: LatLng): number {
 
   const dist = R * c;
 
-  // Normalize -0 → 0 (Object.is(-0, 0) === false)
+  // Normalize -0 -> 0 (Object.is(-0, 0) === false)
   return dist === 0 ? 0 : dist;
 }
 
@@ -103,41 +70,19 @@ export function haversineDistance(a: LatLng, b: LatLng): number {
  * @complexity O(1)
  */
 export const haversineKm = haversineDistance;
+//Tính tâm hình học (centroid) của một polygon phẳng bằng Shoelace Formula.
 
-// ==========================================
-// 2. POLYGON CENTROID
-// ==========================================
-
-/**
- * Tính tâm hình học (centroid) của một polygon phẳng bằng Shoelace Formula.
- *
- * @complexity O(n) — n = số đỉnh của polygon.
- *
- * Contracts:
- *  - `coords.length === 0` → throw GeometryError.
- *  - `coords.length === 1` → trả về điểm duy nhất đó.
- *  - `coords.length === 2` → trả về trung điểm của đoạn thẳng.
- *  - Polygon degenerate (area = 0, tất cả điểm thẳng hàng) → fallback arithmetic mean.
- *  - Kết quả lat/lng luôn finite.
- *
- * Ghi chú: Shoelace Formula giả định tọa độ phẳng (lng, lat). Với các khu vực
- * nhỏ (territory cấp tỉnh/huyện), sai số so với spherical centroid < 0.1%.
- *
- * @param coords - Danh sách đỉnh của polygon theo thứ tự (có thể khép kín hoặc không).
- * @returns Tọa độ tâm hình học, finite, trong bounds lat[-90,90] lng[-180,180].
- * @throws {GeometryError} Nếu `coords` rỗng.
- */
 export function polygonCentroid(coords: LatLng[]): LatLng {
   if (coords.length === 0) {
     throw new GeometryError('polygonCentroid requires at least 1 coordinate.');
   }
 
-  // Edge-case: 1 điểm → trả về chính nó
+  // Edge-case: 1 điểm -> trả về chính nó
   if (coords.length === 1) {
     return { lat: coords[0]!.lat, lng: coords[0]!.lng };
   }
 
-  // Edge-case: 2 điểm → trung điểm
+  // Edge-case: 2 điểm -> trung điểm
   if (coords.length === 2) {
     return {
       lat: (coords[0]!.lat + coords[1]!.lat) / 2,
@@ -153,8 +98,8 @@ export function polygonCentroid(coords: LatLng[]): LatLng {
     pts.push({ lat: first.lat, lng: first.lng });
   }
 
-  // === Shoelace Formula ===
-  // Tọa độ: x = lng, y = lat (convention GeoJSON)
+  // Shoelace Formula
+  // Tọa độ: x = lng, y = lat
   // Area = (1/2) * |Σ (x_i * y_{i+1} - x_{i+1} * y_i)|
   // Cx   = (1/6A) * Σ (x_i + x_{i+1}) * (x_i * y_{i+1} - x_{i+1} * y_i)
   // Cy   = (1/6A) * Σ (y_i + y_{i+1}) * (x_i * y_{i+1} - x_{i+1} * y_i)
@@ -181,7 +126,6 @@ export function polygonCentroid(coords: LatLng[]): LatLng {
   if (Math.abs(area) < 1e-12) {
     let sumLat = 0;
     let sumLng = 0;
-    // Dùng coords gốc (không bao gồm điểm khép kín thêm vào)
     for (const c of coords) {
       sumLat += c.lat;
       sumLng += c.lng;
@@ -196,7 +140,7 @@ export function polygonCentroid(coords: LatLng[]): LatLng {
   const resultLng = factor * cLng;
   const resultLat = factor * cLat;
 
-  // Sanity check: kết quả phải finite (không xảy ra với input hợp lệ)
+  // Sanity check: kết quả phải finite
   if (!Number.isFinite(resultLat) || !Number.isFinite(resultLng)) {
     throw new GeometryError(
       `polygonCentroid produced non-finite result (lat=${resultLat}, lng=${resultLng}). ` +
@@ -207,26 +151,22 @@ export function polygonCentroid(coords: LatLng[]): LatLng {
   return { lat: resultLat, lng: resultLng };
 }
 
-// ==========================================
-// 3. ZONE DIAMETER
-// ==========================================
-
 /**
  * Tính đường kính của tập hợp Zones:
  * = khoảng cách lớn nhất giữa centroid của bất kỳ 2 Zone nào trong tập.
  * Đây là metric chính để tối ưu hóa phân vùng (nhỏ hơn = tốt hơn).
  *
- * @complexity O(n²) — n = số zones. Dùng triangular loop (n*(n-1)/2 iterations).
+ * @complexity O(n²) - n = số zones. Dùng triangular loop (n*(n-1)/2 iterations).
  *
  * Contracts:
- *  - `zones.length === 0` → 0 (không throw).
- *  - `zones.length === 1` → 0 (không throw).
- *  - 2 zones trùng centroid → 0 (không phải -0).
- *  - Kết quả cuối PHẢI finite — throw GeometryError nếu không (fail-fast sentinel).
+ *  - `zones.length === 0 -> 0 (không throw)
+ *  - `zones.length === 1 -> 0 (không throw)
+ *  - 2 zones trùng centroid -> 0 (không phải -0).
+ *  - Kết quả cuối PHẢI finite - throw GeometryError nếu không (fail-fast sentinel)
  *
- * @param zones - Mảng các Zone (đã validate ở L0).
- * @returns Đường kính tính bằng km, finite, >= 0.
- * @throws {GeometryError} Nếu kết quả nội bộ non-finite (programming error).
+ * @param zones - Mảng các Zone 
+ * @returns Đường kính tính bằng km, finite, >= 0
+ * @throws {GeometryError} Nếu kết quả nội bộ non-finite (programming error)
  */
 export function zoneDiameter(zones: Zone[]): number {
   if (zones.length === 0) return 0;
@@ -248,29 +188,15 @@ export function zoneDiameter(zones: Zone[]): number {
   if (!Number.isFinite(result)) {
     throw new GeometryError(
       `zoneDiameter produced non-finite result (${result}) for ${zones.length} zones. ` +
-        'This is a programming error — check haversineDistance inputs.'
+        'This is a programming error - check haversineDistance inputs.'
     );
   }
 
   return result;
 }
 
-// ==========================================
-// 4. BUILD ADJACENCY MATRIX
-// ==========================================
-
-/** Floating-point tolerance for coordinate comparison */
-// Tolerance for floating-point coordinate comparison in edge matching.
-// 1e-5 degrees ≈ 1.1 meters — handles Leaflet drawing imprecision
-// (old value 1e-7 was too strict: failed for edges drawn by mouse ~1cm apart)
 const COORD_EPS = 1e-5;
 
-/**
- * Extract edges from a GeoJSON polygon as pairs of [lng, lat] points.
- * Handles both Polygon and MultiPolygon. Excludes the closing edge
- * (last→first) since GeoJSON ring is already closed (first === last).
- * @internal
- */
 function extractEdges(polygon: Zone['polygon']): Array<[[number, number], [number, number]]> {
   const edges: Array<[[number, number], [number, number]]> = [];
   const rings = polygon.type === 'MultiPolygon'
@@ -278,7 +204,6 @@ function extractEdges(polygon: Zone['polygon']): Array<[[number, number], [numbe
     : polygon.coordinates;
 
   for (const ring of rings) {
-    // GeoJSON ring: first point === last point (closed), so iterate to length-1
     for (let k = 0; k < ring.length - 1; k++) {
       const p1 = ring[k]! as [number, number];
       const p2 = ring[k + 1]! as [number, number];
@@ -288,11 +213,6 @@ function extractEdges(polygon: Zone['polygon']): Array<[[number, number], [numbe
   return edges;
 }
 
-/**
- * Check if two edges share a common segment (same or reversed direction).
- * Uses epsilon tolerance for floating-point coordinate comparison.
- * @internal
- */
 function edgesShareSegment(
   e1: [[number, number], [number, number]],
   e2: [[number, number], [number, number]],
@@ -300,12 +220,12 @@ function edgesShareSegment(
   const [a, b] = e1;
   const [c, d] = e2;
 
-  // Same direction: A≈C && B≈D
+  // Cùng hướng: A≈C && B≈D
   const same =
     Math.abs(a[0]! - c[0]!) < COORD_EPS && Math.abs(a[1]! - c[1]!) < COORD_EPS &&
     Math.abs(b[0]! - d[0]!) < COORD_EPS && Math.abs(b[1]! - d[1]!) < COORD_EPS;
 
-  // Reversed direction: A≈D && B≈C
+  // Ngược hướng: A≈D && B≈C
   const reversed =
     Math.abs(a[0]! - d[0]!) < COORD_EPS && Math.abs(a[1]! - d[1]!) < COORD_EPS &&
     Math.abs(b[0]! - c[0]!) < COORD_EPS && Math.abs(b[1]! - c[1]!) < COORD_EPS;
@@ -313,21 +233,6 @@ function edgesShareSegment(
   return same || reversed;
 }
 
-/**
- * Check if two edges overlap along a shared collinear segment (T-junctions).
- *
- * This detects cases where one edge is a SUB-SEGMENT of another, e.g.:
- *   e1: A=[105.800,21.065] → B=[105.830,21.065]  (long edge)
- *   e2: C=[105.820,21.065] → D=[105.843,21.065]  (partly overlapping edge)
- * These share a segment from 105.820 to 105.830 — but edgesShareSegment
- * returns false because endpoints differ. This function catches that case.
- *
- * Algorithm:
- *  1. Check that both endpoints of e2 lie on the line through e1 (collinear).
- *  2. Project e2 onto e1 and check the 1D overlap is > COORD_EPS.
- *
- * @internal
- */
 function edgesOverlapCollinear(
   e1: [[number, number], [number, number]],
   e2: [[number, number], [number, number]],
@@ -337,16 +242,13 @@ function edgesOverlapCollinear(
 
   const dx = b[0]! - a[0]!, dy = b[1]! - a[1]!;
   const len2 = dx * dx + dy * dy;
-  if (len2 < 1e-20) return false; // degenerate zero-length edge
+  if (len2 < 1e-20) return false;
 
-  // Cross product: if |cross| / |e1| > COORD_EPS, the point is off-line
   const len = Math.sqrt(len2);
   const crossC = (c[0]! - a[0]!) * dy - (c[1]! - a[1]!) * dx;
   const crossD = (d[0]! - a[0]!) * dy - (d[1]! - a[1]!) * dx;
   if (Math.abs(crossC) > COORD_EPS * len || Math.abs(crossD) > COORD_EPS * len) return false;
 
-  // Both c and d lie on the line through e1.
-  // Project c and d onto e1 parametrically (t=0 at a, t=1 at b).
   const tc = ((c[0]! - a[0]!) * dx + (c[1]! - a[1]!) * dy) / len2;
   const td = ((d[0]! - a[0]!) * dx + (d[1]! - a[1]!) * dy) / len2;
   const tMin = Math.min(tc, td);
@@ -358,16 +260,6 @@ function edgesOverlapCollinear(
   return overlapEnd - overlapStart > COORD_EPS;
 }
 
-/**
- * Check if two zones' polygons share at least one common edge segment.
- * Detects both:
- *   (a) Exact shared edges (same endpoints, same or reversed direction).
- *   (b) Partial shared edges / T-junctions (one edge overlaps a sub-segment
- *       of the other — common when user draws adjacent zones separately).
- *
- * Per paper G=(V,E): adjacency = sharing a boundary edge, NOT just a corner.
- * @internal
- */
 function polygonsShareEdge(zoneA: Zone, zoneB: Zone): boolean {
   const edgesA = extractEdges(zoneA.polygon);
   const edgesB = extractEdges(zoneB.polygon);
@@ -381,30 +273,19 @@ function polygonsShareEdge(zoneA: Zone, zoneB: Zone): boolean {
 }
 
 /**
- * Xây dựng ma trận kề (AdjacencyMatrix) cho tập zones.
+ * Xây dựng ma trận kề (AdjacencyMatrix) cho tập zones
+ * 2 zones kề nhau nếu polygon của chúng chia sẻ ít nhất một cạnh chung.
+ * **Fallback**: Nếu polygon adjacency tạo ra đồ thị không liên thông thì sử dụng distance-based threshold làm bổ sung.
  *
- * **Primary method**: Polygon edge-sharing — hai zones kề nhau nếu polygon
- * của chúng chia sẻ ít nhất một cạnh chung. Đúng theo paper Ríos-Mercado:
- *   G = (V, E) where E represents adjacency between blocks.
- *
- * **Fallback**: Nếu polygon adjacency tạo ra đồ thị không liên thông
- * (do polygon gaps), sử dụng distance-based threshold làm bổ sung.
- *
- * @complexity O(n² × e²) — n = zones, e = edges per polygon (~8).
+ * @complexity O(n² × e²) - n = zones, e = edges per polygon (~8).
  *   Cho 12 zones: ~66 pairs × 64 edge comparisons ≈ 4000 ops.
  *
- * Contracts:
- *  - Kết quả luôn symmetric: nếu A kề B thì B kề A.
- *  - Zone tự kề chính nó KHÔNG được thêm vào danh sách (no self-loops).
- *  - `zones.length === 0` → trả về `{}`.
- *  - Mọi zone đều có entry trong kết quả (dù array rỗng).
- *
- * @param zones - Mảng các Zone (đã validate ở L0).
- * @param _thresholdKm - Kept for backward compatibility. Ignored in primary mode.
+ * @param zones - Mảng các Zone
+ * @param _thresholdKm
  * @returns AdjacencyMatrix symmetric, mọi zone có ít nhất một entry (có thể rỗng).
  */
 /**
- * Trích xuất tất cả các đỉnh (coordinates) từ polygon của một Zone.
+ * Trích xuất tất cả các đỉnh) từ polygon của 1 Zone.
  * @internal
  */
 function extractVertices(polygon: Zone['polygon']): Coordinate[] {
@@ -425,13 +306,9 @@ function extractVertices(polygon: Zone['polygon']): Coordinate[] {
   return vertices;
 }
 
-/**
- * Tính khoảng cách nhỏ nhất từ điểm P đến đoạn thẳng AB.
- * Tọa độ trong degree-space, kết quả xấp xỉ km dùng scale cố định cho VN.
- * @internal
- */
+// Tính khoảng cách nhỏ nhất từ điểm P đến đoạn thẳng AB.
 const KM_PER_DEG_LAT = 111.0;
-const KM_PER_DEG_LNG = 103.5; // cos(21°) × 111 — Vietnam average
+const KM_PER_DEG_LNG = 103.5; // cos(21°) × 111 - Vietnam average
 
 function pointToSegDistKm(
   px: number, py: number,
@@ -449,8 +326,7 @@ function pointToSegDistKm(
 }
 
 /**
- * Tính khoảng cách nhỏ nhất giữa hai đoạn thẳng (segment-to-segment).
- * = min của 4 điểm endpoint projected onto opposite segment.
+ * Tính khoảng cách nhỏ nhất giữa hai đoạn thẳng.
  * @internal
  */
 function segPairMinDistKm(
@@ -467,16 +343,7 @@ function segPairMinDistKm(
 }
 
 /**
- * Tính khoảng cách biên nhỏ nhất giữa hai Zone (segment-to-segment toàn bộ polygon).
- *
- * Khác với getMinVertexDistance (chỉ so sánh đỉnh-đỉnh), hàm này tính khoảng cách
- * nhỏ nhất giữa bất kỳ điểm nào trên cạnh của zoneA đến bất kỳ điểm nào trên cạnh
- * của zoneB. Điều này quan trọng cho polygon không đều (irregular): hai zone có thể
- * kề nhau tại giữa cạnh mà không có đỉnh nào gần nhau.
- *
- * Ví dụ: zone tam giác kề zone chữ V — cạnh của chúng gần nhau ở giữa nhưng
- * các vertex ở xa → getMinVertexDistance sẽ trả về giá trị lớn, bỏ sót adjacency.
- *
+ * Tính khoảng cách biên nhỏ nhất giữa hai Zones, dùng để phát hiện adjacency bổ sung cho các polygon có khe hở nhỏ.
  * @internal
  */
 export function getMinBoundaryDistKm(zoneA: Zone, zoneB: Zone): number {
@@ -498,7 +365,6 @@ export function getMinBoundaryDistKm(zoneA: Zone, zoneB: Zone): number {
 
 /**
  * Tính khoảng cách nhỏ nhất giữa bất kỳ cặp đỉnh nào của hai Zone.
- * @deprecated Dùng getMinBoundaryDistKm thay thế cho độ chính xác tốt hơn.
  * @internal
  */
 function getMinVertexDistance(zoneA: Zone, zoneB: Zone): number {
@@ -542,14 +408,6 @@ export function buildAdjacencyMatrix(
     }
   }
 
-  // Secondary (gap-bridging): near-BOUNDARY adjacency for zones with small drawing gaps.
-  // Uses segment-to-segment min distance (not vertex-to-vertex) so irregular polygons
-  // (triangles, V-shapes) are correctly detected as adjacent even when edges are close
-  // at non-vertex points.
-  // - Lower bound dist > 1e-6: excludes corner-only diagonal touch.
-  // - Upper bound default: 0.12km (~120m), covers roads / small gaps without
-  //   accidentally connecting non-neighboring zones across other zones.
-  // Note: `_thresholdKm` is kept for backward compatibility and now controls this gap threshold.
   const NEAR_BOUNDARY_KM = Number.isFinite(_thresholdKm as number) && (_thresholdKm as number) > 0
     ? (_thresholdKm as number)
     : 0.12;
@@ -569,27 +427,9 @@ export function buildAdjacencyMatrix(
   return matrix;
 }
 
-// ==========================================
-// 5. BUILD DISTANCE MATRIX
-// ==========================================
+// 5. Ma trận khoảng cách giữa các cặp zones
 
-/**
- * Xây dựng ma trận khoảng cách đầy đủ N×N giữa tâm của tất cả các zones.
- *
- * @complexity O(n²) — n = số zones. Triangular loop: (n*(n-1)/2) phép tính,
- *   mỗi kết quả được ghi 2 lần (symmetric). Diagonal được ghi thêm n lần.
- *   Tổng memory: O(n²).
- *
- * Contracts:
- *  - distance[A][B] === distance[B][A] (symmetric).
- *  - distance[A][A] === 0 (diagonal = 0).
- *  - Mọi giá trị finite và >= 0.
- *  - `zones.length === 0` → trả về `{}`.
- *  - `zones.length === 1` → trả về `{ [id]: { [id]: 0 } }`.
- *
- * @param zones - Mảng các Zone (đã validate ở L0).
- * @returns DistanceMatrix N×N, symmetric, diagonal = 0, mọi giá trị finite >= 0.
- */
+
 export function buildDistanceMatrix(zones: Zone[]): DistMatrix {
   // Khởi tạo: mọi zone có hàng riêng, diagonal = 0
   const matrix: DistMatrix = {};
@@ -597,14 +437,13 @@ export function buildDistanceMatrix(zones: Zone[]): DistMatrix {
     matrix[zone.id] = { [zone.id]: 0 };
   }
 
-  // Triangular loop: tính mỗi cặp (i, j) một lần → ghi symmetric
+  // Triangular loop: tính mỗi cặp (i, j) một lần -> ghi symmetric
   for (let i = 0; i < zones.length - 1; i++) {
     for (let j = i + 1; j < zones.length; j++) {
       const zi = zones[i]!;
       const zj = zones[j]!;
       const d = haversineDistance(zi.centroid, zj.centroid);
 
-      // Symmetric assignment: O(1) per pair
       matrix[zi.id]![zj.id] = d;
       matrix[zj.id]![zi.id] = d;
     }
@@ -613,16 +452,14 @@ export function buildDistanceMatrix(zones: Zone[]): DistMatrix {
   return matrix;
 }
 
-// ==========================================
 // BACKWARD-COMPATIBLE EXPORT
-// ==========================================
 
 /**
  * Tính tọa độ trung bình (arithmetic mean) của một tập tọa độ.
  * `meanCoordinate` khác `polygonCentroid`: không dùng area-weighting.
  * Chỉ dùng nội bộ cho các phép tính trung bình tọa độ. Dùng `polygonCentroid` cho centroid polygon thực.
  *
- * @complexity O(n) — n = số coordinates.
+ * @complexity O(n) - n = số coordinates.
  * @throws {GeometryError} Nếu `coords` rỗng.
  */
 export function meanCoordinate(coords: Coordinate[]): Coordinate {
@@ -644,18 +481,8 @@ export function meanCoordinate(coords: Coordinate[]): Coordinate {
   };
 }
 
-// ==========================================
-// OVERLAP VALIDATION (L4b-4 Hotfix)
-// ==========================================
+// OVERLAP VALIDATION
 
-/**
- * Check if a point [lng, lat] is inside a polygon ring [lng, lat][].
- * Uses ray-casting algorithm (Jordan curve theorem).
- *
- * @param point - [lng, lat] coordinate
- * @param ring  - Array of [lng, lat] coordinates forming a closed polygon
- * @returns true if point is strictly inside the polygon
- */
 export function pointInPolygon(
   point: [number, number],
   ring: number[][],
@@ -678,20 +505,6 @@ export function pointInPolygon(
   return inside;
 }
 
-/**
- * Check if two polygon rings overlap.
- *
- * Returns true if:
- * 1. Any vertex of polygonA is inside polygonB, OR
- * 2. Any vertex of polygonB is inside polygonA, OR
- * 3. Any edges of the two polygons properly cross each other.
- *
- * Shared edges (touching endpoints) are NOT considered overlap —
- * segmentsIntersect only detects proper crossing.
- *
- * @param ringA - Outer ring of polygon A ([lng, lat][])
- * @param ringB - Outer ring of polygon B ([lng, lat][])
- */
 export function polygonsOverlap(
   ringA: number[][],
   ringB: number[][],

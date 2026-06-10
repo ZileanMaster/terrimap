@@ -3,7 +3,7 @@
 -- đang bị lưu sai tọa độ Đà Nẵng (16.047, 108.206)
 --
 -- Chạy script này trong Supabase SQL Editor:
---   Dashboard → SQL Editor → New Query → Paste → Run
+--   Dashboard -> SQL Editor -> New Query -> Paste -> Run
 -- ============================================================
 
 -- Bước 1: Kiểm tra regions hiện tại (xem trước khi update)

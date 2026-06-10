@@ -8,7 +8,7 @@ function centroidOf(ring: number[][]): { lat: number; lng: number } {
   return { lat: Math.round(lat * 100000) / 100000, lng: Math.round(lng * 100000) / 100000 }
 }
 
-/** Tạo rectangle vùng [lng,lat] — closed ring, counter-clockwise */
+/** Tạo rectangle vùng [lng,lat] - closed ring, counter-clockwise */
 function rect(left: number, bottom: number, right: number, top: number): number[][] {
   return [
     [left, bottom],
@@ -83,17 +83,17 @@ function sgRect(col: number, row: number): number[][] {
 }
 
 const hcmZones: Zone[] = [
-  // Row 2 (top) — Phú Nhuận
+  // Row 2 (top) - Phú Nhuận
   makeZone('sg01', 'Phú Nhuận P1',   'region-hcm', sgRect(0, 2), 145, 100),
   makeZone('sg02', 'Phú Nhuận P2',   'region-hcm', sgRect(1, 2), 170, 115),
   makeZone('sg03', 'Phú Nhuận P3',   'region-hcm', sgRect(2, 2), 130, 85),
   makeZone('sg04', 'Bình Thạnh P1',  'region-hcm', sgRect(3, 2), 195, 135),
-  // Row 1 — Quận 3
+  // Row 1 - Quận 3
   makeZone('sg05', 'Quận 3 P6',      'region-hcm', sgRect(0, 1), 220, 155),
   makeZone('sg06', 'Quận 3 P9',      'region-hcm', sgRect(1, 1), 280, 195),
   makeZone('sg07', 'Quận 3 P12',     'region-hcm', sgRect(2, 1), 240, 165),
   makeZone('sg08', 'Bình Thạnh P2',  'region-hcm', sgRect(3, 1), 160, 110),
-  // Row 0 (bottom) — Quận 1
+  // Row 0 (bottom) - Quận 1
   makeZone('sg09', 'Bến Nghé',       'region-hcm', sgRect(0, 0), 350, 250),
   makeZone('sg10', 'Bến Thành',      'region-hcm', sgRect(1, 0), 400, 280),
   makeZone('sg11', 'Đa Kao',         'region-hcm', sgRect(2, 0), 310, 215),
@@ -108,7 +108,7 @@ export const MOCK_ZONES: Zone[] = [...hnZones, ...hcmZones]
 
 export const MOCK_ASSIGNMENTS: Assignment[] = [
   ...hnHN_ASSIGNMENTS,
-  // HCM — 2 cụm (cụm 5 và 6, khớp với 2 nhân sự mock sales_hcm_1 và sales_hcm_2)
+  // HCM - 2 cụm (cụm 5 và 6, khớp với 2 nhân sự mock sales_hcm_1 và sales_hcm_2)
   { zoneId: 'sg01', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
   { zoneId: 'sg02', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },
   { zoneId: 'sg05', districtId: 5, salesAgentId: 'sales_hcm_1@terrimap.vn' },

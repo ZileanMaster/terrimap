@@ -218,7 +218,7 @@ function componentCount(zones: Zone[]): number {
       )}
         <section style={styles.header}>
           <div>
-            <h1 style={styles.title}>Phân chia thuật toán</h1>
+            <h1 style={styles.title}>Thuật toán phân chia</h1>
             <p style={styles.subtitle}>
               Chọn khu vực, chọn thuật toán và số cụm. Hệ thống chỉ chạy khi bạn bấm nút Chạy phân chia; ưu tiên chất lượng cân bằng, liên thông và độ ổn định của phương án.
             </p>

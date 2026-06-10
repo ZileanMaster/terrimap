@@ -1,9 +1,9 @@
 -- ═══════════════════════════════════════════════════════════════
--- TERRIMAP — FIX ALL: RLS + Agents + Members
+-- TERRIMAP - FIX ALL: RLS + Agents + Members
 -- Chạy script này 1 lần trong Supabase SQL Editor
 -- ═══════════════════════════════════════════════════════════════
 
--- ── 1. FIX RLS: Cho phép tất cả members thấy nhau ────────────
+--  1. FIX RLS: Cho phép tất cả members thấy nhau 
 DROP POLICY IF EXISTS "pm_select" ON public.project_members;
 CREATE POLICY "pm_select" ON public.project_members 
   FOR SELECT 
@@ -12,7 +12,7 @@ CREATE POLICY "pm_select" ON public.project_members
     OR public.is_project_owner(project_id, auth.uid())
   );
 
--- ── 2. XÓA AGENTS LEGACY (không có project_id) ───────────────
+--  2. XÓA AGENTS LEGACY (không có project_id) 
 DELETE FROM public.sales_agents 
   WHERE id IN ('sa0','sa1','sa2','sa3','sa4','sa5','sa6','sa7') 
   AND project_id IS NULL;
@@ -21,7 +21,7 @@ DELETE FROM public.sales_agents
 DELETE FROM public.sales_agents 
   WHERE id LIKE 'sa-hcm%' OR id LIKE 'sa-hue%';
 
--- ── 3. UPSERT AGENTS MỚI (8 agents, đúng region) ─────────────
+--  3. UPSERT AGENTS MỚI (8 agents, đúng region) 
 INSERT INTO public.sales_agents (id, name, active_region, capacity, project_id) VALUES
   ('sa0', 'Nguyễn Văn A',  'Hà Nội',      400, 'test-project-terrimap'),
   ('sa1', 'Trần Thị B',    'Hà Nội',      500, 'test-project-terrimap'),
@@ -37,7 +37,7 @@ ON CONFLICT (id) DO UPDATE SET
   capacity = EXCLUDED.capacity, 
   project_id = EXCLUDED.project_id;
 
--- ── 4. KIỂM TRA ──────────────────────────────────────────────
+--  4. KIỂM TRA 
 -- Xem agents (phải đúng 8 rows, không trùng)
 SELECT id, name, active_region, project_id FROM public.sales_agents ORDER BY id;
 

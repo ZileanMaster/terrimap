@@ -1,5 +1,5 @@
 /**
- * src/test-utils.tsx — Shared test helpers
+ * src/test-utils.tsx - Shared test helpers
  *
  * KHÔNG chứa vi.mock() (phải gọi ở top-level trong từng test file).
  * Chỉ export: mock data factories + custom render.
@@ -42,7 +42,7 @@ export function makeStore(
   }
 }
 
-// ── Facade mock factories ──────────────────────────────────────────────────────
+//  Facade mock factories 
 
 export function makeAdminFacade() {
   return {
@@ -84,7 +84,7 @@ export function makeSalesFacade() {
   }
 }
 
-// ── Custom render ─────────────────────────────────────────────────────────────
+//  Custom render 
 
 export function renderWithProviders(
   ui: React.ReactElement,

@@ -1,8 +1,8 @@
 /**
- * L0 — Runtime Validation Schemas (Zod)
+ * L0 - Runtime Validation Schemas (Zod)
  *
  * Mỗi Schema là nguồn chân lý duy nhất cho runtime validation.
- * Types được infer từ Schema (z.infer) để đảm bảo DRY — không bao giờ khai báo
+ * Types được infer từ Schema (z.infer) để đảm bảo DRY - không bao giờ khai báo
  * type và schema tách rời nhau.
  *
  * KHÔNG import gì từ UI layer hay L1+ layer.
@@ -82,7 +82,7 @@ export const ActivitySchema = z.object({
 export type Activity = DomainActivity;
 
 // ==========================================
-// 2. ZONE (BASIC UNITS) — DISCRIMINATED UNIONS
+// 2. ZONE (BASIC UNITS) - DISCRIMINATED UNIONS
 // ==========================================
 
 const BaseZoneSchema = z.object({
@@ -144,7 +144,7 @@ export const DistrictSchema = z.object({
 export type District = DomainDistrict;
 
 // ==========================================
-// 4. MATRICES — MA TRẬN KỀ & KHOẢNG CÁCH
+// 4. MATRICES - MA TRẬN KỀ & KHOẢNG CÁCH
 // ==========================================
 
 /**
@@ -216,7 +216,7 @@ export const DistanceMatrixSchema = z
 export type DistanceMatrix = DomainDistanceMatrix;
 
 // ==========================================
-// 5. ROOT STATE — TERRITORY VERSION / SNAPSHOT
+// 5. ROOT STATE - TERRITORY VERSION / SNAPSHOT
 // ==========================================
 
 export const VersionPeriodSchema = z.enum(['WEEKLY', 'MONTHLY', 'CUSTOM']);

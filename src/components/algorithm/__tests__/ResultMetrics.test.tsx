@@ -1,7 +1,7 @@
 /**
- * ResultMetrics.test.tsx — Unit tests RM-1 → RM-5
+ * ResultMetrics.test.tsx - Unit tests RM-1 -> RM-5
  *
- * ResultMetrics nhận AlgorithmResultVM | null — test thuần props-based,
+ * ResultMetrics nhận AlgorithmResultVM | null - test thuần props-based,
  * không cần mock store hay facade.
  */
 
@@ -44,22 +44,22 @@ function makeResult(overrides: Partial<AlgorithmResultVM> = {}): AlgorithmResult
 }
 
 describe('ResultMetrics', () => {
-  it('[RM-1] result=null → không render gì (empty)', () => {
+  it('[RM-1] result=null -> không render gì (empty)', () => {
     const { container } = render(<ResultMetrics result={null} />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('[RM-2] balanceScore >= 80 → label "metrics.balance_good"', () => {
+  it('[RM-2] balanceScore >= 80 -> label "metrics.balance_good"', () => {
     render(<ResultMetrics result={makeResult({ balanceScore: 85 })} />)
     expect(screen.getByText('metrics.balance_good')).toBeInTheDocument()
   })
 
-  it('[RM-3] balanceScore 60–79 → label "metrics.balance_medium"', () => {
+  it('[RM-3] balanceScore 60–79 -> label "metrics.balance_medium"', () => {
     render(<ResultMetrics result={makeResult({ balanceScore: 70 })} />)
     expect(screen.getByText('metrics.balance_medium')).toBeInTheDocument()
   })
 
-  it('[RM-4] balanceScore < 60 → label "metrics.balance_low" + suggest SA banner', () => {
+  it('[RM-4] balanceScore < 60 -> label "metrics.balance_low" + suggest SA banner', () => {
     render(
       <ResultMetrics
         result={makeResult({
@@ -72,7 +72,7 @@ describe('ResultMetrics', () => {
     expect(screen.getByTestId('suggest-sa-banner')).toBeInTheDocument()
   })
 
-  it('[RM-5] violationCount > 0 → hiển thị đúng số count', () => {
+  it('[RM-5] violationCount > 0 -> hiển thị đúng số count', () => {
     render(<ResultMetrics result={makeResult({ violationCount: 2 })} />)
     const strong = [...document.querySelectorAll('strong')].find(
       (el) => el.textContent === '2',

@@ -1,5 +1,5 @@
 /**
- * RightPanel — Algorithm controls + Version History
+ * RightPanel - Algorithm controls + Version History
  * Chỉ hiển thị với role admin hoặc coordinator.
  * Chứa: AlgorithmSelector + ConstraintConfig + ProgressBar + ResultMetrics
  * Admin: + VersionHistory
@@ -94,17 +94,17 @@ export default function RightPanel({
           </div>
         )}
 
-        {/* Version History — Admin only */}
+        {/* Version History - Admin only */}
         {role === 'admin' && (
           <VersionHistory snapshots={snapshots} />
         )}
 
-        {/* Matrix Viewer — Admin only */}
+        {/* Matrix Viewer - Admin only */}
         {role === 'admin' && matrixData && zones && zones.length > 0 && (
           <MatrixViewer zones={zones} adj={matrixData.adj} dist={matrixData.dist} />
         )}
 
-        {/* Export Panel — Admin only */}
+        {/* Export Panel - Admin only */}
         {role === 'admin' && (
           <ExportPanel
             zones={zones ?? []}

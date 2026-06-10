@@ -1,8 +1,3 @@
-/**
- * ExportPanel — Khối xuất dữ liệu có thể thu gọn (CSV, GeoJSON, PDF)
- * Chỉ dành cho admin. Đặt trong RightPanel bên dưới MatrixViewer.
- */
-
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Zone, Assignment, AdjMatrix, AlgorithmResultVM, ReportData } from '../../../facades/viewmodels.js'

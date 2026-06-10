@@ -1,10 +1,3 @@
-/**
- * facades/AdminFacade.ts — L3 Role Façade (không giữ state)
- *
- * Vai trò: Admin — toàn quyền.
- * Không lưu zones/assignments trong constructor — nhận qua tham số của method.
- */
-
 import type { Zone, SalesAgent } from '../types/domain.js';
 import type { Assignment, PartitionOpts } from '../lib/partition.js';
 import { validatePartition } from '../lib/validator.js';
@@ -22,7 +15,7 @@ import type {
 } from './viewmodels.js';
 
 export class AdminFacade {
-  /** Cấu hình ràng buộc — lưu trong bộ nhớ, cập nhật qua configureConstraints(). */
+  /** Cấu hình ràng buộc - lưu trong bộ nhớ, cập nhật qua configureConstraints(). */
   private _constraints: ConstraintConfig = {
     adjThresholdKm: 50,
     balanceThreshold: 1.5,
@@ -33,10 +26,10 @@ export class AdminFacade {
     private readonly territorySvc: TerritoryService,
     private readonly versionSvc: VersionService,
     private readonly activitySvc: ActivityService,
-    private readonly mapSvc?: MapService,    // tùy chọn — tương thích ngược
+    private readonly mapSvc?: MapService,    // tùy chọn - tương thích ngược
   ) {}
 
-  // ─── getSalesManagement ───────────────────────────────────────────────────────
+  //  getSalesManagement 
 
   getSalesManagement(
     zones: Zone[],
@@ -55,16 +48,16 @@ export class AdminFacade {
     return { sales: [...salesAgents], districtMap };
   }
 
-  // ─── getVersionHistory ────────────────────────────────────────────────────────
+  //  getVersionHistory 
 
   getVersionHistory(): Snapshot[] {
     return this.versionSvc.listHistory();
   }
 
-  // ─── createVersion ────────────────────────────────────────────────────────────
+  //  createVersion 
 
   /**
-   * Tạo snapshot — Admin có quyền.
+   * Tạo snapshot - Admin có quyền.
    * @throws {VersionError} DUPLICATE_LABEL
    */
   async createVersion(
@@ -75,19 +68,16 @@ export class AdminFacade {
     return this.versionSvc.createSnapshot(label, zones, assignments);
   }
 
-  // ─── runAlgorithm ─────────────────────────────────────────────────────────────
+  //  runAlgorithm 
 
   /**
    * Chạy thuật toán partition và trả AlgorithmResultVM cho L4.
    *
-   * @param algo  — 'greedy' | 'local-search' | 'sa'
-   * @param zones — danh sách zones cần phân vùng
-   * @param m     — số districts
-   * @param salesAgents — danh sách sales agents (OPEN-4: giữ nguyên thứ tự canonical)
-   * @param opts  — tùy chọn bổ sung (cooling, alpha, ...)
-   *
-   * Kiểu trả về đổi từ PartitionResult → AlgorithmResultVM để L4 không bị
-   * lộ các type nội bộ L1/L2 (PartitionMetrics, violations union).
+   * @param algo  - 'greedy' | 'local-search' | 'sa'
+   * @param zones - danh sách zones cần phân vùng
+   * @param m     - số districts
+   * @param salesAgents - danh sách sales agents (OPEN-4: giữ nguyên thứ tự canonical)
+   * @param opts  - tùy chọn bổ sung (cooling, alpha, ...)
    */
   async runAlgorithm(
     algo: 'greedy' | 'local-search' | 'sa',
@@ -100,7 +90,7 @@ export class AdminFacade {
     return this.toAlgorithmResultVM(result);
   }
 
-  // ─── configureConstraints ─────────────────────────────────────────────────────
+  //  configureConstraints 
 
   configureConstraints(config: ConstraintConfig): void {
     this._constraints = { ...this._constraints, ...config };
@@ -110,7 +100,7 @@ export class AdminFacade {
     return { ...this._constraints };
   }
 
-  // ─── exportReport ─────────────────────────────────────────────────────────────
+  //  exportReport 
 
   /**
    * Tổng hợp báo cáo từ zones + assignments + salesAgents hiện tại.
@@ -148,7 +138,7 @@ export class AdminFacade {
     };
   }
 
-  // ─── Quản lý activity (chuyển tiếp sang ActivityService) ─────────────────
+  //  Quản lý activity (chuyển tiếp sang ActivityService) 
 
   /**
    * Cập nhật activities (KH, đơn hàng) cho 1 zone.
@@ -164,14 +154,14 @@ export class AdminFacade {
   }
 
   /**
-   * Parse chuỗi CSV → ActivityRecord[].
+   * Parse chuỗi CSV -> ActivityRecord[].
    * Định dạng: zone_id,customers,orders (header + data rows).
    */
   importActivitiesCSV(csv: string): Array<{ zoneId: string; customers: number; orders: number }> {
     return this.activitySvc.importActivitiesFromCSV(csv);
   }
 
-  // ─── Phương thức Map / Matrix (chuyển tiếp sang MapService) ─────────────────
+  //  Phương thức Map / Matrix (chuyển tiếp sang MapService) 
 
   /**
    * Tính ma trận kề + ma trận khoảng cách.
@@ -184,8 +174,8 @@ export class AdminFacade {
   }
 
   /**
-   * Phát hiện "island zones" — zones không kề zone nào trong ma trận kề.
-   * @returns string[] — danh sách zoneIds bị cô lập.
+   * Phát hiện "island zones" - zones không kề zone nào trong ma trận kề.
+   * @returns string[] - danh sách zoneIds bị cô lập.
    */
   getIslandZones(zones: Zone[]): string[] {
     if (!this.mapSvc) return [];
@@ -195,11 +185,11 @@ export class AdminFacade {
       .map(z => z.id);
   }
 
-  // ─── wrapAssignmentsAsResult ─────────────────────────────────────────────────
+  //  wrapAssignmentsAsResult 
 
   /**
    * Bọc Assignment[] thô (từ Web Worker) thành AlgorithmResultVM.
-   * Worker trả về assignments không có salesAgentId — method này gắn lại chúng
+   * Worker trả về assignments không có salesAgentId - method này gắn lại chúng
    * and validates constraints to produce violations/metrics.
    */
   wrapAssignmentsAsResult(
@@ -231,11 +221,11 @@ export class AdminFacade {
     };
   }
 
-  // ─── Private helpers ──────────────────────────────────────────────────────────
+  //  Private helpers 
 
   /**
-   * Convert L2 PartitionResult → L4 AlgorithmResultVM.
-   * Flatten PartitionMetrics ra top-level. Map violations union → ViolationVM[].
+   * Convert L2 PartitionResult -> L4 AlgorithmResultVM.
+   * Flatten PartitionMetrics ra top-level. Map violations union -> ViolationVM[].
    * L4 không bao giờ thấy PartitionMetrics hay violation union types từ L1.
    */
   private toAlgorithmResultVM(result: PartitionResult): AlgorithmResultVM {
@@ -272,14 +262,14 @@ export class AdminFacade {
   }
 
   /**
-   * Map từng violation union member → ViolationVM.
-   * Dùng discriminated union type: 'OVER_LOADED' | 'UNDER_LOADED' → BALANCE,
-   * 'DISCONNECTED' → CONTIGUITY, DiameterViolation (no .type field) → DIAMETER.
+   * Map từng violation union member -> ViolationVM.
+   * Dùng discriminated union type: 'OVER_LOADED' | 'UNDER_LOADED' -> BALANCE,
+   * 'DISCONNECTED' -> CONTIGUITY, DiameterViolation (no .type field) -> DIAMETER.
    */
   private toViolationVM(
     v: PartitionResult['violations'][number],
   ): ViolationVM {
-    // DiameterViolation không có .type field → kiểm tra 'diameterKm' key
+    // DiameterViolation không có .type field -> kiểm tra 'diameterKm' key
     if ('diameterKm' in v) {
       return {
         type:       'DIAMETER',
@@ -293,7 +283,7 @@ export class AdminFacade {
       return {
         type:       'CONTIGUITY',
         districtId: v.districtId,
-        message:    `District ${v.districtId} bị tách rời — không liên thông`,
+        message:    `District ${v.districtId} bị tách rời - không liên thông`,
         severity:   'error',
       };
     }

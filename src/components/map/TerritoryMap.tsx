@@ -1,14 +1,4 @@
-﻿/**
- * TerritoryMap - Bản đồ Leaflet với màu sắc zones + assignments
- *
- * L4b-1: highlightedSalesId + isTransitioning
- * L4b-2: islandZoneIds (viền cam nét đứt) + disconnectedDistrictIds (viền đỏ nét đứt)
- * L4c:   children prop cho DrawingToolbar
- *
- * Thứ tự ưu tiên: disconnected (đỏ) > island (cam) > highlighted > selected > normal
- */
-
-import React, { useMemo } from 'react'
+﻿import React, { useMemo } from 'react'
 import { MapContainer, TileLayer, Polygon, Tooltip, useMap } from 'react-leaflet'
 import type { Zone, Assignment } from '../../../facades/viewmodels.js'
 
@@ -43,7 +33,7 @@ export interface TerritoryMapProps {
   disconnectedDistrictIds?: Set<number> | undefined   // L4b-2 EC-2
 }
 
-// ── Sửa icon mặc định của Leaflet ──────────────────────────────────────────────
+//  Sửa icon mặc định của Leaflet 
 const leaflet = L as any
 delete leaflet.Icon.Default.prototype._getIconUrl
 leaflet.Icon.Default.mergeOptions({
@@ -56,7 +46,7 @@ const RLMapContainer = MapContainer as unknown as React.ComponentType<any>
 const RLTileLayer = TileLayer as unknown as React.ComponentType<any>
 const RLTooltip = Tooltip as unknown as React.ComponentType<any>
 
-// ── MapFlyTo - Hiệu ứng bay mượt khi đổi vùng ─────────────────────────────────
+//  MapFlyTo - Hiệu ứng bay mượt khi đổi vùng 
 function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap()
   const prevCenter = React.useRef(center)
@@ -77,7 +67,7 @@ function MapFlyTo({ center, zoom }: { center: [number, number]; zoom: number }) 
   return null
 }
 
-// ── MapZoneFlyTo - fitBounds theo zone đang được chọn ─────────────────────────
+//  MapZoneFlyTo - fitBounds theo zone đang được chọn 
 // Zoom vào zone chính xác bằng Leaflet bounds (tránh phụ thuộc vào centroid đã lưu)
 function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId?: string | null }) {
   const map = useMap()
@@ -97,7 +87,7 @@ function MapZoneFlyTo({ zones, selectedZoneId }: { zones: Zone[]; selectedZoneId
       ring = ((zone.polygon.coordinates[0]?.[0]) ?? []) as number[][]
     }
     if (ring.length < 2) return
-    // Chuyển GeoJSON [lng, lat] → Leaflet [lat, lng]
+    // Chuyển GeoJSON [lng, lat] -> Leaflet [lat, lng]
     const latlngs: [number, number][] = ring.map(([lng, lat]) => [lat!, lng!])
     try {
       const bounds = leaflet.latLngBounds(latlngs)
@@ -239,7 +229,7 @@ export default function TerritoryMap({
             borderWeight = 2.5
             dashArray    = '8 4'
           }
-    // Chuyển GeoJSON [lng, lat] → Leaflet [lat, lng]
+    // Chuyển GeoJSON [lng, lat] -> Leaflet [lat, lng]
           let positions: [number, number][][]
 
           if (zone.polygon.type === 'Polygon') {

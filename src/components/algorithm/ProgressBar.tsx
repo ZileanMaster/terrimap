@@ -1,7 +1,3 @@
-/**
- * ProgressBar — Hiển thị tiến trình chạy thuật toán
- */
-
 import React, { useEffect, useRef, useState } from 'react'
 
 export interface ProgressBarProps {

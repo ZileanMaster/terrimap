@@ -1,8 +1,8 @@
 /**
- * zones20 — Lưới 4×5 trong bounds Hà Nội (lat 20.8–21.2, lng 105.6–106.0).
+ * zones20 - Lưới 4×5 trong bounds Hà Nội (lat 20.8–21.2, lng 105.6–106.0).
  *
  * Customers seed cố định (pseudo-random bằng lcg):
- *   customers[i] = 50 + (lcg(i) % 151)  →  range [50, 200]
+ *   customers[i] = 50 + (lcg(i) % 151)  ->  range [50, 200]
  *
  * Fixture này dùng chung cho tất cả correctness, quality, determinism tests.
  */
@@ -14,7 +14,7 @@ const CELL_LNG = 0.4 / 4;  // ~0.10°
 const GRID_LAT0 = 20.8;
 const GRID_LNG0 = 105.6;
 
-/** Simple LCG để sinh customers seed cố định — không dùng Math.random(). */
+/** Simple LCG để sinh customers seed cố định - không dùng Math.random(). */
 function lcg(seed: number): number {
   // LCG params từ Numerical Recipes
   return (1664525 * seed + 1013904223) >>> 0;

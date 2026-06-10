@@ -1,8 +1,8 @@
 /**
- * TerritoryMap.test.tsx — Kiểm thử đơn vị MAP-1 → MAP-5
+ * TerritoryMap.test.tsx - Kiểm thử đơn vị MAP-1 -> MAP-5
  *
  * react-leaflet được mock ở test-setup.tsx:
- *   Polygon → <div data-testid="polygon" data-zone-id data-district data-selected onClick>
+ *   Polygon -> <div data-testid="polygon" data-zone-id data-district data-selected onClick>
  */
 
 import React from 'react'
@@ -14,7 +14,7 @@ import type { TerritoryMapProps } from '../TerritoryMap'
 import type { Zone } from '../../../../types/domain'
 import type { Assignment } from '../../../../facades/viewmodels'
 
-// ── Module-level mocks ────────────────────────────────────────────────────────
+//  Module-level mocks 
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -37,7 +37,7 @@ vi.mock('../ClusterLayer', () => ({
   default: () => null,
 }))
 
-// ── Dữ liệu mock ───────────────────────────────────────────────────────────────
+//  Dữ liệu mock 
 
 const ring1: [number, number][] = [
   [105.7, 20.9], [105.9, 20.9], [105.9, 21.1],
@@ -68,7 +68,7 @@ const mockAssignments: Assignment[] = [
   { zoneId: 'z2', districtId: 1, salesAgentId: 'sa1' },
 ]
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
+//  Tests 
 
 describe('TerritoryMap', () => {
   beforeEach(() => {
@@ -83,12 +83,12 @@ describe('TerritoryMap', () => {
     expect(screen.getAllByTestId('polygon')).toHaveLength(2)
   })
 
-  it('[MAP-2] 0 zones → không crash, không có polygon', () => {
+  it('[MAP-2] 0 zones -> không crash, không có polygon', () => {
     render(<TerritoryMap zones={[]} assignments={[]} />)
     expect(screen.queryAllByTestId('polygon')).toHaveLength(0)
   })
 
-  it('[MAP-3] click polygon → onZoneClick("z1")', async () => {
+  it('[MAP-3] click polygon -> onZoneClick("z1")', async () => {
     const onZoneClick = vi.fn()
     const user = userEvent.setup()
     render(
@@ -98,13 +98,13 @@ describe('TerritoryMap', () => {
         onZoneClick={onZoneClick}
       />,
     )
-    // polygon[0] → zone z1 (render theo thứ tự map)
+    // polygon[0] -> zone z1 (render theo thứ tự map)
     const polygons = screen.getAllByTestId('polygon')
     await user.click(polygons[0]!)
     expect(onZoneClick).toHaveBeenCalledWith('z1')
   })
 
-  it('[MAP-4] selectedZoneId="z2" → polygon z2 có data-selected="true"', () => {
+  it('[MAP-4] selectedZoneId="z2" -> polygon z2 có data-selected="true"', () => {
     render(
       <TerritoryMap
         zones={mockZones}
@@ -118,7 +118,7 @@ describe('TerritoryMap', () => {
     expect(polygons[1]).toHaveAttribute('data-selected', 'true')
   })
 
-  it('[MAP-5] assignments thay đổi → data-district cập nhật đúng', () => {
+  it('[MAP-5] assignments thay đổi -> data-district cập nhật đúng', () => {
     const { rerender } = render(
       <TerritoryMap zones={mockZones} assignments={mockAssignments} />,
     )

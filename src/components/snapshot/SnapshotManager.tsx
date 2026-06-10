@@ -2,8 +2,8 @@
  * SnapshotManager — Khối lưu / tải bản đồ
  *
  * Đặt tuyệt đối ở góc trên bên phải khu vực bản đồ.
- * Lưu: hỏi tên → saveSnapshot toàn bộ zones + assignments
- * Tải: danh sách xổ xuống → khôi phục zones + assignments vào store toàn cục
+ * Lưu: hỏi tên -> saveSnapshot toàn bộ zones + assignments
+ * Tải: danh sách xổ xuống -> khôi phục zones + assignments vào store toàn cục
  *
  * Hoạt động cả ở chế độ online (Supabase) và offline (localStorage).
  */

@@ -1,10 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════
--- TERRIMAP — Auth & Project RBAC Migration
+-- TERRIMAP - Auth & Project RBAC Migration
 -- Run trên Supabase SQL Editor SAU migration-full.sql
 -- Project: bsodtlrpulpmlyrcfdap
 -- ═══════════════════════════════════════════════════════════════
 
--- 1. Profiles — auto-created on signup
+-- 1. Profiles - auto-created on signup
 CREATE TABLE IF NOT EXISTS profiles (
   id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT NOT NULL UNIQUE,

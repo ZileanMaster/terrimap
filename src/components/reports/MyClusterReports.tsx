@@ -1,13 +1,3 @@
-/**
- * MyClusterReports — nơi nhân sự nhập KPI cho các cụm (district) được giao.
- *
- * "Được giao" nghĩa là có ít nhất một assignment với salesAgentId === currentUserKey
- * trong khu vực hiện tại. Cách này khớp với logic ánh xạ district → agent đang dùng.
- *
- * Dữ liệu được lưu theo project trong localStorage và có thể đồng bộ lên Supabase
- * thông qua bảng district_reports.
- */
-
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import type { Assignment, DistrictReport, Zone } from '../../../facades/viewmodels.js'
 import { currentPeriod, loadDistrictReports, saveDistrictReport } from '../../services/districtReportsDb.js'

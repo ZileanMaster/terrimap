@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   TerriMap Design Tokens — Light / Dark Mode
+   TerriMap Design Tokens - Light / Dark Mode
    ═══════════════════════════════════════════════════════════ */
 
 :root {
@@ -12,7 +12,7 @@
   --c-primary-700: #1d4ed8;
   --c-primary-900: #1e3a8a;
 
-  /* ── Semantic tokens — Light mode ── */
+  /*  Semantic tokens - Light mode  */
   --color-bg:           #ffffff;
   --color-surface:      #f8fafc;
   --color-surface-2:    #f1f5f9;
@@ -55,7 +55,7 @@
   --color-nav-icon-bg:          var(--color-surface-2);
   --color-nav-icon-bg-active:   var(--color-accent-light);
 
-  /* District colors — good contrast both modes */
+  /* District colors - good contrast both modes */
   --district-0: #3b82f6;
   --district-1: #10b981;
   --district-2: #f59e0b;
@@ -68,7 +68,7 @@
   --district-9: #6366f1;
 }
 
-/* ── Dark mode ── */
+/*  Dark mode  */
 :root.dark {
   --color-bg:           #0d1117;
   --color-surface:      #161b22;
@@ -100,7 +100,7 @@
   --color-nav-icon-bg-active:   var(--color-accent-light);
 }
 
-/* ── Base reset ── */
+/*  Base reset  */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 button, input, textarea, select {
@@ -117,13 +117,13 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Scrollbar ── */
+/*  Scrollbar  */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--color-surface); }
 ::-webkit-scrollbar-thumb { background: var(--color-border-2); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-3); }
 
-/* ── Map tile dark mode ── */
+/*  Map tile dark mode  */
 .leaflet-tile {
   filter: var(--map-tile-filter) !important;
 }
@@ -134,18 +134,18 @@ html, body, #root {
   margin-top: 112px;
 }
 
-/* ── Utility classes ── */
+/*  Utility classes  */
 .text-muted { color: var(--color-text-2); }
 .text-faint  { color: var(--color-text-3); }
 
-/* ── Transitions ── */
+/*  Transitions  */
 *, *::before, *::after {
   transition-property: background-color, border-color, color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
 }
 
-/* ── Animations (login/splash) ── */
+/*  Animations (login/splash)  */
 @keyframes float {
   0%, 100% { transform: translate(0, 0) scale(1); }
   33%      { transform: translate(30px, -20px) scale(1.05); }

@@ -1,7 +1,7 @@
 import React from 'react'
 
 /**
- * ErrorBoundary — prevent "blank screen" on render/runtime errors.
+ * ErrorBoundary - prevent "blank screen" on render/runtime errors.
  * Keep it intentionally simple: no external deps, safe in offline mode.
  */
 export default class ErrorBoundary extends React.Component<

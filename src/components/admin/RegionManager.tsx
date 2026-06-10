@@ -112,7 +112,7 @@ export default function RegionManager({ onFlyTo }: RegionManagerProps) {
             }}
             style={styles.select}
           >
-            <option value="">— Chưa gán —</option>
+            <option value="">- Chưa gán -</option>
             {agents.map((agent) => (
               <option key={agent.id} value={agent.id}>{agent.name}</option>
             ))}

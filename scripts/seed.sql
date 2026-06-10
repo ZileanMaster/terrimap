@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- TERRIMAP SEED DATA — ALL 3 REGIONS
+-- TERRIMAP SEED DATA - ALL 3 REGIONS
 -- Seed data prepared by scripts/seed-supabase.ts
 -- Date: 2026-05-07
 -- ═══════════════════════════════════════════════════════════════

@@ -1,12 +1,12 @@
 /**
- * e2e/role-isolation.spec.ts — Role switching isolation tests
+ * e2e/role-isolation.spec.ts - Role switching isolation tests
  */
 
 import { test, expect } from '@playwright/test'
 import { AppPage } from './pages/AppPage'
 
 test.describe('Role isolation', () => {
-  test('[E2E-I1] Admin → Sales → Admin: app không crash', async ({ page }) => {
+  test('[E2E-I1] Admin -> Sales -> Admin: app không crash', async ({ page }) => {
     const app = new AppPage(page)
     await app.goto()
 
@@ -50,7 +50,7 @@ test.describe('Role isolation', () => {
     expect(realErrors, `Console errors: ${realErrors.join('\n')}`).toHaveLength(0)
   })
 
-  test('[E2E-I3] locale toggle vi → en → vi không crash', async ({ page }) => {
+  test('[E2E-I3] locale toggle vi -> en -> vi không crash', async ({ page }) => {
     const app = new AppPage(page)
     await app.goto()
 
@@ -62,7 +62,7 @@ test.describe('Role isolation', () => {
     await app.localeToggle.click()
     await page.waitForTimeout(400)
 
-    // App vẫn functional — logo vẫn hiển thị
+    // App vẫn functional - logo vẫn hiển thị
     await expect(page.getByTestId('logo')).toBeVisible()
     // Map vẫn hiển thị
     await expect(app.mapContainer).toBeVisible()
