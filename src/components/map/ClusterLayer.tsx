@@ -18,7 +18,6 @@ export default function ClusterLayer({ zones, onZoneClick }: ClusterLayerProps) 
   const leaflet = L as any
 
   useEffect(() => {
-    // Only activate clustering for large zone sets
     if (zones.length <= CLUSTER_THRESHOLD) return
 
     const clusterGroup = leaflet.markerClusterGroup({

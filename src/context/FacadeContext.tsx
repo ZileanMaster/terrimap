@@ -1,13 +1,3 @@
-/**
- * FacadeContext — React Context cho L4
- *
- * Cung cấp đúng Facade instance theo role hiện tại từ UIStore.
- * Chỉ import từ facades/ (L3). Không import trực tiếp từ lib/, services/, types/.
- *
- * Quan trọng (OPEN-4): Khi role === 'sales', MOCK_AGENTS phải được truyền
- * theo thứ tự canonical — KHÔNG sort trước khi inject.
- */
-
 import React, {
   createContext,
   useContext,
@@ -26,14 +16,14 @@ import { useDataStore } from '../store/dataStore.js'
 import { useUIStore, type Role } from '../store/uiStore.js'
 import { resolveUserKey } from '../utils/userIdentity.js'
 
-// ── Type ──────────────────────────────────────────────────────────────────────
+// Loại
 
 type FacadeContextValue =
   | { role: 'admin';       facade: AdminFacade }
   | { role: 'coordinator'; facade: CoordinatorFacade }
   | { role: 'sales';       facade: SalesFacade }
 
-// ── Context ───────────────────────────────────────────────────────────────────
+// Context
 
 const FacadeContext = createContext<FacadeContextValue | null>(null)
 
@@ -44,7 +34,7 @@ const versionSvc   = new VersionService()
 const activitySvc  = new ActivityService()
 const mapSvc       = new MapService()
 
-// ── Provider ──────────────────────────────────────────────────────────────────
+// Provider component
 
 export function FacadeProvider({ children }: { children: ReactNode }) {
   const role = useUIStore((s) => s.role)

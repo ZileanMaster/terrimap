@@ -75,7 +75,6 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
       <h3 style={styles.title}>👥 Phân công nhân viên</h3>
       {districts.map((d) => (
         <div key={d.districtId} style={styles.row}>
-          {
           <div style={styles.colorDot}>
             <span style={{
               ...styles.dot,
@@ -101,7 +100,6 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
                 {agent.name}
               </option>
             ))}
-            {
             {d.currentAgent && !filteredAgents.some((a) => a.id === d.currentAgent) && (
               <option value={d.currentAgent}>
                 {agents.find((a) => a.id === d.currentAgent)?.name ?? d.currentAgent} (ngoài vùng)

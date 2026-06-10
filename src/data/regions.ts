@@ -1,11 +1,3 @@
-/**
- * src/data/regions.ts — Region data model
- *
- * Region = khu vực địa lý cấp cao (Hà Nội, HCM, Huế).
- * Admin quản lý regions và gán Coordinator phụ trách.
- * Coordinator chỉ thấy zones thuộc region mình chọn.
- */
-
 export interface Region {
   id:            string
   name:          string

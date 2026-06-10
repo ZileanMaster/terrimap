@@ -1,7 +1,3 @@
-/**
- * DashboardViews.tsx — View components for the main Dashboard panels
- */
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataStore } from '../store/dataStore.js';
 import { useUIStore } from '../store/uiStore.js';
@@ -578,19 +574,19 @@ export function UsersView() {
                         {isEditing ? (
                           <div style={styles.btnGroup}>
                           <button onClick={() => handleSaveEdit(m)} style={styles.inlineSaveBtn}>
-                            Lưu
+                            {'Lưu'}
                           </button>
                           <button onClick={() => setEditingId(null)} style={styles.inlineCancelBtn}>
-                            Hủy
+                            {'Huỷ'}
                           </button>
                         </div>
                       ) : (
                         <div style={styles.btnGroup}>
                           <button onClick={() => handleStartEdit(m)} style={styles.inlineEditBtn}>
-                            Sửa
+                            {'Sửa'}
                           </button>
                           <button onClick={() => handleDeleteMember(m)} style={styles.inlineDeleteBtn}>
-                            Xóa
+                            {'Xoá'}
                           </button>
                         </div>
                       )}

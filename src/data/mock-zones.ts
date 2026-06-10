@@ -1,13 +1,6 @@
-/**
- * Mock Zones — 500 zones Hà Nội (25x20 grid) + 12 zones TP.HCM = 512 total
- *
- * THIẾT KẾ: Grid tiling — mỗi zone là hình chữ nhật, biên chia sẻ
- * chính xác (shared edges) → ZERO overlap, ZERO gap.
- */
-
 import type { Zone, Assignment } from '../../facades/viewmodels.js'
 
-// ── Helper ──────────────────────────────────────────────────────────────────────
+//  Helper 
 function centroidOf(ring: number[][]): { lat: number; lng: number } {
   const pts = ring.slice(0, -1)
   const lat = pts.reduce((s, p) => s + p[1]!, 0) / pts.length
@@ -41,12 +34,6 @@ function makeZone(
   } as any
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// HÀ NỘI — 500 zones (25 cols × 20 rows)
-// Grid: lat 21.000 → 21.048, lng 105.810 → 105.860
-// Cell: ~0.002 lat × 0.0024 lng ≈ 220m × 260m (diện tích nhỏ hơn nhiều so với cũ)
-// ══════════════════════════════════════════════════════════════════════════════
-
 const hnZones: Zone[] = []
 const hnHN_ASSIGNMENTS: Assignment[] = []
 
@@ -72,15 +59,12 @@ for (let col = 0; col < COLS; col++) {
     const top = bottom + rowHeight
     const ring = rect(left, bottom, right, top)
     
-    // Deterministic customers and orders using sine/cosine to distribute nicely
     const customers = Math.floor((Math.sin(col / 2.0) + Math.cos(row / 2.0) + 2) * 50) + 20
     const orders = Math.floor(customers * 0.7)
     
     hnZones.push(makeZone(id, name, 'region-hn', ring, customers, orders))
     
-    // Gán vào 20 cụm
     const districtId = (col % 5) + (row % 4) * 5
-    // Ánh xạ sang 20 nhân sự Hà Nội
     const salesAgentId = districtId === 0 ? 'sales.test@terrimap.vn' : `sales_hn_${districtId}@terrimap.vn`
     
     hnHN_ASSIGNMENTS.push({
@@ -90,13 +74,6 @@ for (let col = 0; col < COLS; col++) {
     })
   }
 }
-
-// ══════════════════════════════════════════════════════════════════════════════
-// TP.HCM — 12 zones (4 cols × 3 rows)
-// Khu vực: Q1 / Q3 / Phú Nhuận / Bình Thạnh
-// Grid: lat 10.775 → 10.811, lng 106.675 → 106.715
-// Cell: ~0.012 lat × 0.010 lng ≈ 1.3km × 1.0km
-// ══════════════════════════════════════════════════════════════════════════════
 
 const SC = [106.675, 106.685, 106.695, 106.705, 106.715] // 5 col edges
 const SR = [10.775, 10.787, 10.799, 10.811]               // 4 row edges

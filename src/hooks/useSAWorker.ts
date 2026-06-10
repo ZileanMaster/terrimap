@@ -1,4 +1,3 @@
-
 import { useRef, useCallback } from 'react'
 import type { Assignment } from '../../facades/viewmodels.js'
 
@@ -28,10 +27,9 @@ export function useSAWorker() {
     m: number,
     opts: SAOpts,
     onProgress?: (iter: number, cost: number, total: number) => void,
-        // Tạo worker mới cho mỗi lần chạy (tránh state cũ)
+  ): Promise<Assignment[]> => {
     return new Promise((resolve, reject) => {
       try {
-        // Tạo worker mới cho mỗi lần chạy (tránh state cũ)
         const worker = new Worker(
           new URL('../workers/sa-worker.ts', import.meta.url),
           { type: 'module' },
@@ -42,11 +40,17 @@ export function useSAWorker() {
           const { type } = e.data
           if (type === 'progress') {
             onProgress?.(e.data.iter, e.data.cost, e.data.total)
-          } else if (type === 'done') {
+            return
+          }
+
+          if (type === 'done') {
             resolve(e.data.assignments as Assignment[])
             worker.terminate()
             workerRef.current = null
-          } else if (type === 'error') {
+            return
+          }
+
+          if (type === 'error') {
             reject(new Error(e.data.message))
             worker.terminate()
             workerRef.current = null
@@ -55,14 +59,12 @@ export function useSAWorker() {
 
         worker.onerror = (err) => {
           reject(new Error(err.message))
-        // Gửi dữ liệu để serialize sang worker
+          worker.terminate()
           workerRef.current = null
         }
 
-        // Gửi dữ liệu để serialize sang worker
         worker.postMessage({ zones, m, opts })
       } catch {
-
         reject(new Error('Web Worker not available'))
       }
     })

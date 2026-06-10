@@ -1,25 +1,17 @@
-﻿/**
- * DrawingToolbar - Điều khiển Leaflet.Draw gốc cho vùng (chỉ admin)
- *
- * Dùng trực tiếp Leaflet Draw (không dùng wrapper react-leaflet-draw) để tránh lỗi ESM.
- * Lưu ý: CSS được import global một lần (xem src/main.tsx) vì dynamic CSS import
- * có thể lỗi trong production build và gây màn hình trắng.
- */
-
-import { useEffect, useRef } from 'react'
+﻿import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import * as L from 'leaflet'
 import type { GeoJSONPolygon, Zone } from '../../../facades/viewmodels.js'
 import { polygonsOverlap } from '../../../lib/geometry.js'
 
 interface DrawingToolbarProps {
-  /** Callback khi người dùng vẽ xong một vùng. */
+  /** Callback khi user vẽ xong một vùng. */
   onZoneCreated: (polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
-  /** Callback khi người dùng chỉnh sửa một vùng đã tồn tại. */
+  /** Callback khi user sửa một vùng có sẵn. */
   onZoneEdited: (zoneId: string, polygon: GeoJSONPolygon, centroid: { lat: number; lng: number }) => void
-  /** Existing zones for overlap validation. */
+  /** Vùng đang được dùng để check chồng lên nhau. */
   existingZones?: Zone[]
-  /** Vùng đang được chọn để sửa (chỉ một vùng tại một thời điểm để tối ưu hiệu năng). */
+  /** Vùng đang được chọn để sửa. */
   selectedZone?: Zone | null
 }
 
@@ -63,12 +55,10 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
     const boot = async () => {
       if (typeof window === 'undefined') return
       if (cancelled) return
-      // Leaflet.Draw là CJS và có thể khó chịu trong các build Vite/ESM.
-      // Dynamic import ở đây giúp tránh crash và đảm bảo side-effect chạy xong trước khi truy cập L.Control.Draw.
+      // Dynamic import tránh crash và đảm bảo side-effect chạy xong trước khi truy cập L.Control.Draw.
       try {
         await import('leaflet-draw')
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error('[TerriMap] Failed to load leaflet-draw:', e)
         return
       }
@@ -79,7 +69,7 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       drawnItemsRef.current = drawnItems
 
       drawControl = new (L.Control as any).Draw({
-        // Tránh chồng lấn với các nút hành động ở góc phải trên của bản đồ ("Lưu map" / "Mở map").
+        // Tránh chồng lấn với nút"Lưu map", "Mở map".
         position: 'topright',
         draw: {
           polygon: {
@@ -95,8 +85,6 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
         edit: {
           featureGroup: drawnItems,
           remove: false,
-          // Leaflet.Draw cần một object ở đây (nó sẽ ghi selectedPathOptions vào đó).
-          // Passing boolean true can crash: "Cannot create property 'selectedPathOptions' on boolean 'true'".
           edit: {
             selectedPathOptions: {
               color: '#2563eb',
@@ -220,8 +208,6 @@ export default function DrawingToolbar({ onZoneCreated, onZoneEdited, existingZo
       .map(([lng, lat]) => [lat, lng] as [number, number])
 
     if (latlngs.length < 3) return
-    // QUAN TRỌNG: phải tương tác được để các tay nắm sửa của Leaflet.Draw hoạt động.
-    // Nếu interactive là false, vùng sẽ không nhận pointer events và cảm giác sửa sẽ như "không bấm được".
     const layer = leaflet.polygon(latlngs, { color: '#2563eb', weight: 2, fillOpacity: 0.05, interactive: true })
     ;(layer as any).__zoneId = selectedZone.id
     selectedLayerRef.current = layer

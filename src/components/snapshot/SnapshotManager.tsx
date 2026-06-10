@@ -222,7 +222,6 @@ export default function SnapshotManager() {
       data-snapshot-manager
       style={styles.container}
     >
-      {
       <button
         id="snapshot-save-btn"
         onClick={handleSave}
@@ -237,7 +236,6 @@ export default function SnapshotManager() {
         {saving ? '⏳' : '💾'} Lưu map
       </button>
 
-      {
       <div style={styles.dropdownWrapper}>
         <button
           id="snapshot-load-btn"
@@ -254,7 +252,6 @@ export default function SnapshotManager() {
             <div style={styles.dropdownHeader}>
               <span>Bản đồ đã lưu</span>
               <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', alignItems: 'center' }}>
-                {
                 <button
                   onClick={() => {
                     setCompareMode((v) => !v)
@@ -269,7 +266,6 @@ export default function SnapshotManager() {
                 >
                   📊 So sánh
                 </button>
-                {
                 {availablePeriods.length > 0 && (
                   <select
                     value={periodFilter}
@@ -287,7 +283,6 @@ export default function SnapshotManager() {
               </div>
             </div>
 
-            {
             {compareMode && (
               <div style={styles.compareBanner}>
                 {selectedForCompare.length < 2
@@ -326,7 +321,6 @@ export default function SnapshotManager() {
                       onMouseEnter={() => setHoveredId(snap.id)}
                       onMouseLeave={() => setHoveredId(null)}
                     >
-                      {
                       {compareMode && (
                         <input
                           type="checkbox"
@@ -374,7 +368,6 @@ export default function SnapshotManager() {
         )}
       </div>
 
-      {
       {comparingPair && (
         <SnapshotCompare
           snapshotA={comparingPair[0]}

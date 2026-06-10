@@ -1,9 +1,3 @@
-/**
- * VersionHistory — Timeline UI for version snapshots
- * Displays newest-first vertical timeline with dot indicators.
- * Only rendered for admin role in RightPanel.
- */
-
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Snapshot } from '../../../facades/viewmodels.js'

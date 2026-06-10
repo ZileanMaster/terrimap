@@ -170,7 +170,6 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
   return (
     <div style={styles.layout}>
-      {
       <div style={styles.leftCol}>
         {mode === 'assignments' && (
           <>
@@ -259,9 +258,9 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
             zones={displayZones}
             assignments={displayAssignments}
             onAssign={handleAssign}
-          districtCount={districtCount}
-          districtIds={districtIds}
-        />
+            districtCount={districtCount}
+            districtIds={districtIds}
+          />
       </div>
     </div>
   )

@@ -1,11 +1,3 @@
-/**
- * MatrixViewer — Trình xem bảng ma trận kề và ma trận khoảng cách
- *
- * Panel có thể thu gọn với hai tab: adjacency (✓/·) và distance (bản đồ nhiệt km).
- * Xử lý tràn khi số zone lớn (>12) bằng thanh cuộn ngang.
- * Chỉ dành cho admin — render trong RightPanel.
- */
-
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Zone, AdjMatrix, DistMatrix } from '../../../facades/viewmodels.js'

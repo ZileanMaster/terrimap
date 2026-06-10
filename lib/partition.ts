@@ -13,8 +13,12 @@
  * @module partition
  */
 
-import type { Zone, AdjacencyMatrix } from '../types/domain.js';
+import type { Zone as DomainZone } from '../types/domain.js';
 import { haversineDistance, buildAdjacencyMatrix, meanCoordinate } from './geometry.js';
+
+type Zone = DomainZone;
+
+type AdjacencyMatrix = Record<string, string[]>;
 
 // ==========================================
 // ERROR TYPE
@@ -153,9 +157,11 @@ function ensureConnectedInputGraph(zones: Zone[], adjMatrix: AdjacencyMatrix): v
  * @internal
  */
 function zoneCustomers(zone: Zone): number {
-  return zone.activities
-    .filter((a) => a.type === 'CUSTOMER')
-    .reduce((sum, a) => sum + a.value, 0);
+  let total = 0;
+  for (const activity of zone.activities) {
+    if (activity.type === 'CUSTOMER') total += activity.value;
+  }
+  return total;
 }
 
 /**
@@ -163,9 +169,11 @@ function zoneCustomers(zone: Zone): number {
  * @internal
  */
 function zoneOrders(zone: Zone): number {
-  return zone.activities
-    .filter((a) => a.type === 'ORDER')
-    .reduce((sum, a) => sum + a.value, 0);
+  let total = 0;
+  for (const activity of zone.activities) {
+    if (activity.type === 'ORDER') total += activity.value;
+  }
+  return total;
 }
 
 interface ZoneActivityTotals {
@@ -326,13 +334,13 @@ function computeCost(
   let totalImbalance = 0
 
   if (weights.customers > 0) {
-    const mean = customerTotals.reduce((s, c) => s + c, 0) / m
+    const mean = customerTotals.reduce<number>((sum, value) => sum + value, 0) / m
     const variance = customerTotals.reduce((s, c) => s + (c - mean) ** 2, 0) / m
     totalImbalance += weights.customers * Math.sqrt(variance)
   }
 
   if (weights.orders > 0) {
-    const mean = orderTotals.reduce((s, c) => s + c, 0) / m
+    const mean = orderTotals.reduce<number>((sum, value) => sum + value, 0) / m
     const variance = orderTotals.reduce((s, c) => s + (c - mean) ** 2, 0) / m
     totalImbalance += weights.orders * Math.sqrt(variance)
   }
