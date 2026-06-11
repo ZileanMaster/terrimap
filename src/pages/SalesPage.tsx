@@ -9,6 +9,7 @@ import type { Zone, Assignment } from '../../facades/viewmodels.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
 import { resolveUserKey } from '../utils/userIdentity.js'
+import { getActiveDistrictIds } from '../utils/districtAssignments.js'
 
 export default function SalesPage() {
   //  Global store 
@@ -44,6 +45,10 @@ export default function SalesPage() {
       return { myZones: [], myAssignments: [] }
     }
   }, [ctx, zones, assignments])
+  const myDistrictIds = useMemo(
+    () => getActiveDistrictIds(myAssignments, myZones),
+    [myAssignments, myZones],
+  )
 
   if (loading) {
     return (
@@ -90,7 +95,8 @@ export default function SalesPage() {
         <ZoneInfoPanel
           zones={myZones}
           assignments={myAssignments}
-          districtCount={new Set(myAssignments.map((a) => a.districtId)).size || 0}
+          districtCount={myDistrictIds.length}
+          districtIds={myDistrictIds}
           // Không có onAssign - Sales chỉ đọc
         />
 

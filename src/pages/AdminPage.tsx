@@ -17,6 +17,7 @@ import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
 import { resolveUserKey } from '../utils/userIdentity.js'
+import { getActiveDistrictIds } from '../utils/districtAssignments.js'
 
 import { useSAWorker } from '../hooks/useSAWorker.js'
 import { validatePartition } from '../../lib/validator.js'
@@ -59,8 +60,8 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     : assignments
 
   const districtIds = useMemo(
-    () => [...new Set(displayAssignments.map((a) => a.districtId))].sort((a, b) => a - b),
-    [displayAssignments],
+    () => getActiveDistrictIds(displayAssignments, displayZones),
+    [displayAssignments, displayZones],
   )
 
   // Tính map center/zoom từ region đã chọn (cho hiệu ứng flyTo)
@@ -435,7 +436,11 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   
           {mode === 'assignments' && <SnapshotManager />}
           {mode === 'assignments' && (
-            <MapLegend assignments={displayAssignments} disconnectedDistrictIds={disconnectedDistrictIds} />
+            <MapLegend
+              assignments={displayAssignments}
+              zones={displayZones}
+              disconnectedDistrictIds={disconnectedDistrictIds}
+            />
           )}
           <ZoneInfoPanel
             zones={displayZones}

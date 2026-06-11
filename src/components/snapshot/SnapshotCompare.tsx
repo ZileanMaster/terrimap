@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import type { SnapshotItem } from './SnapshotManager.js'
+import { getActiveDistrictIds } from '../../utils/districtAssignments.js'
 
 interface SnapshotCompareProps {
   snapshotA: SnapshotItem
@@ -22,8 +23,8 @@ export default function SnapshotCompare({ snapshotA, snapshotB, onClose }: Snaps
       }
     }
 
-    const distCountA = new Set(snapshotA.data.assignments.map((a) => a.districtId)).size
-    const distCountB = new Set(snapshotB.data.assignments.map((a) => a.districtId)).size
+    const distCountA = getActiveDistrictIds(snapshotA.data.assignments, snapshotA.data.zones).length
+    const distCountB = getActiveDistrictIds(snapshotB.data.assignments, snapshotB.data.zones).length
 
     return {
       diffs: changes,

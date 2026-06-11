@@ -1,14 +1,16 @@
 import React, { useMemo, useState } from 'react'
-import type { Assignment } from '../../../facades/viewmodels.js'
+import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
 import { useUIStore } from '../../store/uiStore.js'
+import { getActiveDistrictIds } from '../../utils/districtAssignments.js'
 
 interface MapLegendProps {
   assignments: Assignment[]
+  zones?: Zone[]
   disconnectedDistrictIds?: Set<number>
 }
 
-export default function MapLegend({ assignments, disconnectedDistrictIds }: MapLegendProps) {
+export default function MapLegend({ assignments, zones, disconnectedDistrictIds }: MapLegendProps) {
   const selectedDistrictId = useUIStore((s) => s.selectedDistrictId)
   const setSelectedDistrictId = useUIStore((s) => s.setSelectedDistrictId)
   const showPolygons = useUIStore((s) => s.showPolygons)
@@ -17,9 +19,9 @@ export default function MapLegend({ assignments, disconnectedDistrictIds }: MapL
   const [filter, setFilter] = useState('')
 
   const clusters = useMemo(() => {
-    return [...new Set(assignments.map((a) => a.districtId))]
-      .sort((a, b) => a - b)
-  }, [assignments])
+    if (zones) return getActiveDistrictIds(assignments, zones)
+    return [...new Set(assignments.map((a) => a.districtId))].sort((a, b) => a - b)
+  }, [assignments, zones])
 
   const visibleClusters = useMemo(() => {
     const q = filter.trim()

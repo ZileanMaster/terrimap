@@ -4,6 +4,7 @@ import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
 import { currentPeriod as getCurrentPeriod, loadDistrictReports } from '../../services/districtReportsDb.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
+import { buildDistrictSummaries } from '../../utils/districtAssignments.js'
 import type { Assignment, DistrictReport, SalesAgent, Zone } from '../../../facades/viewmodels.js'
 
 interface PeriodSummary {
@@ -86,9 +87,13 @@ export default function ClusterInsightsPanel({
     return assignments.filter((assignment) => zoneIds.has(assignment.zoneId))
   }, [assignments, currentRegionId, zones])
 
+  const districtSummaries = useMemo(
+    () => buildDistrictSummaries(visibleAssignments, zones),
+    [visibleAssignments, zones],
+  )
   const districtIds = useMemo(
-    () => [...new Set(visibleAssignments.map((assignment) => assignment.districtId))].sort((a, b) => a - b),
-    [visibleAssignments],
+    () => districtSummaries.map((summary) => summary.districtId),
+    [districtSummaries],
   )
 
   const assignmentByDistrict = useMemo(() => {

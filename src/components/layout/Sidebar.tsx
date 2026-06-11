@@ -18,6 +18,7 @@ import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
 import ClusterInsightsPanel from './ClusterInsightsPanel.js'
 import { AssignmentWorkspacePanel, MapDataWorkspacePanel } from './WorkspacePanels.js'
+import { getActiveDistrictIds } from '../../utils/districtAssignments.js'
 import type { Assignment, HistoryEntry, SalesAgent, Zone } from '../../../facades/viewmodels.js'
 
 interface SidebarProps {
@@ -269,7 +270,7 @@ function AdminSidebar({
 
   if (ctx.role !== 'admin') return null
   const mgmt = ctx.facade.getSalesManagement(zones, assignments, agents)
-  const districtCount = new Set(assignments.map((a) => a.districtId)).size
+  const districtCount = getActiveDistrictIds(assignments, zones).length
 
   return (
     <div style={styles.content}>
@@ -332,7 +333,7 @@ function CoordinatorSidebar({
 
   if (ctx.role !== 'coordinator') return null
   const overview = ctx.facade.getTeamOverview(zones, assignments, agents)
-  const districtCount = new Set(assignments.map((assignment) => assignment.districtId)).size
+  const districtCount = getActiveDistrictIds(assignments, zones).length
 
   return (
     <div style={styles.content} data-testid="team-overview">

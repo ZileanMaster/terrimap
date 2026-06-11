@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
+import { buildDistrictSummaries } from '../../utils/districtAssignments.js'
 import type { Zone } from '../../../facades/viewmodels.js'
 
 interface DistrictAgentAssignerProps {
@@ -37,26 +38,12 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
   }, [activeRegionId, agents])
 
   const districts = useMemo(() => {
-    const ids = [...new Set(assignments.map((a) => a.districtId))].sort((a, b) => a - b)
-    return ids.map((districtId) => {
-      const distAssignments = assignments.filter((a) => a.districtId === districtId)
-      const distZones = zones.filter((zone) => distAssignments.some((assignment) => assignment.zoneId === zone.id))
-
-      const totalCustomers = distZones.reduce(
-        (sum, zone) =>
-          sum + zone.activities
-            .filter((activity) => activity.type === 'CUSTOMER')
-            .reduce((acc, activity) => acc + activity.value, 0),
-        0,
-      )
-
-      return {
-        districtId,
-        zoneCount: distAssignments.length,
-        totalCustomers,
-        currentAgent: distAssignments[0]?.salesAgentId ?? '',
-      }
-    })
+    return buildDistrictSummaries(assignments, zones).map((summary) => ({
+      districtId: summary.districtId,
+      zoneCount: summary.zoneCount,
+      totalCustomers: summary.totalCustomers,
+      currentAgent: summary.currentAgentId,
+    }))
   }, [assignments, zones])
 
   const currentAgentByDistrict = useMemo(() => {

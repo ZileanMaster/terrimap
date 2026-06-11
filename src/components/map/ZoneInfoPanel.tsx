@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useUIStore } from '../../store/uiStore.js'
 import type { Zone, Assignment } from '../../../facades/viewmodels.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
+import { getActiveDistrictIds } from '../../utils/districtAssignments.js'
 
 interface ZoneInfoPanelProps {
   zones: Zone[]
@@ -46,8 +47,8 @@ export default function ZoneInfoPanel({
 
   const availableDistrictIds = useMemo(() => {
     if (districtIds?.length) return [...districtIds].sort((a, b) => a - b)
-    return Array.from({ length: districtCount }, (_, i) => i)
-  }, [districtCount, districtIds])
+    return getActiveDistrictIds(assignments, zones)
+  }, [assignments, districtIds, zones])
 
   const targetZoneCount = assignments.filter((a) => a.districtId === targetDistrict).length
   const sourceZoneCount = districtId >= 0

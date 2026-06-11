@@ -13,6 +13,7 @@ import { resolveUserKey } from '../utils/userIdentity.js'
 import { buildAdjacencyMatrix } from '../../lib/geometry.js'
 import { isDistrictConnected } from '../../lib/partition.js'
 import { validatePartition } from '../../lib/validator.js'
+import { getActiveDistrictIds } from '../utils/districtAssignments.js'
 import type { Zone } from '../../facades/viewmodels.js'
 
 function currentPeriodDefault() {
@@ -77,8 +78,8 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   )
 
   const districtIds = useMemo(
-    () => [...new Set(displayAssignments.map((a) => a.districtId))].sort((a, b) => a - b),
-    [displayAssignments],
+    () => getActiveDistrictIds(displayAssignments, displayZones),
+    [displayAssignments, displayZones],
   )
 
   const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
@@ -264,7 +265,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
             )}
           </div>
 
-          {mode === 'assignments' && <MapLegend assignments={displayAssignments} />}
+          {mode === 'assignments' && <MapLegend assignments={displayAssignments} zones={displayZones} />}
           <ZoneInfoPanel
             zones={displayZones}
             assignments={displayAssignments}
