@@ -206,31 +206,13 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
     return []
   }
 
-  if (localZones.length === 0) return loadedZones
-
-  const mergedZones = [...loadedZones]
-  const zoneIndexMap = new Map(loadedZones.map((zone, index) => [zone.id, index]))
-  for (const localZone of localZones) {
-    const existingIndex = zoneIndexMap.get(localZone.id)
-    if (existingIndex === undefined) {
-      mergedZones.push(localZone)
-    } else {
-      mergedZones[existingIndex] = {
-        ...mergedZones[existingIndex],
-        ...localZone,
-        activities: localZone.activities?.length ? localZone.activities : mergedZones[existingIndex]!.activities,
-      }
-    }
-  }
-
   try {
-    assertNoPolygonTopologyViolations(mergedZones as any)
-  } catch (e) {
-    console.error('[DB] loadZones merged topology error:', e)
-    return loadedZones
+    writeJsonArray(scopedKey('terrimap_zones', projectId), loadedZones)
+  } catch (error) {
+    console.error('[DB] loadZones cache sync error:', error)
   }
 
-  return mergedZones
+  return loadedZones
 }
 
 export async function loadAssignments(projectId?: string): Promise<Assignment[]> {
@@ -333,13 +315,16 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     }
   }
 
-  return Array.from(agentMap.values()).map((a) => ({
+  const remoteAgents = Array.from(agentMap.values()).map((a) => ({
     id:           a.id,
     name:         a.name,
     activeRegion: a.active_region,
     ...(a.region_id != null ? { regionId: a.region_id } : {}),
     capacity:     a.capacity,
   }))
+
+  writeJsonArray(scopedKey('terrimap_agents', projectId), remoteAgents)
+  return remoteAgents
 }
 
 //  SAVE 
@@ -694,20 +679,8 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
       zoom:   r.zoom,
     }))
 
-    const mergedRegions = [...remoteRegions]
-    const remoteIndex = new Map(remoteRegions.map((region, index) => [region.id, index]))
-
-    for (const region of local) {
-      const index = remoteIndex.get(region.id)
-      if (index === undefined) {
-        remoteIndex.set(region.id, mergedRegions.length)
-        mergedRegions.push(region)
-        continue
-      }
-      mergedRegions[index] = region
-    }
-
-    return mergedRegions.sort((left, right) => left.name.localeCompare(right.name, 'vi'))
+    writeJsonArray(scopedKey('terrimap_regions', projectId), remoteRegions)
+    return remoteRegions.sort((left, right) => left.name.localeCompare(right.name, 'vi'))
   } catch {
     return local.length > 0 ? local : (projectId ? [] : DEFAULT_REGIONS)
   }
