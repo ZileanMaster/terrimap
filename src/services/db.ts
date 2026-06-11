@@ -274,21 +274,11 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
     salesAgentId: a.sales_agent_id,
   }))
 
-  const mergedAssignments: Assignment[] = [...remoteAssignments]
-  const remoteIndex = new Map(remoteAssignments.map((assignment, index) => [`${assignment.zoneId}:${assignment.districtId}`, index]))
+  // Khi đã đọc được dữ liệu online hợp lệ, dùng remote làm nguồn sự thật
+  // và đồng bộ lại cache local để tránh local cache cũ làm lệch số cụm.
+  writeJsonArray(scopedKey('terrimap_assignments', projectId), remoteAssignments)
 
-  for (const assignment of localAssignments) {
-    const key = `${assignment.zoneId}:${assignment.districtId}`
-    const index = remoteIndex.get(key)
-    if (index === undefined) {
-      remoteIndex.set(key, mergedAssignments.length)
-      mergedAssignments.push(assignment)
-      continue
-    }
-    mergedAssignments[index] = assignment
-  }
-
-  return mergedAssignments
+  return remoteAssignments
 }
 
 /**

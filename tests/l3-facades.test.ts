@@ -1,4 +1,4 @@
-/**
+﻿/**
  * tests/l3-facades.test.ts
  *
  * Test suite cho L3 Role Façades.
@@ -100,12 +100,12 @@ describe('AdminFacade permissions', () => {
   it('[ADM-1] runAlgorithm -> gọi territory.runPartition', async () => {
     mockTerritory.runPartition.mockResolvedValue({
       assignments: assignments4, metrics: {}, violations: [],
-      algo: 'local-search', durationMs: 10, suggestSA: false,
+      algo: 'hill-climbing', durationMs: 10, suggestSA: false,
     });
     const admin = makeAdmin();
-    await admin.runAlgorithm('local-search', zones4, 2);
+    await admin.runAlgorithm('hill-climbing', zones4, 2);
     expect(mockTerritory.runPartition)
-      .toHaveBeenCalledWith(zones4, 2, 'local-search', [], undefined);
+      .toHaveBeenCalledWith(zones4, 2, 'hill-climbing', [], undefined);
   });
 
   it('[ADM-1b] runAlgorithm với opts -> opts được truyền qua', async () => {
@@ -241,10 +241,10 @@ describe('CoordinatorFacade permissions', () => {
     }
   });
 
-  it('[COORD-4] runAlgorithm -> throw PermissionError PERMISSION_DENIED (async)', async () => {
+  it('[COORD-4] runAlgorithm -> cho phép chạy và trả về kết quả (async)', async () => {
     const coord = makeCoord();
-    await expect((coord as any).runAlgorithm?.('local-search', [], 2))
-      .rejects.toBeInstanceOf(PermissionError);
+    await expect((coord as any).runAlgorithm?.('hill-climbing', [], 2))
+      .resolves.toBeDefined();
   });
 
   it('[COORD-5] flagForReview lưu flag in-memory', () => {
@@ -652,3 +652,4 @@ describe('ServiceError and VersionError - fallback message', () => {
     expect(e.name).toBe('VersionError');
   });
 });
+

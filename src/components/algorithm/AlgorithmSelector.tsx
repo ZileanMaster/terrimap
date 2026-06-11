@@ -1,7 +1,8 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AlgorithmName } from '../../../lib/partition.js'
 
-type Algo = 'greedy' | 'local-search' | 'sa'
+type Algo = AlgorithmName
 
 export interface AlgorithmSelectorProps {
   value:    Algo
@@ -29,8 +30,8 @@ export default function AlgorithmSelector({
       desc: 'Khởi tạo nhanh, làm nền cho bước tinh chỉnh.',
     },
     {
-      id:   'local-search',
-      label: 'Tìm kiếm cục bộ',
+      id:   'hill-climbing',
+      label: t('algo.hill_climbing'),
       icon: '🔄',
       desc: 'Tinh chỉnh để tăng cân bằng và giữ liên thông tốt.',
     },

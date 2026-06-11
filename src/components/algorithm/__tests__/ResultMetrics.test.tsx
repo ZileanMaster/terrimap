@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ResultMetrics.test.tsx - Unit tests RM-1 -> RM-5
  *
  * ResultMetrics nhận AlgorithmResultVM | null - test thuần props-based,
@@ -25,7 +25,7 @@ function makeResult(overrides: Partial<AlgorithmResultVM> = {}): AlgorithmResult
     avgCustomersPerDistrict: 100,
     maxDiameter: 25,
     violationCount: 0,
-    algo: 'local-search',
+    algo: 'hill-climbing',
     durationMs: 1200,
     suggestSA: false,
     violations: [],
@@ -86,3 +86,4 @@ describe('ResultMetrics', () => {
     expect(screen.getByText('125.4')).toBeInTheDocument()
   })
 })
+

@@ -1,6 +1,7 @@
 import type { Zone, SalesAgent } from '../types/domain.js';
 import {
   getPartitionFn,
+  type AlgorithmName,
   type Assignment,
   type PartitionOpts,
   PartitionError,
@@ -44,12 +45,12 @@ export interface PartitionResult {
   assignments: Assignment[];
   metrics: PartitionMetrics;
   violations: ValidationResult['violations'];
-  algo: 'greedy' | 'local-search' | 'sa';
+  algo: AlgorithmName;
   durationMs: number;
   avgCustomersPerDistrict: number;
   /**
    * true nếu balanceScore < 60 và algo !== 'sa'.
-   * Local Search balance thường tốt hơn Greedy nhờ 2-opt improvement.
+   * Hill Climbing balance thường tốt hơn Greedy nhờ 2-opt improvement.
    * Khi suggestSA = true, UI nên hiển thị warning rebalance.
    */
   suggestSA: boolean;
@@ -83,7 +84,7 @@ export class TerritoryService extends EventEmitter {
   async runPartition(
     zones: Zone[],
     m: number,
-    algo: 'greedy' | 'local-search' | 'sa',
+    algo: AlgorithmName,
     salesAgents: SalesAgent[] = [],
     opts?: PartitionOpts,
   ): Promise<PartitionResult> {
@@ -150,14 +151,16 @@ export class TerritoryService extends EventEmitter {
     }
 
     // 7. Build result
+    const canonicalAlgo: AlgorithmName = algo === 'local-search' ? 'hill-climbing' : algo;
+
     const result: PartitionResult = {
       assignments,
       metrics: validation.metrics,
       violations: validation.violations,
-      algo,
+      algo: canonicalAlgo,
       durationMs,
       avgCustomersPerDistrict: computeAvgCustomersPerDistrict(zones, assignments),
-      suggestSA: validation.metrics.balanceScore < 60 && algo !== 'sa',
+      suggestSA: validation.metrics.balanceScore < 60 && canonicalAlgo !== 'sa',
     };
 
     // 8. Emit AFTER success
@@ -255,12 +258,13 @@ function computeAvgCustomersPerDistrict(zones: Zone[], assignments: Assignment[]
   const zoneById = new Map(zones.map((zone) => [zone.id, zone]));
   const totals = new Map<number, number>();
 
-  for (const assignment of assignments) {
-    const zone = zoneById.get(assignment.zoneId);
-    if (!zone) continue;
-    const customers = zone.activities
-      .filter((activity) => activity.type === 'CUSTOMER')
-      .reduce((sum, activity) => sum + activity.value, 0);
+    for (const assignment of assignments) {
+      const zone = zoneById.get(assignment.zoneId);
+      if (!zone) continue;
+      const activities = zone.activities ?? [];
+      const customers = activities
+        .filter((activity) => activity.type === 'CUSTOMER')
+        .reduce((sum, activity) => sum + activity.value, 0);
     totals.set(assignment.districtId, (totals.get(assignment.districtId) ?? 0) + customers);
   }
 

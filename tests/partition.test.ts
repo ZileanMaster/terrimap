@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite cho L1b - lib/partition.ts
  *
  * API mới: PartitionFn = (zones, m, opts?) => Assignment[]
@@ -479,7 +479,7 @@ describe('partitionSimulatedAnnealing', () => {
 describe('Connectivity precondition on disconnected input graph', () => {
   const algos = [
     { name: 'greedy', fn: partitionGreedy },
-    { name: 'local-search', fn: partitionLocalSearch },
+    { name: 'hill-climbing', fn: partitionLocalSearch },
     {
       name: 'sa',
       fn: (zones: Zone[], m: number) =>
@@ -507,8 +507,8 @@ describe('Connectivity precondition on disconnected input graph', () => {
 // ==========================================
 
 describe('getPartitionFn', () => {
-  it('[HP-1] getPartitionFn("local-search") trả về function hợp lệ', () => {
-    const fn = getPartitionFn('local-search');
+  it('[HP-1] getPartitionFn("hill-climbing") trả về function hợp lệ', () => {
+    const fn = getPartitionFn('hill-climbing');
     const assignments = fn(zones5, 2);
     expect(assignments.length).toBe(zones5.length);
   });
@@ -923,10 +923,11 @@ describe('Regression (Golden Output)', () => {
       return;
     }
     const golden = JSON.parse(readFileSync(__goldenPath, 'utf8')) as {
-      'local-search': { assignments: { zoneId: string; districtId: number }[] };
+      'hill-climbing': { assignments: { zoneId: string; districtId: number }[] };
     };
     const current = partitionLocalSearch(zones20, 4);
-    expect(current).toEqual(golden['local-search'].assignments);
+    expect(current).toEqual(golden['hill-climbing'].assignments);
   });
 });
+
 

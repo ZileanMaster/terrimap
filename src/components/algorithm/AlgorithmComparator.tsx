@@ -9,8 +9,9 @@ import { useSAWorker } from '../../hooks/useSAWorker.js'
 import TerritoryMap from '../map/TerritoryMap.js'
 import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
+import type { AlgorithmName } from '../../../lib/partition.js'
 
-type Algo = 'greedy' | 'local-search' | 'sa'
+type Algo = AlgorithmName
 
 function waitForPaint(): Promise<void> {
   return new Promise((resolve) => {
@@ -46,6 +47,11 @@ function componentCount(zones: Zone[]): number {
   }
 
   return count
+}
+
+function formatAlgoLabel(algo: Algo): string {
+  if (algo === 'hill-climbing' || algo === 'local-search') return 'HILL CLIMBING'
+  return algo.toUpperCase()
 }
 
   export default function AlgorithmComparator() {
@@ -359,7 +365,7 @@ function DataChip({ label, value, ok }: { label: string; value: number; ok: bool
             <span>Thuật toán</span>
             <select value={algo} onChange={(e) => setAlgo(e.target.value as Algo)} style={styles.input}>
               <option value="greedy">Greedy Seed Expansion</option>
-              <option value="local-search">Local Search Refinement</option>
+              <option value="hill-climbing">Hill Climbing</option>
               <option value="sa">Simulated Annealing</option>
             </select>
           </label>
@@ -382,7 +388,7 @@ function ResultPanel({
       <div style={styles.resultHeader}>
         <div>
           <h2 style={styles.resultTitle}>{title}</h2>
-          <span style={styles.kicker}>{algo}</span>
+          <span style={styles.kicker}>{formatAlgoLabel(algo)}</span>
         </div>
         <button style={styles.applyBtn} onClick={onApply}>Áp dụng</button>
       </div>

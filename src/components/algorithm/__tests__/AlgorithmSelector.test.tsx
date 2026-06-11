@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AlgorithmSelector.test.tsx - Unit tests AS-1 -> AS-5
  */
 
@@ -29,30 +29,30 @@ describe('AlgorithmSelector', () => {
       <AlgorithmSelector value="greedy" onChange={vi.fn()} disabled={false} />,
     )
     expect(screen.getByText('algo.greedy')).toBeInTheDocument()
-    // Local Search uses hardcoded label, not i18n key
-    expect(screen.getByText('Tìm kiếm cục bộ')).toBeInTheDocument()
+    // Hill Climbing uses i18n key
+    expect(screen.getByText('algo.hill_climbing')).toBeInTheDocument()
     expect(screen.getByText('algo.sa')).toBeInTheDocument()
   })
 
-  it('[AS-2] Local Search card không có warning badge', () => {
+  it('[AS-2] Hill Climbing card không có warning badge', () => {
     render(
       <AlgorithmSelector value="greedy" onChange={vi.fn()} disabled={false} />,
     )
-    // Local Search card exists
-    const lsCard = document.querySelector('[data-algo="local-search"]')
+    // Hill Climbing card exists
+    const lsCard = document.querySelector('[data-algo="hill-climbing"]')
     expect(lsCard).toBeInTheDocument()
     // No warning badge anywhere
     expect(screen.queryByText('⚠')).not.toBeInTheDocument()
   })
 
-  it('[AS-3] click Local Search -> onChange("local-search")', async () => {
+  it('[AS-3] click Hill Climbing -> onChange("hill-climbing")', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()
     render(
       <AlgorithmSelector value="greedy" onChange={onChange} disabled={false} />,
     )
-    await user.click(screen.getByText('Tìm kiếm cục bộ'))
-    expect(onChange).toHaveBeenCalledWith('local-search')
+    await user.click(screen.getByText('algo.hill_climbing'))
+    expect(onChange).toHaveBeenCalledWith('hill-climbing')
   })
 
   it('[AS-4] disabled=true -> click không gọi onChange', async () => {
@@ -61,7 +61,7 @@ describe('AlgorithmSelector', () => {
     render(
       <AlgorithmSelector value="greedy" onChange={onChange} disabled={true} />,
     )
-    const lsCard = document.querySelector('[data-algo="local-search"]') as HTMLElement
+    const lsCard = document.querySelector('[data-algo="hill-climbing"]') as HTMLElement
     await user.click(lsCard)
     expect(onChange).not.toHaveBeenCalled()
   })
@@ -72,6 +72,7 @@ describe('AlgorithmSelector', () => {
     )
     expect(document.querySelector('[data-algo="sa"]')).toHaveAttribute('data-selected', 'true')
     expect(document.querySelector('[data-algo="greedy"]')).toHaveAttribute('data-selected', 'false')
-    expect(document.querySelector('[data-algo="local-search"]')).toHaveAttribute('data-selected', 'false')
+    expect(document.querySelector('[data-algo="hill-climbing"]')).toHaveAttribute('data-selected', 'false')
   })
 })
+

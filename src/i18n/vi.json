@@ -10,6 +10,7 @@
 
   "algo.greedy": "Tham lam",
   "algo.local_search": "Tìm kiếm cục bộ",
+  "algo.hill_climbing": "Leo đồi",
   "algo.sa": "Simulated Annealing",
   "algo.run": "Chạy phân chia",
   "algo.running": "Đang chạy...",

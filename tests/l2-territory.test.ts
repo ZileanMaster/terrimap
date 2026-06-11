@@ -1,4 +1,4 @@
-/**
+﻿/**
  * tests/l2-territory.test.ts
  *
  * Unit tests cho TerritoryService (L2).
@@ -94,8 +94,8 @@ describe('TerritoryService.runPartition', () => {
 
   it('[RP-1] gọi getPartitionFn với đúng algo', async () => {
     const svc = new TerritoryService();
-    await svc.runPartition(zones4, 2, 'local-search');
-    expect(getPartitionFn).toHaveBeenCalledWith('local-search');
+    await svc.runPartition(zones4, 2, 'hill-climbing');
+    expect(getPartitionFn).toHaveBeenCalledWith('hill-climbing');
     expect(getPartitionFn).toHaveBeenCalledTimes(1);
   });
 
@@ -120,18 +120,18 @@ describe('TerritoryService.runPartition', () => {
       callOrder.push('validate');
       return validValidation as any;
     });
-    await svc.runPartition(zones4, 2, 'local-search');
+    await svc.runPartition(zones4, 2, 'hill-climbing');
     expect(callOrder).toEqual(['partition', 'validate']);
   });
 
   it('[RP-4] trả về PartitionResult đầy đủ fields', async () => {
     const svc = new TerritoryService();
-    const result = await svc.runPartition(zones4, 2, 'local-search');
+    const result = await svc.runPartition(zones4, 2, 'hill-climbing');
     expect(result).toMatchObject({
       assignments: validAssignments,
       metrics: validMetrics,
       violations: [],
-      algo: 'local-search',
+      algo: 'hill-climbing',
       durationMs: expect.any(Number),
       suggestSA: expect.any(Boolean),
     });
@@ -144,7 +144,7 @@ describe('TerritoryService.runPartition', () => {
       metrics: { ...validMetrics, balanceScore: 45 },
     } as any);
     const svc = new TerritoryService();
-    const result = await svc.runPartition(zones4, 2, 'local-search');
+    const result = await svc.runPartition(zones4, 2, 'hill-climbing');
     expect(result.suggestSA).toBe(true);
   });
 
@@ -160,14 +160,14 @@ describe('TerritoryService.runPartition', () => {
 
   it('[RP-7] m < 2 -> ServiceError INVALID_INPUT, không gọi partition', async () => {
     const svc = new TerritoryService();
-    await expect(svc.runPartition(zones4, 1, 'local-search'))
+    await expect(svc.runPartition(zones4, 1, 'hill-climbing'))
       .rejects.toMatchObject({ details: { code: 'INVALID_INPUT' } });
     expect(mockPartitionFn).not.toHaveBeenCalled();
   });
 
   it('[RP-8] zones rỗng -> ServiceError INVALID_INPUT', async () => {
     const svc = new TerritoryService();
-    await expect(svc.runPartition([], 2, 'local-search'))
+    await expect(svc.runPartition([], 2, 'hill-climbing'))
       .rejects.toMatchObject({ details: { code: 'INVALID_INPUT' } });
   });
 
@@ -177,7 +177,7 @@ describe('TerritoryService.runPartition', () => {
       throw new (PartitionError as any)('zones too large', 'M_TOO_LARGE');
     });
     const svc = new TerritoryService();
-    await expect(svc.runPartition(zones4, 2, 'local-search'))
+    await expect(svc.runPartition(zones4, 2, 'hill-climbing'))
       .rejects.toMatchObject({ details: { code: 'PARTITION_FAILED' } });
     expect(validatePartition).not.toHaveBeenCalled();
   });
@@ -189,7 +189,7 @@ describe('TerritoryService.runPartition', () => {
       throw new Error('unexpected internal error');
     });
     const svc = new TerritoryService();
-    await expect(svc.runPartition(zones4, 2, 'local-search'))
+    await expect(svc.runPartition(zones4, 2, 'hill-climbing'))
       .rejects.toMatchObject({ details: { code: 'VALIDATION_FAILED' } });
   });
 
@@ -212,7 +212,7 @@ describe('TerritoryService.runPartition', () => {
     const svc = new TerritoryService();
     let emitted: PartitionResult | null = null;
     svc.on('partition:complete', (payload) => { emitted = payload as PartitionResult; });
-    const result = await svc.runPartition(zones4, 2, 'local-search');
+    const result = await svc.runPartition(zones4, 2, 'hill-climbing');
     expect(emitted).toBe(result); // same object reference
   });
 
@@ -222,7 +222,7 @@ describe('TerritoryService.runPartition', () => {
     const svc = new TerritoryService();
     const events: any[] = [];
     svc.on('partition:complete', (p) => events.push(p));
-    await expect(svc.runPartition(zones4, 2, 'local-search')).rejects.toThrow();
+    await expect(svc.runPartition(zones4, 2, 'hill-climbing')).rejects.toThrow();
     expect(events).toHaveLength(0);
   });
 
@@ -356,3 +356,4 @@ describe('TerritoryService.getSuggestions', () => {
   });
 
 });
+

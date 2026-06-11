@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Benchmark so sánh 3 thuật toán phân vùng.
  *
  * Chạy: npx tsx tests/partition-benchmark.ts
@@ -72,7 +72,7 @@ console.log(`   zones=${zones20.length}, m=${M}, runs=${RUNS}\n`);
 console.log(''.repeat(65));
 
 benchAlgo('greedy', () => partitionGreedy(zones20, M));
-benchAlgo('local-search', () => partitionLocalSearch(zones20, M));
+benchAlgo('hill-climbing', () => partitionLocalSearch(zones20, M));
 benchAlgo('sa', () => partitionSA(zones20, M, { maxIter: 200 }));
 
 console.log(''.repeat(65));
@@ -80,3 +80,4 @@ console.log('\n📊 Columns:');
 console.log('   avg_balance  = stdDev/(mean+1), lower is better (threshold < 0.3)');
 console.log('   avg_diameter = max district diameter in km, lower is better');
 console.log('   avg_time     = wall clock ms per call\n');
+

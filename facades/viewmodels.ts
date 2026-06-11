@@ -2,7 +2,7 @@ import type { SalesAgent, Zone, GeoJSONPolygon } from '../types/domain.js';
 import type { Snapshot } from '../services/VersionService.js';
 import type { PartitionResult } from '../services/TerritoryService.js';
 import type { DistrictSummary } from '../services/ActivityService.js';
-import type { Assignment } from '../lib/partition.js';
+import type { Assignment, AlgorithmName } from '../lib/partition.js';
 
 //  ViewModels
 export type { Assignment };
@@ -50,7 +50,7 @@ export interface AlgorithmResultVM {
 
 //  Metadata thuật toán 
   /** Thuật toán đã dùng. */
-  algo:           'greedy' | 'local-search' | 'sa';
+  algo:           AlgorithmName;
   /** Thời gian chạy (ms). */
   durationMs:     number;
 
@@ -81,7 +81,7 @@ export interface ConstraintConfig {
 /** Số cụm. */
   m?: number;
   /** Thuật toán mặc định. */
-  defaultAlgo?: 'greedy' | 'local-search' | 'sa';
+  defaultAlgo?: AlgorithmName;
 }
 
 export interface ReportData {

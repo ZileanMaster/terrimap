@@ -10,6 +10,7 @@
 
   "algo.greedy": "Greedy",
   "algo.local_search": "Local Search",
+  "algo.hill_climbing": "Hill Climbing",
   "algo.sa": "Simulated Annealing",
   "algo.run": "Run Partition",
   "algo.running": "Running...",

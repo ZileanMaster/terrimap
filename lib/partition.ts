@@ -40,7 +40,7 @@ export interface PartitionOpts {
   /** Callback nhận tiến trình mỗi iteration. */
   onProgress?: ProgressCallback;
 
-  /** Số vòng lặp tối đa. Default: 100 (Greedy), 500 (Local Search), 10000 (SA). */
+  /** Số vòng lặp tối đa. Default: 100 (Greedy), 500 (Hill Climbing), 10000 (SA). */
   maxIter?: number;
 
   // --- Simulated Annealing ---
@@ -711,7 +711,7 @@ export function isDistrictConnected(
 }
 
 
-// LOCAL SEARCH
+// HILL CLIMBING
 
 export function partitionLocalSearch(
   zones: Zone[],
@@ -939,14 +939,14 @@ export function partitionSimulatedAnnealing(
 // FACTORY   getPartitionFn
 
 /** Tên các thuật toán phân vùng được hỗ trợ. */
-export type AlgorithmName = 'greedy' | 'local-search' | 'sa';
+export type AlgorithmName = 'greedy' | 'hill-climbing' | 'local-search' | 'sa';
 
 /**
  * Factory trả về PartitionFn tương ứng theo tên thuật toán.
  *
  * @example
  * ```ts
- * const fn = getPartitionFn('local-search');
+ * const fn = getPartitionFn('hill-climbing');
  * const assignments = fn(zones, 5, { maxIter: 200 });
  * ```
  *
@@ -956,6 +956,7 @@ export function getPartitionFn(algo: AlgorithmName): PartitionFn {
   switch (algo) {
     case 'greedy':
       return partitionGreedy;
+    case 'hill-climbing':
     case 'local-search':
       return partitionLocalSearch;
     case 'sa':
@@ -972,6 +973,12 @@ export function getPartitionFn(algo: AlgorithmName): PartitionFn {
  * @public
  */
 export const partitionSA = partitionSimulatedAnnealing;
+
+/**
+ * Alias ngắn gọn cho partitionLocalSearch (hill climbing).
+ * @public
+ */
+export const partitionHillClimbing = partitionLocalSearch;
 
 /**
  * Helper: nhóm lại các zones theo cluster từ Assignment[].

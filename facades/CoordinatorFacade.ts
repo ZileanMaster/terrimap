@@ -1,5 +1,5 @@
 import type { Zone, SalesAgent, Activity } from '../types/domain.js';
-import type { Assignment, PartitionOpts } from '../lib/partition.js';
+import type { Assignment, AlgorithmName, PartitionOpts } from '../lib/partition.js';
 import type { TerritoryService } from '../services/TerritoryService.js';
 import type { VersionService } from '../services/VersionService.js';
 import type { ActivityService } from '../services/ActivityService.js';
@@ -161,7 +161,7 @@ export class CoordinatorFacade {
    * nhưng vẫn không có quyền tạo version snapshot.
    */
   async runAlgorithm(
-    algo: 'greedy' | 'local-search' | 'sa',
+    algo: AlgorithmName,
     zones: Zone[],
     m: number,
     salesAgents: SalesAgent[] = [],

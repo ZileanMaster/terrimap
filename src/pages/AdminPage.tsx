@@ -20,6 +20,7 @@ import { resolveUserKey } from '../utils/userIdentity.js'
 
 import { useSAWorker } from '../hooks/useSAWorker.js'
 import { validatePartition } from '../../lib/validator.js'
+import type { AlgorithmName } from '../../lib/partition.js'
 
 export interface AdminPageProps {
   mode?: 'regions' | 'assignments'
@@ -147,7 +148,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   //  Run algorithm 
 
   const handleRun = useCallback(async (
-    algo: 'greedy' | 'local-search' | 'sa',
+    algo: AlgorithmName,
     m: number,
   ) => {
     if (ctx.role !== 'admin') return

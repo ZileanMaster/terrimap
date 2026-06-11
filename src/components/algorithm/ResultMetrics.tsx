@@ -24,12 +24,15 @@ export default function ResultMetrics({ result }: ResultMetricsProps) {
     balance >= 80 ? t('metrics.balance_good') :
     balance >= 60 ? t('metrics.balance_medium') :
                    t('metrics.balance_low')
+  const algoLabel = (algo === 'hill-climbing' || algo === 'local-search')
+    ? 'HILL CLIMBING'
+    : algo.toUpperCase()
 
   return (
     <div style={styles.wrapper}>
       <div style={styles.header}>
         <span style={styles.title}>📊 Kết quả phân chia</span>
-        <span style={styles.algo}>{algo.toUpperCase()}</span>
+        <span style={styles.algo}>{algoLabel}</span>
       </div>
 
       <div style={styles.balanceBox}>
@@ -103,7 +106,7 @@ export default function ResultMetrics({ result }: ResultMetricsProps) {
             ⚡ Chất lượng chưa đạt kỳ vọng ({balance.toFixed(1)})
           </div>
           <div style={{ fontSize: 11, opacity: 0.9 }}>
-            Thuật toán {algo.toUpperCase()} chưa đạt mức cân bằng mong muốn.
+            Thuật toán {algoLabel} chưa đạt mức cân bằng mong muốn.
             Hãy thử thuật toán khác hoặc tăng tiêu chí chất lượng để ưu tiên kết quả tốt hơn.
           </div>
         </div>

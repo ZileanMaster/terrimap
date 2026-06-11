@@ -86,7 +86,7 @@
     "zonesCount": 20,
     "m": 4
   },
-  "local-search": {
+  "hill-climbing": {
     "assignments": [
       {
         "zoneId": "z00",
@@ -174,3 +174,4 @@
     "m": 4
   }
 }
+

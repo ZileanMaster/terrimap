@@ -1,5 +1,5 @@
 import type { Zone, SalesAgent } from '../types/domain.js';
-import type { Assignment, PartitionOpts } from '../lib/partition.js';
+import type { Assignment, AlgorithmName, PartitionOpts } from '../lib/partition.js';
 import { validatePartition } from '../lib/validator.js';
 import type { TerritoryService, PartitionResult } from '../services/TerritoryService.js';
 import type { VersionService, Snapshot } from '../services/VersionService.js';
@@ -19,7 +19,7 @@ export class AdminFacade {
   private _constraints: ConstraintConfig = {
     adjThresholdKm: 50,
     balanceThreshold: 1.5,
-    defaultAlgo: 'local-search',
+    defaultAlgo: 'hill-climbing',
   };
 
   constructor(
@@ -73,14 +73,14 @@ export class AdminFacade {
   /**
    * Chạy thuật toán partition và trả AlgorithmResultVM cho L4.
    *
-   * @param algo  - 'greedy' | 'local-search' | 'sa'
+   * @param algo  - 'greedy' | 'hill-climbing' | 'local-search' | 'sa'
    * @param zones - danh sách zones cần phân vùng
    * @param m     - số districts
    * @param salesAgents - danh sách sales agents (OPEN-4: giữ nguyên thứ tự canonical)
    * @param opts  - tùy chọn bổ sung (cooling, alpha, ...)
    */
   async runAlgorithm(
-    algo: 'greedy' | 'local-search' | 'sa',
+    algo: AlgorithmName,
     zones: Zone[],
     m: number,
     salesAgents: SalesAgent[] = [],
@@ -193,7 +193,7 @@ export class AdminFacade {
    * and validates constraints to produce violations/metrics.
    */
   wrapAssignmentsAsResult(
-    algo: 'greedy' | 'local-search' | 'sa',
+    algo: AlgorithmName,
     zones: Zone[],
     rawAssignments: Assignment[],
     salesAgents: SalesAgent[],
@@ -208,15 +208,17 @@ export class AdminFacade {
     // Validate ?? l?y metrics + violations
     const validation = validatePartition(zones, assignments, { adjThresholdKm: 50 });
 
+    const canonicalAlgo: AlgorithmName = algo === 'local-search' ? 'hill-climbing' : algo;
+
     return {
       assignments,
       balanceScore:   validation.metrics.balanceScore,
       avgCustomersPerDistrict: this.computeAvgCustomersPerDistrict(zones, assignments),
       violationCount: validation.violations.length,
       maxDiameter:    validation.metrics.maxDiameter,
-      algo,
+      algo:           canonicalAlgo,
       durationMs,
-      suggestSA:      validation.metrics.balanceScore < 60 && algo !== 'sa',
+      suggestSA:      validation.metrics.balanceScore < 60 && canonicalAlgo !== 'sa',
       violations:     validation.violations.map((v: PartitionResult['violations'][number]) => this.toViolationVM(v)),
     };
   }

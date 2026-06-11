@@ -14,11 +14,12 @@ import ResultMetrics from '../algorithm/ResultMetrics.js'
 import VersionHistory from '../version/VersionHistory.js'
 import MatrixViewer from '../map/MatrixViewer.js'
 import ExportPanel from '../export/ExportPanel.js'
+import type { AlgorithmName } from '../../../lib/partition.js'
 import type { AlgorithmResultVM, Assignment, Snapshot, Zone, AdjMatrix, DistMatrix, ReportData } from '../../../facades/viewmodels.js'
 
 interface RightPanelProps {
   result:        AlgorithmResultVM | null
-  onRun:         (algo: 'greedy' | 'local-search' | 'sa', m: number) => void
+  onRun:         (algo: AlgorithmName, m: number) => void
   progress:      number
   currentCost:   number | null
   snapshots?:    Snapshot[]
@@ -34,7 +35,7 @@ export default function RightPanel({
 }: RightPanelProps) {
   const role               = useUIStore((s) => s.role)
   const isRunning          = useUIStore((s) => s.isAlgorithmRunning)
-  const [algo, setAlgo]    = React.useState<'greedy'|'local-search'|'sa'>('local-search')
+  const [algo, setAlgo]    = React.useState<AlgorithmName>('hill-climbing')
   const [m, setM]          = React.useState(4)
 
   if (role === 'sales') return null

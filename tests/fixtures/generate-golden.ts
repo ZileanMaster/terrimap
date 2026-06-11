@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Generate golden output file cho regression tests.
  *
  * Chạy một lần:
@@ -22,7 +22,7 @@ const golden = {
     zonesCount: zones20.length,
     m: 4,
   },
-  'local-search': {
+  'hill-climbing': {
     assignments: partitionLocalSearch(zones20, 4),
     timestamp: new Date().toISOString(),
     zonesCount: zones20.length,
@@ -34,4 +34,5 @@ const outPath = join(__dirname, 'partition-golden.json');
 writeFileSync(outPath, JSON.stringify(golden, null, 2), 'utf8');
 console.log(`✅ Golden file written to: ${outPath}`);
 console.log(`   greedy: ${golden.greedy.assignments.length} assignments`);
-console.log(`   local-search: ${golden['local-search'].assignments.length} assignments`);
+console.log(`   hill-climbing: ${golden['hill-climbing'].assignments.length} assignments`);
+
