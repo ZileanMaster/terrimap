@@ -16,8 +16,9 @@ import { getDistrictFillColor } from '../../data/district-colors.js'
 import AgentManager from '../agent/AgentManager.js'
 import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
+import ClusterInsightsPanel from './ClusterInsightsPanel.js'
 import { AssignmentWorkspacePanel, MapDataWorkspacePanel } from './WorkspacePanels.js'
-import type { Assignment, HistoryEntry, Zone } from '../../../facades/viewmodels.js'
+import type { Assignment, HistoryEntry, SalesAgent, Zone } from '../../../facades/viewmodels.js'
 
 interface SidebarProps {
   /** Live assignments - reflects algorithm results. Passed from Page. */
@@ -32,15 +33,18 @@ interface SidebarProps {
   /** Fly map to given coordinates (from province search) */
   onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined
   mode?: 'regions' | 'assignments'
+  workspaceExpanded?: boolean
+  onToggleWorkspace?: (() => void) | undefined
+  agents?: SalesAgent[] | undefined
 }
 
-export default function Sidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo, mode = 'assignments' }: SidebarProps) {
+export default function Sidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo, mode = 'assignments', workspaceExpanded = false, onToggleWorkspace, agents }: SidebarProps) {
   const role = useUIStore((s) => s.role)
 
   return (
     <aside style={styles.sidebar} data-testid="sidebar">
-      {role === 'admin'       && <AdminSidebar zones={zones} assignments={assignments} onCreateSnapshot={onCreateSnapshot} islandZoneIds={islandZoneIds} disconnectedDistrictIds={disconnectedDistrictIds} onFlyTo={onFlyTo} mode={mode} />}
-      {role === 'coordinator' && <CoordinatorSidebar zones={zones} assignments={assignments} mode={mode} />}
+      {role === 'admin'       && <AdminSidebar zones={zones} assignments={assignments} agents={agents} onCreateSnapshot={onCreateSnapshot} islandZoneIds={islandZoneIds} disconnectedDistrictIds={disconnectedDistrictIds} onFlyTo={onFlyTo} mode={mode} workspaceExpanded={workspaceExpanded} onToggleWorkspace={onToggleWorkspace} />}
+      {role === 'coordinator' && <CoordinatorSidebar zones={zones} assignments={assignments} agents={agents} mode={mode} workspaceExpanded={workspaceExpanded} onToggleWorkspace={onToggleWorkspace} />}
       {role === 'sales'       && <SalesSidebar />}
     </aside>
   )
@@ -226,11 +230,28 @@ const ZoneCard = React.memo(function ZoneCard({
   )
 })
 
-function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, disconnectedDistrictIds, onFlyTo, mode }: {
-  zones: Zone[]; assignments: Assignment[]; onCreateSnapshot?: (() => void) | undefined;
-  islandZoneIds?: Set<string> | undefined; disconnectedDistrictIds?: Set<number> | undefined;
-  onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined;
-  mode?: 'regions' | 'assignments';
+function AdminSidebar({
+  zones,
+  assignments,
+  agents: propAgents,
+  onCreateSnapshot,
+  islandZoneIds,
+  disconnectedDistrictIds,
+  onFlyTo,
+  mode,
+  workspaceExpanded = false,
+  onToggleWorkspace,
+}: {
+  zones: Zone[]
+  assignments: Assignment[]
+  agents?: SalesAgent[] | undefined
+  onCreateSnapshot?: (() => void) | undefined
+  islandZoneIds?: Set<string> | undefined
+  disconnectedDistrictIds?: Set<number> | undefined
+  onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined
+  mode?: 'regions' | 'assignments'
+  workspaceExpanded?: boolean
+  onToggleWorkspace?: (() => void) | undefined
 }) {
   const { t } = useTranslation()
   const ctx                = useFacade()
@@ -240,9 +261,10 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
   const setHighlightedSalesId = useUIStore((s) => s.setHighlightedSalesId)
   const allAgents = useDataStore((s) => s.agents)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
-  const agents = currentRegionId
+  const agents = propAgents ?? (currentRegionId
     ? allAgents.filter((a) => (a as any).region_id === currentRegionId || (a as any).regionId === currentRegionId)
     : allAgents
+  )
   const [agentModalOpen, setAgentModalOpen] = useState(false)
 
   if (ctx.role !== 'admin') return null
@@ -251,11 +273,24 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
 
   return (
     <div style={styles.content}>
+      {onToggleWorkspace && (
+        <div style={styles.workspaceHeader}>
+          <div>
+            <div style={styles.workspaceKicker}>Không gian vận hành</div>
+            <div style={styles.workspaceTitle}>Phân chia lãnh thổ</div>
+          </div>
+          <button style={styles.workspaceToggleBtn} onClick={onToggleWorkspace}>
+            {workspaceExpanded ? 'Thu gọn' : 'Mở rộng'}
+          </button>
+        </div>
+      )}
       <MapDataWorkspacePanel zones={zones} assignments={assignments} />
       <div style={styles.divider} />
-      <RegionManager onFlyTo={onFlyTo} />
+      <RegionManager onFlyTo={onFlyTo} assignments={assignments} />
       <div style={styles.divider} />
       <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
+      <div style={styles.divider} />
+      <ClusterInsightsPanel zones={zones} assignments={assignments} agents={agents} compact={!workspaceExpanded} />
       <div style={styles.divider} />
       <DistrictAgentAssigner regionId={currentRegionId ?? undefined} />
 
@@ -269,16 +304,31 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
     </div>
   )
 }
-function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assignments: Assignment[]; mode?: 'regions' | 'assignments' }) {
+function CoordinatorSidebar({
+  zones,
+  assignments,
+  agents: propAgents,
+  mode,
+  workspaceExpanded = false,
+  onToggleWorkspace,
+}: {
+  zones: Zone[]
+  assignments: Assignment[]
+  agents?: SalesAgent[] | undefined
+  mode?: 'regions' | 'assignments'
+  workspaceExpanded?: boolean
+  onToggleWorkspace?: (() => void) | undefined
+}) {
   const { t } = useTranslation()
   const ctx                    = useFacade()
   const highlightedSalesId     = useUIStore((s) => s.highlightedSalesId)
   const setHighlightedSalesId  = useUIStore((s) => s.setHighlightedSalesId)
   const allAgents = useDataStore((s) => s.agents)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
-  const agents = currentRegionId
+  const agents = propAgents ?? (currentRegionId
     ? allAgents.filter((a) => (a as any).region_id === currentRegionId || (a as any).regionId === currentRegionId)
     : allAgents
+  )
 
   if (ctx.role !== 'coordinator') return null
   const overview = ctx.facade.getTeamOverview(zones, assignments, agents)
@@ -286,11 +336,24 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
 
   return (
     <div style={styles.content} data-testid="team-overview">
+      {onToggleWorkspace && (
+        <div style={styles.workspaceHeader}>
+          <div>
+            <div style={styles.workspaceKicker}>Không gian vận hành</div>
+            <div style={styles.workspaceTitle}>Phân chia lãnh thổ</div>
+          </div>
+          <button style={styles.workspaceToggleBtn} onClick={onToggleWorkspace}>
+            {workspaceExpanded ? 'Thu gọn' : 'Mở rộng'}
+          </button>
+        </div>
+      )}
       <MapDataWorkspacePanel zones={zones} assignments={assignments} canExport={false} />
       <div style={styles.divider} />
-      <RegionManager onFlyTo={undefined} />
+      <RegionManager onFlyTo={undefined} assignments={assignments} />
       <div style={styles.divider} />
       <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
+      <div style={styles.divider} />
+      <ClusterInsightsPanel zones={zones} assignments={assignments} agents={agents} compact={!workspaceExpanded} />
       <div style={styles.divider} />
       <h2 style={styles.sectionTitle}>{t('sidebar.team_overview')}</h2>
       <div style={styles.statsGrid}>
@@ -447,7 +510,7 @@ function StatCard({ label, value }: { label: string; value: number }) {
 
 const styles: Record<string, React.CSSProperties> = {
   sidebar: {
-    width: 'var(--sidebar-w)',
+    width: '100%',
     background: 'var(--color-surface)',
     borderRight: '1px solid var(--color-border)',
     overflowY: 'auto',
@@ -459,6 +522,40 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
+  },
+  workspaceHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+    padding: '10px 12px',
+    borderRadius: 14,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+  },
+  workspaceKicker: {
+    fontSize: 11,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: 'var(--color-text-3)',
+  },
+  workspaceTitle: {
+    fontSize: 15,
+    fontWeight: 800,
+    color: 'var(--color-text)',
+    marginTop: 2,
+  },
+  workspaceToggleBtn: {
+    padding: '7px 10px',
+    borderRadius: 10,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: 'pointer',
+    flexShrink: 0,
   },
   sectionTitle: {
     fontSize: 12,

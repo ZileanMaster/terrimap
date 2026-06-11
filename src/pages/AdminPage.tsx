@@ -87,6 +87,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const [progress, setProgress]       = useState(0)
   const [currentCost, setCurrentCost] = useState<number | null>(null)
   const [snapshots, setSnapshots]     = useState<Snapshot[]>([])
+  const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
 
   const selectedZoneId        = useUIStore((s) => s.selectedZoneId)
   const selectZone            = useUIStore((s) => s.selectZone)
@@ -339,15 +340,25 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
 
   return (
     <div style={styles.layout}>
-      <div style={styles.leftCol}>
+      {workspaceExpanded && <button type="button" aria-label="Đóng bảng phân chia" style={styles.backdrop} onClick={() => setWorkspaceExpanded(false)} />}
+
+      <div
+        style={{
+          ...styles.leftCol,
+          ...(workspaceExpanded ? styles.leftColOverlay : {}),
+        }}
+      >
         <Sidebar
           zones={displayZones}
           assignments={displayAssignments}
+          agents={displayAgents}
           onCreateSnapshot={handleSnapshot}
           islandZoneIds={islandZoneIds}
           disconnectedDistrictIds={disconnectedDistrictIds}
           onFlyTo={handleFlyTo}
           mode={mode}
+          workspaceExpanded={workspaceExpanded}
+          onToggleWorkspace={() => setWorkspaceExpanded((value) => !value)}
         />
       </div>
 
@@ -443,6 +454,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
 const styles: Record<string, React.CSSProperties> = {
   layout: {
     display: 'flex',
+    position: 'relative',
     height: '100%',
     overflow: 'hidden',
   },
@@ -452,6 +464,29 @@ const styles: Record<string, React.CSSProperties> = {
     overflow:       'hidden',
     borderRight:    '1px solid var(--color-border)',
     flexShrink:     0,
+    width:          360,
+    background:     'var(--color-surface)',
+    position:       'relative',
+    zIndex:         2,
+    transition:     'all 180ms ease',
+  },
+  leftColOverlay: {
+    position:   'absolute',
+    top:        0,
+    left:       0,
+    bottom:     0,
+    width:      'min(460px, 92vw)',
+    zIndex:     1300,
+    boxShadow:  '0 24px 64px rgba(15,23,42,.22)',
+    borderRight:'1px solid var(--color-border)',
+  },
+  backdrop: {
+    position: 'absolute',
+    inset: 0,
+    zIndex: 1200,
+    border: 'none',
+    background: 'rgba(15, 23, 42, 0.14)',
+    cursor: 'pointer',
   },
   mapArea: {
     flex: 1,

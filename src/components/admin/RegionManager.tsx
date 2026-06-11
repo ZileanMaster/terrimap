@@ -4,9 +4,10 @@ import { useUIStore } from '../../store/uiStore.js'
 
 interface RegionManagerProps {
   onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined
+  assignments?: Array<{ zoneId: string; districtId: number }> | undefined
 }
 
-export default function RegionManager({ onFlyTo }: RegionManagerProps) {
+export default function RegionManager({ onFlyTo, assignments = [] }: RegionManagerProps) {
   const role = useUIStore((s) => s.role)
   const regions = useDataStore((s) => s.regions)
   const zones = useDataStore((s) => s.zones)
@@ -29,10 +30,26 @@ export default function RegionManager({ onFlyTo }: RegionManagerProps) {
   }, [deleteRegion, zones])
 
   const activeRegion = regions.find((region) => region.id === currentRegionId)
+  const visibleRegions = regions.filter((region) => {
+    const regionZoneIds = new Set(
+      zones
+        .filter((zone) => (zone as any).regionId === region.id)
+        .map((zone) => zone.id),
+    )
+    if (regionZoneIds.size === 0) return false
+
+    const districtCount = new Set(
+      assignments
+        .filter((assignment) => regionZoneIds.has(assignment.zoneId))
+        .map((assignment) => assignment.districtId),
+    ).size
+
+    return districtCount > 0
+  })
 
   return (
     <div style={styles.wrapper}>
-      {regions.length === 0 ? (
+      {visibleRegions.length === 0 ? (
         <div style={styles.emptyState}>
           <div style={styles.emptyIcon}>🗺️</div>
           <div style={styles.emptyText}>Chưa có khu vực nào</div>
@@ -44,9 +61,20 @@ export default function RegionManager({ onFlyTo }: RegionManagerProps) {
         </div>
       ) : (
         <div style={styles.pillBar}>
-          {regions.map((region) => {
+          {visibleRegions.map((region) => {
             const isActive = currentRegionId === region.id
             const zoneCount = zones.filter((zone) => (zone as any).regionId === region.id).length
+            const districtCount = new Set(
+              assignments
+                .filter((assignment) =>
+                  zones.some(
+                    (zone) =>
+                      zone.id === assignment.zoneId
+                      && (zone as any).regionId === region.id,
+                  ),
+                )
+                .map((assignment) => assignment.districtId),
+            ).size
             const isConfirming = confirmDelete === region.id
 
             return (
@@ -63,7 +91,7 @@ export default function RegionManager({ onFlyTo }: RegionManagerProps) {
                       onFlyTo?.(region.center.lat, region.center.lng, (region as any).zoom ?? 12)
                     }
                   }}
-                  title={`${region.name} · ${zoneCount} vùng`}
+                  title={`${region.name} · ${zoneCount} vùng · ${districtCount} cụm`}
                 >
                   <span style={styles.pillName}>{region.name}</span>
                   <span
