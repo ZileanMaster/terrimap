@@ -54,6 +54,39 @@ function buildRegionsFromZones(zones: Zone[], existingRegions: Region[]): Region
   })
 }
 
+function validateAssignmentsBeforeSave(assignments: Assignment[]): void {
+  if (assignments.length === 0) return
+
+  const districtOwners = new Map<number, Set<string>>()
+
+  for (const assignment of assignments) {
+    const salesAgentId = assignment.salesAgentId?.trim()
+    if (!salesAgentId) {
+      throw new Error(`Cụm ${assignment.districtId} chưa có nhân viên quản lý`)
+    }
+
+    const owners = districtOwners.get(assignment.districtId) ?? new Set<string>()
+    owners.add(salesAgentId)
+    districtOwners.set(assignment.districtId, owners)
+  }
+
+  for (const [districtId, owners] of districtOwners.entries()) {
+    if (owners.size > 1) {
+      throw new Error(`Cụm ${districtId} đang có nhiều nhân viên quản lý khác nhau`)
+    }
+  }
+
+  const agentToDistrict = new Map<string, number>()
+  for (const assignment of assignments) {
+    const salesAgentId = assignment.salesAgentId?.trim() ?? ''
+    const existingDistrict = agentToDistrict.get(salesAgentId)
+    if (existingDistrict != null && existingDistrict !== assignment.districtId) {
+      throw new Error(`Nhân viên ${salesAgentId} đang được gán cho nhiều cụm`)
+    }
+    agentToDistrict.set(salesAgentId, assignment.districtId)
+  }
+}
+
 interface DataStore {
   //  State 
   zones:           Zone[]
@@ -207,9 +240,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
   },
 
   persistAssignments: async (assignments) => {
+    validateAssignmentsBeforeSave(assignments)
     set({ assignments, saving: true })
-    await saveAssignments(assignments, get().currentProjectId)
-    set({ saving: false })
+    try {
+      await saveAssignments(assignments, get().currentProjectId)
+    } finally {
+      set({ saving: false })
+    }
   },
 
   addAgent: async (agent) => {

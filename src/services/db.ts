@@ -441,11 +441,18 @@ export async function deleteZone(zoneId: string, projectId?: string): Promise<vo
  * Fire-and-forget.
  */
 export async function saveAssignments(assignments: Assignment[], projectId?: string): Promise<void> {
+    for (const assignment of assignments) {
+      if (!assignment.salesAgentId?.trim()) {
+        throw new Error(`[DB] saveAssignments rejected: district ${assignment.districtId} is missing salesAgentId`)
+      }
+    }
+
   writeJsonArray(scopedKey('terrimap_assignments', projectId), assignments)
 
   if (!isOnline()) return
 
   try {
+
     let delQuery = supabase!.from('assignments').delete().neq('zone_id', '')
     if (projectId) delQuery = delQuery.eq('project_id', projectId)
     const { error: deleteError } = await delQuery
@@ -459,7 +466,7 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
         assignments.map((a) => ({
           zone_id:        a.zoneId,
           district_id:    a.districtId,
-          sales_agent_id: a.salesAgentId ?? `sa${a.districtId}`,
+          sales_agent_id: a.salesAgentId,
           ...(projectId ? { project_id: projectId } : {}),
         })),
       )

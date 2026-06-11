@@ -202,7 +202,7 @@ export class AdminFacade {
     // G?n salesAgentId theo th? t? canonical c?a salesAgents
     const assignments = rawAssignments.map(a => ({
       ...a,
-      salesAgentId: a.salesAgentId ?? salesAgents[a.districtId % salesAgents.length]?.id ?? `sa${a.districtId}`,
+      salesAgentId: a.salesAgentId ?? salesAgents[a.districtId % salesAgents.length]?.id ?? '',
     }));
 
     // Validate ?? l?y metrics + violations

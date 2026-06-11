@@ -77,35 +77,35 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
     if (ctx.role !== 'coordinator') return
 
-    // 3C: kiểm tra liên thông BFS - xác nhận cụm nguồn vẫn liên thông sau khi chuyển
-    const currentAssignment = displayAssignments.find((a) => a.zoneId === zoneId)
-    const fromDistrict = currentAssignment?.districtId ?? -1
-
-    if (fromDistrict !== toDistrict && fromDistrict >= 0) {
-      // Build temp assignment array (index-based)
-      const tempAssignments = displayAssignments.map((a) =>
-        a.zoneId === zoneId ? { ...a, districtId: toDistrict } : a,
-      )
-      const assignmentArr = displayZones.map((z) => {
-        const a = tempAssignments.find((a) => a.zoneId === z.id)
-        return a?.districtId ?? -1
-      })
-
-      // Build adjacency matrix from zones
-      const adjMatrix = buildAdjacencyMatrix(displayZones)
-      const idToIdx   = new Map(displayZones.map((z, i) => [z.id, i]))
-
-      // Kiểm tra cụm nguồn vẫn liên thông
-      if (!isDistrictConnected(displayZones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
-        throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm nguồn bị tách rời.')
-      }
-    }
-
-    // OK - persist
     try {
+      // 3C: kiểm tra liên thông BFS - xác nhận cụm nguồn vẫn liên thông sau khi chuyển
+      const currentAssignment = displayAssignments.find((a) => a.zoneId === zoneId)
+      const fromDistrict = currentAssignment?.districtId ?? -1
+
+      if (fromDistrict !== toDistrict && fromDistrict >= 0) {
+        // Build temp assignment array (index-based)
+        const tempAssignments = displayAssignments.map((a) =>
+          a.zoneId === zoneId ? { ...a, districtId: toDistrict } : a,
+        )
+        const assignmentArr = displayZones.map((z) => {
+          const a = tempAssignments.find((a) => a.zoneId === z.id)
+          return a?.districtId ?? -1
+        })
+
+        // Build adjacency matrix from zones
+        const adjMatrix = buildAdjacencyMatrix(displayZones)
+        const idToIdx   = new Map(displayZones.map((z, i) => [z.id, i]))
+
+        // Kiểm tra cụm nguồn vẫn liên thông
+        if (!isDistrictConnected(displayZones, assignmentArr, fromDistrict, adjMatrix, idToIdx)) {
+          throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm nguồn bị tách rời.')
+        }
+      }
+
+      // OK - persist
       const targetSalesAgentId =
         displayAssignments.find((a) => a.districtId === toDistrict)?.salesAgentId
-        ?? `sa${toDistrict}`
+        ?? ''
       const nextScopedAssignments = currentAssignment
         ? displayAssignments.map((a) =>
             a.zoneId === zoneId
@@ -129,6 +129,8 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       selectZone(null)
     } catch (e) {
       console.error('[CoordinatorPage] assignZone error:', e)
+      const message = e instanceof Error ? e.message : 'Không thể lưu thay đổi phân vùng'
+      alert(message)
     }
   }, [ctx, assignments, displayAssignments, displayZones, persistAssignments, selectZone])
 

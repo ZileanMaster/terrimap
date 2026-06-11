@@ -257,7 +257,7 @@ function AdminSidebar({ zones, assignments, onCreateSnapshot, islandZoneIds, dis
       <div style={styles.divider} />
       <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
       <div style={styles.divider} />
-      <DistrictAgentAssigner />
+      <DistrictAgentAssigner regionId={currentRegionId ?? undefined} />
 
       <div style={styles.divider} />
       <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
@@ -326,7 +326,7 @@ function CoordinatorSidebar({ zones, assignments, mode }: { zones: Zone[]; assig
       })}
 
       <div style={styles.divider} />
-      <DistrictAgentAssigner />
+      <DistrictAgentAssigner regionId={currentRegionId ?? undefined} />
 
       <div style={styles.divider} />
       <ZoneCardList zones={zones} assignments={assignments} mode="assignments" />

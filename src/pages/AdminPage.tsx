@@ -245,34 +245,39 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const handleAssign = useCallback(async (zoneId: string, toDistrict: number) => {
     if (ctx.role !== 'admin') return
 
-    const existing = displayAssignments.find((a) => a.zoneId === zoneId)
-    const targetSalesAgentId =
-      displayAssignments.find((a) => a.districtId === toDistrict)?.salesAgentId
-      ?? displayAgents[toDistrict]?.id
-      ?? `sa${toDistrict}`
+    try {
+      const existing = displayAssignments.find((a) => a.zoneId === zoneId)
+      const targetSalesAgentId =
+        displayAssignments.find((a) => a.districtId === toDistrict)?.salesAgentId
+        ?? ''
 
-    const nextScopedAssignments = existing
-      ? displayAssignments.map((a) =>
-          a.zoneId === zoneId
-            ? { ...a, districtId: toDistrict, salesAgentId: targetSalesAgentId }
-            : a,
-        )
-      : [...displayAssignments, { zoneId, districtId: toDistrict, salesAgentId: targetSalesAgentId }]
+      const nextScopedAssignments = existing
+        ? displayAssignments.map((a) =>
+            a.zoneId === zoneId
+              ? { ...a, districtId: toDistrict, salesAgentId: targetSalesAgentId }
+              : a,
+          )
+        : [...displayAssignments, { zoneId, districtId: toDistrict, salesAgentId: targetSalesAgentId }]
 
-    const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
-    const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
-    if (disconnected) {
-      throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm mất liên thông.')
+      const validation = validatePartition(displayZones, nextScopedAssignments, { adjThresholdKm: 50 })
+      const disconnected = validation.violations.find((v) => 'type' in v && v.type === 'DISCONNECTED')
+      if (disconnected) {
+        throw new Error('Không thể chuyển vùng vì thao tác này sẽ làm cụm mất liên thông.')
+      }
+
+      const scopedZoneIds = new Set(displayZones.map((z) => z.id))
+      const mergedAssignments = [
+        ...assignments.filter((a) => !scopedZoneIds.has(a.zoneId)),
+        ...nextScopedAssignments,
+      ]
+
+      await persistAssignments(mergedAssignments)
+      selectZone(null)
+    } catch (e) {
+      console.error('[AdminPage] assignZone error:', e)
+      const message = e instanceof Error ? e.message : 'Không thể lưu thay đổi phân vùng'
+      alert(message)
     }
-
-    const scopedZoneIds = new Set(displayZones.map((z) => z.id))
-    const mergedAssignments = [
-      ...assignments.filter((a) => !scopedZoneIds.has(a.zoneId)),
-      ...nextScopedAssignments,
-    ]
-
-    await persistAssignments(mergedAssignments)
-    selectZone(null)
   }, [ctx, displayAssignments, displayAgents, displayZones, assignments, persistAssignments, selectZone])
 
   //  Draw zone 

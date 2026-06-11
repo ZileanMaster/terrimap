@@ -4,60 +4,96 @@ import { getDistrictFillColor } from '../../data/district-colors.js'
 import type { Zone } from '../../../facades/viewmodels.js'
 
 interface DistrictAgentAssignerProps {
-  /** Tùy chọn: lọc nhân sự theo regionId này (Giai đoạn 3 - 3B) */
+  /** Tùy chọn: lọc nhân sự theo regionId này. */
+  regionId?: string | undefined
+  zones?: Zone[]
+}
+
+type AgentOption = {
+  id: string
+  name: string
   regionId?: string
-  zones?:    Zone[]
 }
 
 export default function DistrictAgentAssigner({ regionId, zones: propZones }: DistrictAgentAssignerProps = {}) {
   const assignments        = useDataStore((s) => s.assignments)
   const agents             = useDataStore((s) => s.agents)
+  const currentRegionId    = useDataStore((s) => s.currentRegionId)
   const storeZones         = useDataStore((s) => s.zones)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
 
   const zones = propZones ?? storeZones
+  const activeRegionId = regionId ?? currentRegionId ?? null
 
+  const regionAgents = useMemo<AgentOption[]>(() => {
+    const normalizedAgents = agents.map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      regionId: (agent as any).regionId ?? (agent as any).region_id ?? undefined,
+    }))
 
-
-  const filteredAgents = useMemo(() => {
-    if (!regionId) return agents
-    return agents.filter((a) => {
-      const agentRegion = (a as any).regionId
-      return !agentRegion || agentRegion === regionId
-    })
-  }, [agents, regionId])
-
+    if (!activeRegionId) return normalizedAgents
+    return normalizedAgents.filter((agent) => agent.regionId === activeRegionId)
+  }, [activeRegionId, agents])
 
   const districts = useMemo(() => {
     const ids = [...new Set(assignments.map((a) => a.districtId))].sort((a, b) => a - b)
-    return ids.map((d) => {
-      const distAssignments = assignments.filter((a) => a.districtId === d)
-      const distZones       = zones.filter((z) => distAssignments.some((a) => a.zoneId === z.id))
+    return ids.map((districtId) => {
+      const distAssignments = assignments.filter((a) => a.districtId === districtId)
+      const distZones = zones.filter((zone) => distAssignments.some((assignment) => assignment.zoneId === zone.id))
 
-
-      const totalCustomers = distZones.reduce((sum, z) =>
-        sum + z.activities
-          .filter((act) => act.type === 'CUSTOMER')
-          .reduce((s, act) => s + act.value, 0),
+      const totalCustomers = distZones.reduce(
+        (sum, zone) =>
+          sum + zone.activities
+            .filter((activity) => activity.type === 'CUSTOMER')
+            .reduce((acc, activity) => acc + activity.value, 0),
         0,
       )
 
       return {
-        districtId:    d,
-        zoneCount:     distAssignments.length,
+        districtId,
+        zoneCount: distAssignments.length,
         totalCustomers,
-        currentAgent:  distAssignments[0]?.salesAgentId ?? '',
+        currentAgent: distAssignments[0]?.salesAgentId ?? '',
       }
     })
   }, [assignments, zones])
 
-  const handleChange = useCallback(async (districtId: number, newAgentId: string) => {
-    const updated = assignments.map((a) =>
-      a.districtId === districtId
-        ? { ...a, salesAgentId: newAgentId }
-        : a,
+  const currentAgentByDistrict = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const district of districts) {
+      if (district.currentAgent) map.set(district.districtId, district.currentAgent)
+    }
+    return map
+  }, [districts])
+
+  const assignedAgentIds = useMemo(() => {
+    return new Set(
+      districts
+        .map((district) => district.currentAgent)
+        .filter((agentId): agentId is string => Boolean(agentId)),
     )
-    await persistAssignments(updated)
+  }, [districts])
+
+  const getAvailableAgentsForDistrict = useCallback((districtId: number) => {
+    const currentAgentId = currentAgentByDistrict.get(districtId) ?? ''
+    const usedElsewhere = new Set([...assignedAgentIds].filter((agentId) => agentId !== currentAgentId))
+    return regionAgents.filter((agent) => !usedElsewhere.has(agent.id))
+  }, [assignedAgentIds, currentAgentByDistrict, regionAgents])
+
+  const handleChange = useCallback(async (districtId: number, newAgentId: string) => {
+    const updated = assignments.map((assignment) =>
+      assignment.districtId === districtId
+        ? { ...assignment, salesAgentId: newAgentId }
+        : assignment,
+    )
+    try {
+      await persistAssignments(updated)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể lưu phân công nhân viên'
+      alert(message)
+      throw error
+    }
   }, [assignments, persistAssignments])
 
   if (districts.length === 0) return null
@@ -65,41 +101,44 @@ export default function DistrictAgentAssigner({ regionId, zones: propZones }: Di
   return (
     <div style={styles.container}>
       <h3 style={styles.title}>👥 Phân công nhân viên</h3>
-      {districts.map((d) => (
-        <div key={d.districtId} style={styles.row}>
-          <div style={styles.colorDot}>
-            <span style={{
-              ...styles.dot,
-              background: getDistrictFillColor(d.districtId),
-            }} />
-            <div style={styles.labelCol}>
-              <span style={styles.label}>Cụm {d.districtId}</span>
-              <span style={styles.meta}>
-                {d.zoneCount} vùng · {d.totalCustomers.toLocaleString()} KH
-              </span>
-            </div>
-          </div>
+      {districts.map((district) => {
+        const availableAgents = getAvailableAgentsForDistrict(district.districtId)
+        const currentValue = availableAgents.some((agent) => agent.id === district.currentAgent)
+          ? district.currentAgent
+          : ''
 
-          {/* Dropdown nhân sự - đã lọc theo vùng */}
-          <select
-            value={d.currentAgent}
-            onChange={(e) => handleChange(d.districtId, e.target.value)}
-            style={styles.select}
-          >
-            <option value="">-- Chọn nhân viên --</option>
-            {filteredAgents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))}
-            {d.currentAgent && !filteredAgents.some((a) => a.id === d.currentAgent) && (
-              <option value={d.currentAgent}>
-                {agents.find((a) => a.id === d.currentAgent)?.name ?? d.currentAgent} (ngoài vùng)
-              </option>
-            )}
-          </select>
-        </div>
-      ))}
+        return (
+          <div key={district.districtId} style={styles.row}>
+            <div style={styles.colorDot}>
+              <span
+                style={{
+                  ...styles.dot,
+                  background: getDistrictFillColor(district.districtId),
+                }}
+              />
+              <div style={styles.labelCol}>
+                <span style={styles.label}>Cụm {district.districtId}</span>
+                <span style={styles.meta}>
+                  {district.zoneCount} vùng · {district.totalCustomers.toLocaleString()} KH
+                </span>
+              </div>
+            </div>
+
+            <select
+              value={currentValue}
+              onChange={(e) => handleChange(district.districtId, e.target.value)}
+              style={styles.select}
+            >
+              <option value="">-- Chọn nhân viên --</option>
+              {availableAgents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )
+      })}
     </div>
   )
 }
