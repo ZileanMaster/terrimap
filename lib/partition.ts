@@ -9,7 +9,8 @@ export type PartitionErrorCode =
   | 'DISCONNECTED_GRAPH' // input adjacency graph has multiple components
   | 'INVALID_ITER'  // maxIter < 0 hoặc không nguyên
   | 'INVALID_COOLING' // cooling ngoài (0,1)
-  | 'INVALID_TEMP'; // initialTemp <= 0
+  | 'INVALID_TEMP' // initialTemp <= 0
+  | 'INVALID_TOPK'; // topK < 1 hoặc không nguyên
 
 /**
  * Lỗi do vi phạm contract của Partition Engine.
@@ -56,6 +57,11 @@ export interface PartitionOpts {
    * Default: 0.12 km
    */
   adjThresholdKm?: number;
+  /**
+   * Số ứng viên tốt nhất giữ lại cho mỗi bước SA.
+   * Default: 8.
+   */
+  topK?: number;
   balanceWeights?: { customers: number; orders: number };
   objective?: 'p-center' | 'p-median';
 }
@@ -110,6 +116,35 @@ function ensureConnectedInputGraph(zones: Zone[], adjMatrix: AdjacencyMatrix): v
       'cannot guarantee connected districts without artificial bridge edges',
     'DISCONNECTED_GRAPH',
   );
+}
+
+interface MoveCandidate {
+  idx: number;
+  from: number;
+  to: number;
+  cost: number;
+}
+
+function pickTopKMove(candidates: MoveCandidate[], currentCost: number, temperature: number): MoveCandidate {
+  if (candidates.length === 1) return candidates[0]!
+
+  const safeTemp = Math.max(temperature, 1e-9)
+  const deltas = candidates.map((candidate) => candidate.cost - currentCost)
+  const minDelta = Math.min(...deltas)
+  const weights = deltas.map((delta) => Math.exp(-(delta - minDelta) / safeTemp))
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
+
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+    return candidates[0]!
+  }
+
+  let threshold = Math.random() * totalWeight
+  for (let i = 0; i < candidates.length; i++) {
+    threshold -= weights[i]!
+    if (threshold <= 0) return candidates[i]!
+  }
+
+  return candidates[candidates.length - 1]!
 }
 
 /**
@@ -745,6 +780,7 @@ export function partitionSimulatedAnnealing(
     alpha = 0.35,
     beta = 0.65,
     adjThresholdKm = 0.12,
+    topK = 8,
     maxIter = 10000,
     balanceWeights,
     objective,
@@ -754,6 +790,8 @@ export function partitionSimulatedAnnealing(
     throw new PartitionError(`cooling must be in (0, 1), got ${cooling}`, 'INVALID_COOLING');
   if (initialTemp <= 0)
     throw new PartitionError(`initialTemp must be > 0, got ${initialTemp}`, 'INVALID_TEMP');
+  if (!Number.isInteger(topK) || topK < 1)
+    throw new PartitionError(`topK must be an integer >= 1, got ${topK}`, 'INVALID_TOPK');
 
   const adjMatrix: AdjacencyMatrix = buildAdjacencyMatrix(zones, adjThresholdKm);
   ensureConnectedInputGraph(zones, adjMatrix);
@@ -798,7 +836,7 @@ export function partitionSimulatedAnnealing(
   }
 
   while (iter < remainingIter && T >= 1) {
-    let bestMove: null | { idx: number; from: number; to: number; cost: number } = null;
+    const candidates: MoveCandidate[] = [];
 
     for (let i = 0; i < zones.length; i++) {
       const currentDistrict = assignment[i]!;
@@ -845,29 +883,31 @@ export function partitionSimulatedAnnealing(
 
         assignment[i] = currentDistrict;
 
-        if (!bestMove || newCost < bestMove.cost) {
-          bestMove = { idx: i, from: currentDistrict, to: targetDistrict, cost: newCost };
-        }
+        candidates.push({ idx: i, from: currentDistrict, to: targetDistrict, cost: newCost });
       }
     }
 
-    if (!bestMove) break;
+    if (candidates.length === 0) break;
 
-    assignment[bestMove.idx] = bestMove.to;
-    districtSizes[bestMove.from]!--;
-    districtSizes[bestMove.to] = (districtSizes[bestMove.to] ?? 0) + 1;
+    candidates.sort((a, b) => a.cost - b.cost || a.idx - b.idx || a.from - b.from || a.to - b.to);
+    const movePool = candidates.slice(0, Math.min(topK, candidates.length));
+    const chosenMove = pickTopKMove(movePool, currentCost, T);
 
-    const deltaE = bestMove.cost - currentCost;
+    assignment[chosenMove.idx] = chosenMove.to;
+    districtSizes[chosenMove.from]!--;
+    districtSizes[chosenMove.to] = (districtSizes[chosenMove.to] ?? 0) + 1;
+
+    const deltaE = chosenMove.cost - currentCost;
     if (deltaE <= 0 || Math.random() < Math.exp(-deltaE / T)) {
-      currentCost = bestMove.cost;
+      currentCost = chosenMove.cost;
       if (currentCost < bestCost) {
         bestCost = currentCost;
         bestAssignment = new Int32Array(assignment);
       }
     } else {
-      assignment[bestMove.idx] = bestMove.from;
-      districtSizes[bestMove.from] = (districtSizes[bestMove.from] ?? 0) + 1;
-      districtSizes[bestMove.to] = (districtSizes[bestMove.to] ?? 0) - 1;
+      assignment[chosenMove.idx] = chosenMove.from;
+      districtSizes[chosenMove.from] = (districtSizes[chosenMove.from] ?? 0) + 1;
+      districtSizes[chosenMove.to] = (districtSizes[chosenMove.to] ?? 0) - 1;
     }
 
     T *= cooling;
