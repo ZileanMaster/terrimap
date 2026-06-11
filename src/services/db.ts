@@ -60,10 +60,10 @@ function writeJsonArray<T>(key: string, value: T[]): void {
 }
 
 function readScopedCollections<T>(base: string, projectId?: string): T[] {
-  const scoped = readJsonArray<T>(scopedKey(base, projectId))
-  if (scoped.length > 0) return scoped
-  const legacy = readJsonArray<T>(base)
-  return legacy
+  if (projectId) {
+    return readJsonArray<T>(scopedKey(base, projectId))
+  }
+  return readJsonArray<T>(base)
 }
 
 function dispatchSnapshotChange(projectId?: string, snapshotId?: string) {
@@ -147,22 +147,7 @@ export async function loadZones(projectId?: string): Promise<Zone[]> {
   if (zErr || !zones || zones.length === 0) {
     if (zErr) console.error('[DB] loadZones error:', zErr)
     if (localZones.length > 0) return localZones
-    if (projectId) {
-      const { data: legacyZones, error: legacyErr } = await supabase!
-        .from('zones')
-        .select('*')
-        .is('project_id', null)
-        .order('id')
-      if (legacyErr) {
-        console.error('[DB] loadZones legacy error:', legacyErr)
-      } else if (legacyZones && legacyZones.length > 0) {
-        zones = legacyZones as DbZone[]
-      } else {
-        return []
-      }
-    } else {
-      return []
-    }
+    return []
   }
 
 
@@ -230,23 +215,6 @@ export async function loadAssignments(projectId?: string): Promise<Assignment[]>
   if (error || !data || data.length === 0) {
     if (error) console.error('[DB] loadAssignments error:', error)
     if (localAssignments.length > 0) return localAssignments
-    if (projectId) {
-      const { data: legacyData, error: legacyErr } = await supabase!
-        .from('assignments')
-        .select('*')
-        .is('project_id', null)
-      if (legacyErr) {
-        console.error('[DB] loadAssignments legacy error:', legacyErr)
-        return []
-      }
-      if (legacyData && legacyData.length > 0) {
-        return (legacyData as DbAssignment[]).map((a) => ({
-          zoneId:       a.zone_id,
-          districtId:   a.district_id,
-          salesAgentId: a.sales_agent_id,
-        }))
-      }
-    }
     return []
   }
 
@@ -283,26 +251,6 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     if (error) console.error('[DB] loadAgents error or empty:', error)
     const cached = readScopedCollections<SalesAgent>('terrimap_agents', projectId)
     if (cached.length > 0) return cached
-    if (projectId) {
-      const { data: legacyData, error: legacyErr } = await supabase!
-        .from('sales_agents')
-        .select('*')
-        .is('project_id', null)
-        .order('id')
-      if (legacyErr) {
-        console.error('[DB] loadAgents legacy error:', legacyErr)
-        return []
-      }
-      if (legacyData && legacyData.length > 0) {
-        return (legacyData as DbSalesAgent[]).map((a) => ({
-          id:           a.id,
-          name:         a.name,
-          activeRegion: a.active_region,
-          ...(a.region_id != null ? { regionId: a.region_id } : {}),
-          capacity:     a.capacity,
-        }))
-      }
-    }
     return []
   }
 
@@ -649,25 +597,7 @@ export async function loadRegions(projectId?: string): Promise<Region[]> {
 
     if (error || !data || data.length === 0) {
       if (local.length > 0) return local
-      if (projectId) {
-        const { data: legacyData, error: legacyErr } = await supabase!
-          .from('regions')
-          .select('*')
-          .is('project_id', null)
-          .order('name')
-        if (legacyErr) {
-          console.error('[DB] loadRegions legacy error:', legacyErr)
-        } else if (legacyData && legacyData.length > 0) {
-          return (legacyData as DbRegion[]).map((r): Region => ({
-            id:     r.id,
-            name:   r.name,
-            ...(r.coordinator_id ? { coordinatorId: r.coordinator_id } : {}),
-            center: r.center,
-            zoom:   r.zoom,
-          }))
-        }
-        return []
-      }
+      if (projectId) return []
       return DEFAULT_REGIONS
     }
 
