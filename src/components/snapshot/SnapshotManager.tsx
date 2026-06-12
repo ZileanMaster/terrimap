@@ -31,6 +31,7 @@ export default function SnapshotManager() {
   const [periodFilter, setPeriodFilter] = useState<string>('all')
   const [activeSnapshot, setActiveSnapshot] = useState<SnapshotItem | null>(null)
   const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null)
+  const [hydrating, setHydrating] = useState(true)
   const autoOpenedProjectIdRef = useRef<string | null>(null)
 
 
@@ -58,8 +59,10 @@ export default function SnapshotManager() {
 
 
   useEffect(() => {
+    setHydrating(true)
     void refreshSnapshots().catch((error) => {
       console.error('[SnapshotManager] load error:', error)
+      setHydrating(false)
     })
   }, [refreshSnapshots, currentProjectId])
 
@@ -67,6 +70,7 @@ export default function SnapshotManager() {
     if (!currentProjectId || loadedProjectId !== currentProjectId) return
     if (snapshots.length === 0) {
       setActiveSnapshot(null)
+      setHydrating(false)
       return
     }
 
@@ -74,6 +78,7 @@ export default function SnapshotManager() {
     if (autoOpenedProjectIdRef.current === currentProjectId) return
     autoOpenedProjectIdRef.current = currentProjectId
     restoreSnapshot(latest)
+    setHydrating(false)
   }, [currentProjectId, loadedProjectId, restoreSnapshot, snapshots])
 
 
@@ -241,6 +246,22 @@ export default function SnapshotManager() {
       data-snapshot-manager
       style={styles.container}
     >
+      {hydrating && (
+        <div style={styles.hydrationOverlay} aria-live="polite" aria-busy="true">
+          <div style={styles.hydrationCard}>
+            <div style={styles.hydrationSpinner} />
+            <div style={styles.hydrationTextBlock}>
+              <strong style={styles.hydrationTitle}>Đang mở bản lưu mới nhất</strong>
+              <span style={styles.hydrationSubtitle}>
+                {snapshots[0]?.label
+                  ? `Chuẩn bị tải: ${snapshots[0].label}`
+                  : 'Đang đồng bộ dữ liệu bản lưu cho dự án hiện tại...'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeSnapshot && (
         <div style={styles.activeBanner}>
           <span style={styles.activeBannerLabel}>Đang mở:</span>
@@ -424,6 +445,49 @@ const styles: Record<string, React.CSSProperties> = {
     gap:       8,
     alignItems: 'flex-start',
     flexDirection: 'column',
+  },
+  hydrationOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 5000,
+    display: 'grid',
+    placeItems: 'center',
+    background: 'rgba(248, 250, 252, 0.82)',
+    backdropFilter: 'blur(3px)',
+  },
+  hydrationCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    minWidth: 320,
+    padding: '14px 16px',
+    borderRadius: 14,
+    border: '1px solid rgba(37,99,235,0.18)',
+    background: 'var(--color-surface)',
+    boxShadow: '0 18px 40px rgba(15,23,42,0.18)',
+  },
+  hydrationSpinner: {
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    border: '3px solid color-mix(in srgb, var(--color-border) 65%, white)',
+    borderTopColor: 'var(--color-accent)',
+    animation: 'spin 0.8s linear infinite',
+    flex: '0 0 auto',
+  },
+  hydrationTextBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  hydrationTitle: {
+    fontSize: 14,
+    color: 'var(--color-text)',
+    fontWeight: 900,
+  },
+  hydrationSubtitle: {
+    fontSize: 12,
+    color: 'var(--color-text-2)',
   },
   activeBanner: {
     display: 'flex',
