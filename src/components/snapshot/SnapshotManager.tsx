@@ -251,7 +251,7 @@ export default function SnapshotManager() {
           <div style={styles.hydrationCard}>
             <div style={styles.hydrationSpinner} />
             <div style={styles.hydrationTextBlock}>
-              <strong style={styles.hydrationTitle}>Đang mở bản lưu mới nhất</strong>
+              <strong style={styles.hydrationTitle}>Đang mở</strong>
               <span style={styles.hydrationSubtitle}>
                 {snapshots[0]?.label
                   ? `Chuẩn bị tải: ${snapshots[0].label}`
