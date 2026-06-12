@@ -109,6 +109,14 @@ async function resolveDefaultProject(): Promise<Project | null> {
   return (adminProject as Project | null) ?? null
 }
 
+async function pickFallbackProject(projects: Project[]): Promise<string | null> {
+  const preferred = pickInitialProject(projects)
+  if (preferred) return preferred
+
+  const defaultProject = await resolveDefaultProject()
+  return defaultProject?.id ?? null
+}
+
 async function ensureDefaultProjectMembership(userId: string): Promise<void> {
   if (!supabase) return
 
@@ -184,7 +192,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           get().loadProjects(),
         ])
 
-        const nextProjectId = pickInitialProject(get().projects)
+        const nextProjectId = await pickFallbackProject(get().projects)
         if (nextProjectId) {
           await get().selectProject(nextProjectId)
         }
@@ -205,7 +213,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         await ensureDefaultProjectMembership(session.user.id)
         await get().loadProfile()
         await get().loadProjects()
-        const nextProjectId = pickInitialProject(get().projects)
+        const nextProjectId = await pickFallbackProject(get().projects)
         if (nextProjectId && get().currentProjectId !== nextProjectId) {
           await get().selectProject(nextProjectId)
         }
@@ -243,7 +251,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         get().loadProfile(),
         get().loadProjects(),
       ])
-      const nextProjectId = pickInitialProject(get().projects)
+      const nextProjectId = await pickFallbackProject(get().projects)
       if (nextProjectId) {
         await get().selectProject(nextProjectId)
       }
@@ -297,7 +305,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (get().profile) break
     }
     await get().loadProjects()
-    const nextProjectId = pickInitialProject(get().projects)
+    const nextProjectId = await pickFallbackProject(get().projects)
     if (nextProjectId) {
       await get().selectProject(nextProjectId)
     }
