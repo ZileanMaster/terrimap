@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
-import { saveSnapshot, loadSnapshots, deleteSnapshot } from '../../services/db.js'
+import { saveSnapshot, loadSnapshots, deleteSnapshot, readSnapshotCache } from '../../services/db.js'
 import { supabase, isOnline } from '../../lib/supabase.js'
 import SnapshotCompare from './SnapshotCompare.js'
 
@@ -32,7 +32,7 @@ export default function SnapshotManager() {
   const [activeSnapshot, setActiveSnapshot] = useState<SnapshotItem | null>(null)
   const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null)
   const [hydrating, setHydrating] = useState(true)
-  const autoOpenedProjectIdRef = useRef<string | null>(null)
+  const lastOpenedSnapshotIdRef = useRef<string | null>(null)
 
 
   const [compareMode, setCompareMode]             = useState(false)
@@ -59,7 +59,19 @@ export default function SnapshotManager() {
 
 
   useEffect(() => {
-    setHydrating(true)
+    const cached = readSnapshotCache(currentProjectId ?? undefined) as SnapshotItem[]
+    setSnapshots(cached)
+    setLoadedProjectId(currentProjectId ?? null)
+
+    if (cached.length > 0) {
+      const latestCached = cached[0]!
+      lastOpenedSnapshotIdRef.current = latestCached.id
+      restoreSnapshot(latestCached)
+      setHydrating(false)
+    } else {
+      setHydrating(true)
+    }
+
     void refreshSnapshots().catch((error) => {
       console.error('[SnapshotManager] load error:', error)
       setHydrating(false)
@@ -75,8 +87,11 @@ export default function SnapshotManager() {
     }
 
     const latest = snapshots[0]!
-    if (autoOpenedProjectIdRef.current === currentProjectId) return
-    autoOpenedProjectIdRef.current = currentProjectId
+    if (lastOpenedSnapshotIdRef.current === latest.id) {
+      setHydrating(false)
+      return
+    }
+    lastOpenedSnapshotIdRef.current = latest.id
     restoreSnapshot(latest)
     setHydrating(false)
   }, [currentProjectId, loadedProjectId, restoreSnapshot, snapshots])
