@@ -236,6 +236,9 @@ export default function ClusterInsightsPanel({
           const currentRevenue = item.latestHistory?.revenue ?? 0
           const prevRevenue = item.previousHistory?.revenue ?? 0
           const revenueDelta = currentRevenue - prevRevenue
+          const assignedSalesZones = item.assignedSales?.assignedZones ?? []
+          const assignedSalesCustomers = assignedSalesZones.reduce((sum, zone) => sum + zone.customers, 0)
+          const assignedSalesOrders = assignedSalesZones.reduce((sum, zone) => sum + zone.orders, 0)
 
           return (
             <div key={item.districtId} style={styles.card}>
@@ -272,43 +275,64 @@ export default function ClusterInsightsPanel({
               </div>
 
               {!compact && (
-                <>
-                  <div style={styles.agentCard}>
-                    <div style={styles.agentTitle}>Nhân viên phụ trách</div>
-                    <div style={styles.agentSummary}>
-                      <span>{assignedLabel}</span>
-                      <span>
-                        {item.assignedSales
-                          ? `${item.assignedSales.assignedZones.length} cụm · ${item.assignedSales.assignedZones.reduce((sum, zone) => sum + zone.customers, 0).toLocaleString('vi-VN')} KH · ${item.assignedSales.assignedZones.reduce((sum, zone) => sum + zone.orders, 0).toLocaleString('vi-VN')} đơn`
-                          : 'Chưa có dữ liệu nhân sự'}
-                      </span>
+                <div style={styles.detailGrid}>
+                  <div style={styles.detailCard}>
+                    <div style={styles.detailTitle}>Lịch sử cụm</div>
+                    <div style={styles.history}>
+                      {item.districtHistory.map((summary) => (
+                        <div key={`${item.districtId}-${summary.period}`} style={styles.historyRow}>
+                          <span style={styles.historyPeriod}>{summary.period}</span>
+                          <span style={styles.historyValue}>{summary.customers.toLocaleString('vi-VN')} KH</span>
+                          <span style={styles.historyValue}>{summary.orders.toLocaleString('vi-VN')} đơn</span>
+                          <span style={styles.historyRevenue}>
+                            {summary.revenue.toLocaleString('vi-VN')}
+                            {summary.updatedAt ? ` · ${new Date(summary.updatedAt).toLocaleDateString('vi-VN')}` : ''}
+                          </span>
+                        </div>
+                      ))}
                     </div>
+
+                    {item.latestHistory && (
+                      <div style={styles.deltaRow}>
+                        <span style={styles.deltaLabel}>Chênh lệch doanh thu so với kỳ trước</span>
+                        <strong style={{ color: revenueDelta >= 0 ? '#16a34a' : '#dc2626' }}>
+                          {revenueDelta >= 0 ? '+' : ''}
+                          {revenueDelta.toLocaleString('vi-VN')}
+                        </strong>
+                      </div>
+                    )}
                   </div>
 
-                  <div style={styles.history}>
-                    {item.districtHistory.map((summary) => (
-                      <div key={`${item.districtId}-${summary.period}`} style={styles.historyRow}>
-                        <span style={styles.historyPeriod}>{summary.period}</span>
-                        <span style={styles.historyValue}>{summary.customers.toLocaleString('vi-VN')} KH</span>
-                        <span style={styles.historyValue}>{summary.orders.toLocaleString('vi-VN')} đơn</span>
-                        <span style={styles.historyRevenue}>
-                          {summary.revenue.toLocaleString('vi-VN')}
-                          {summary.updatedAt ? ` · ${new Date(summary.updatedAt).toLocaleDateString('vi-VN')}` : ''}
+                  <div style={styles.detailCard}>
+                    <div style={styles.detailTitle}>Lịch sử nhân viên</div>
+                    <div style={styles.agentCard}>
+                      <div style={styles.agentTitle}>{assignedLabel}</div>
+                      <div style={styles.agentSummary}>
+                        <span>
+                          {item.assignedSales
+                            ? `${item.assignedSales.assignedZones.length} cụm đang quản lý`
+                            : 'Chưa có dữ liệu nhân sự'}
+                        </span>
+                        <span>
+                          {item.assignedSales
+                            ? `${assignedSalesCustomers.toLocaleString('vi-VN')} KH · ${assignedSalesOrders.toLocaleString('vi-VN')} đơn`
+                            : 'Chưa có lịch sử nhân viên'}
                         </span>
                       </div>
-                    ))}
-                  </div>
-
-                  {item.latestHistory && (
-                    <div style={styles.deltaRow}>
-                      <span style={styles.deltaLabel}>Chênh lệch doanh thu so với kỳ trước</span>
-                      <strong style={{ color: revenueDelta >= 0 ? '#16a34a' : '#dc2626' }}>
-                        {revenueDelta >= 0 ? '+' : ''}
-                        {revenueDelta.toLocaleString('vi-VN')}
-                      </strong>
                     </div>
-                  )}
-                </>
+                    {item.assignedSales && (
+                      <div style={styles.agentHistoryList}>
+                        {assignedSalesZones.slice(0, 4).map((zone, index) => (
+                          <div key={`${assignedLabel}-${index}`} style={styles.agentHistoryRow}>
+                            <span style={styles.agentHistoryZone}>Cụm {index + 1}</span>
+                            <span style={styles.agentHistoryValue}>{zone.customers.toLocaleString('vi-VN')} KH</span>
+                            <span style={styles.agentHistoryValue}>{zone.orders.toLocaleString('vi-VN')} đơn</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )
@@ -452,6 +476,26 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
     gap: 8,
   },
+  detailGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)',
+    gap: 10,
+    alignItems: 'start',
+  },
+  detailCard: {
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface-2)',
+    borderRadius: 14,
+    padding: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  detailTitle: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
   metricPill: {
     border: '1px solid var(--color-border)',
     background: 'var(--color-surface-2)',
@@ -489,6 +533,28 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     color: 'var(--color-text-2)',
     lineHeight: 1.45,
+  },
+  agentHistoryList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  agentHistoryRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 88px 88px',
+    gap: 8,
+    alignItems: 'center',
+    paddingTop: 6,
+    borderTop: '1px dashed var(--color-border)',
+    fontSize: 11,
+  },
+  agentHistoryZone: {
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  agentHistoryValue: {
+    color: 'var(--color-text-2)',
+    fontWeight: 700,
   },
   history: {
     display: 'flex',
