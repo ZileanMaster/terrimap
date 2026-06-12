@@ -7,6 +7,7 @@ import TerritoryMap from '../components/map/TerritoryMap.js'
 import ZoneInfoPanel from '../components/map/ZoneInfoPanel.js'
 import MapLegend from '../components/map/MapLegend.js'
 import MetricsInput from '../components/coordinator/MetricsInput.js'
+import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
 import { useAuthStore } from '../store/authStore.js'
 import { resolveUserKey } from '../utils/userIdentity.js'
@@ -153,6 +154,17 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
     alert(`✅ Chạy phân vùng với ${zonesWithMetrics.length} zones (chỉ số tháng ${currentPeriod}).\nTính năng chạy thuật toán sẽ được tích hợp sau.`)
   }, [currentPeriod])
 
+  const handleSnapshot = useCallback(async () => {
+    if (ctx.role !== 'coordinator') return
+    const label = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    try {
+      await ctx.facade.createVersion(label, displayZones, displayAssignments)
+    } catch (e) {
+      console.error('[CoordinatorPage] createVersion error:', e)
+      alert('Không thể lưu snapshot hiện tại.')
+    }
+  }, [ctx, displayZones, displayAssignments])
+
   const districtCount = districtIds.length
   const showPolygons = useUIStore((s) => s.showPolygons)
   const togglePolygons = useUIStore((s) => s.togglePolygons)
@@ -213,6 +225,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
           zones={displayZones}
           assignments={displayAssignments}
           agents={displayAgents}
+          onCreateSnapshot={handleSnapshot}
           mode={mode}
           workspaceExpanded={workspaceExpanded}
           onToggleWorkspace={() => setWorkspaceExpanded((value) => !value)}
@@ -243,6 +256,8 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
               assignments={assignments}
             />
           )}
+
+          {mode === 'assignments' && <SnapshotManager />}
 
           <div style={styles.mapHud}>
             <div style={styles.mapHudRow}>

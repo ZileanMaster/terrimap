@@ -12,6 +12,7 @@ import type {
   HistoryEntry,
   ViolationVM,
   PartitionResult,
+  Snapshot,
 } from './viewmodels.js';
 
 //  Nội bộ 
@@ -143,14 +144,23 @@ export class CoordinatorFacade {
 
   //  BỊ CHẶN - ném đồng bộ 
 
-  /** @throws {PermissionError} PERMISSION_DENIED */
-  createVersion(_label: string, ..._rest: unknown[]): never {
-    throw new PermissionError({
-      code: 'PERMISSION_DENIED',
-      role: this._role,
-      method: 'createVersion',
-      message: 'Coordinators cannot create versions. Use AdminFacade instead.',
-    });
+  /**
+   * Điều phối viên cũng được phép lưu snapshot/bản đồ đang chỉnh.
+   */
+  async createVersion(
+    label: string,
+    zones?: Zone[],
+    assignments?: Assignment[],
+  ): Promise<Snapshot> {
+    if (!zones || !assignments) {
+      throw new PermissionError({
+        code: 'PERMISSION_DENIED',
+        role: this._role,
+        method: 'createVersion',
+        message: 'Coordinators cannot create versions without snapshot data.',
+      });
+    }
+    return this.versionSvc.createSnapshot(label, zones, assignments);
   }
 
   //  BỊ CHẶN - ném bất đồng bộ (trả về Promise bị reject) 

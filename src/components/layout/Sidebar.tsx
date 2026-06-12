@@ -42,7 +42,7 @@ export default function Sidebar({ zones, assignments, onCreateSnapshot, islandZo
   return (
     <aside style={styles.sidebar} data-testid="sidebar">
       {role === 'admin'       && <AdminSidebar zones={zones} assignments={assignments} agents={agents} onCreateSnapshot={onCreateSnapshot} islandZoneIds={islandZoneIds} disconnectedDistrictIds={disconnectedDistrictIds} onFlyTo={onFlyTo} mode={mode} workspaceExpanded={workspaceExpanded} onToggleWorkspace={onToggleWorkspace} />}
-      {role === 'coordinator' && <CoordinatorSidebar zones={zones} assignments={assignments} agents={agents} mode={mode} workspaceExpanded={workspaceExpanded} onToggleWorkspace={onToggleWorkspace} />}
+      {role === 'coordinator' && <CoordinatorSidebar zones={zones} assignments={assignments} agents={agents} onCreateSnapshot={onCreateSnapshot} mode={mode} workspaceExpanded={workspaceExpanded} onToggleWorkspace={onToggleWorkspace} />}
       {role === 'sales'       && <SalesSidebar />}
     </aside>
   )
@@ -298,6 +298,7 @@ function CoordinatorSidebar({
   zones,
   assignments,
   agents: propAgents,
+  onCreateSnapshot,
   mode,
   workspaceExpanded = false,
   onToggleWorkspace,
@@ -305,6 +306,7 @@ function CoordinatorSidebar({
   zones: Zone[]
   assignments: Assignment[]
   agents?: SalesAgent[] | undefined
+  onCreateSnapshot?: (() => void) | undefined
   mode?: 'regions' | 'assignments'
   workspaceExpanded?: boolean
   onToggleWorkspace?: (() => void) | undefined
@@ -339,6 +341,11 @@ function CoordinatorSidebar({
       <RegionManager onFlyTo={undefined} assignments={assignments} />
       <div style={styles.divider} />
       <ClusterInsightsPanel zones={zones} assignments={assignments} agents={agents} compact={!workspaceExpanded} />
+      <div style={styles.divider} />
+      <button style={styles.primaryBtn} id="btn-create-snapshot" onClick={onCreateSnapshot} disabled={!onCreateSnapshot}>
+        Lưu snapshot
+      </button>
+
       <div style={styles.divider} />
       <h2 style={styles.sectionTitle}>{t('sidebar.team_overview')}</h2>
       <div style={styles.statsGrid}>
