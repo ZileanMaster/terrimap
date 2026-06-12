@@ -269,6 +269,9 @@ export default function ClusterInsightsPanel({
               .filter((agentId) => agentId && agentId !== currentAgentId),
           )
           const availableAgents = regionAgents.filter((agent) => !usedElsewhere.has(agent.id))
+          const selectableAgents = currentAgent
+            ? [currentAgent, ...availableAgents.filter((agent) => agent.id !== currentAgent.id)]
+            : availableAgents
 
           return (
             <div key={item.districtId} style={styles.card}>
@@ -304,6 +307,27 @@ export default function ClusterInsightsPanel({
                 </div>
               </div>
 
+              <div style={styles.assignRow}>
+                <div style={styles.assignLabelCol}>
+                  <span style={styles.assignLabel}>Phân công nhân viên</span>
+                  <span style={styles.assignMeta}>
+                    {currentAgent ? currentAgent.name : 'Chưa chọn'}
+                  </span>
+                </div>
+                <select
+                  value={currentAgent ? currentAgent.id : ''}
+                  onChange={(e) => void handleAssignAgent(item.districtId, e.target.value)}
+                  style={styles.assignSelect}
+                >
+                  <option value="">-- Chọn nhân viên --</option>
+                  {selectableAgents.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {!compact && (
                 <div style={styles.detailGrid}>
                   <div style={styles.detailCard}>
@@ -335,26 +359,6 @@ export default function ClusterInsightsPanel({
 
                   <div style={styles.detailCard}>
                     <div style={styles.detailTitle}>Lịch sử nhân viên</div>
-                    <div style={styles.assignRow}>
-                      <div style={styles.assignLabelCol}>
-                        <span style={styles.assignLabel}>Phân công nhân viên</span>
-                        <span style={styles.assignMeta}>
-                          {currentAgent ? currentAgent.name : 'Chưa chọn'}
-                        </span>
-                      </div>
-                      <select
-                        value={availableAgents.some((agent) => agent.id === currentAgentId) ? currentAgentId : ''}
-                        onChange={(e) => void handleAssignAgent(item.districtId, e.target.value)}
-                        style={styles.assignSelect}
-                      >
-                        <option value="">-- Chọn nhân viên --</option>
-                        {availableAgents.map((agent) => (
-                          <option key={agent.id} value={agent.id}>
-                            {agent.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                     <div style={styles.agentCard}>
                       <div style={styles.agentTitle}>{assignedLabel}</div>
                       <div style={styles.agentSummary}>
