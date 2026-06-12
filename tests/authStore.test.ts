@@ -316,6 +316,33 @@ describe('authStore', () => {
       expect(useAuthStore.getState().membership?.id).toBe('owner')
     })
 
+    it('[AUTH-9b] selectProject with blocked membership -> access denied', async () => {
+      useAuthStore.setState({
+        user: { id: 'u1' } as any,
+        projects: [{ id: 'p1', owner_id: 'u2', name: 'Test', description: '', created_at: '2026-01-01' }],
+      })
+
+      const blockedChain = mockFromChain({
+        id: 'm1',
+        project_id: 'p1',
+        user_id: 'u1',
+        role: 'sales',
+        region_id: null,
+        joined_at: '2026-01-01',
+        status: 'blocked',
+      })
+
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'project_members') return blockedChain
+        return mockFromChain(null)
+      })
+
+      await useAuthStore.getState().selectProject('p1')
+
+      expect(useAuthStore.getState().currentProjectId).toBeNull()
+      expect(useAuthStore.getState().authError).toContain('hạn chế')
+    })
+
     it('[AUTH-10] createProject is temporarily disabled', async () => {
       useAuthStore.setState({ user: { id: 'u1' } as any })
       const projectId = await useAuthStore.getState().createProject('New Project')

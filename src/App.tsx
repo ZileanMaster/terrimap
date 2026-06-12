@@ -55,6 +55,27 @@ function PageLoader() {
   )
 }
 
+function ProjectAccessGate({ hasProjects, onSignOut }: { hasProjects: boolean; onSignOut: () => Promise<void> | void }) {
+  return (
+    <div style={styles.gate}>
+      <div style={styles.gateCard}>
+        <div style={styles.gateIcon}>🔒</div>
+        <h2 style={styles.gateTitle}>
+          {hasProjects ? 'Không thể mở dự án hiện tại' : 'Chưa có dự án khả dụng'}
+        </h2>
+        <p style={styles.gateText}>
+          {hasProjects
+            ? 'Tài khoản của bạn đang bị hạn chế hoặc không còn quyền vào dự án đang được chọn. Vui lòng liên hệ quản trị viên để được gỡ hạn chế.'
+            : 'Tài khoản này chưa được gán vào dự án nào, hoặc đang bị hạn chế khỏi toàn bộ dự án khả dụng.'}
+        </p>
+        <button type="button" onClick={onSignOut} style={styles.gateButton}>
+          Đăng xuất
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   // Lấy state
   const authUser       = useAuthStore((s) => s.user)
@@ -63,6 +84,7 @@ export default function App() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const membership     = useAuthStore((s) => s.membership)
   const projects       = useAuthStore((s) => s.projects)
+  const signOut        = useAuthStore((s) => s.signOut)
   const initAuth       = useAuthStore((s) => s.initialize)
 
   // Lấy vai trò đang dùng
@@ -138,7 +160,7 @@ export default function App() {
 
   // Tải dữ liệu khi đã có project
   if (!currentProjectId) {
-    return <PageLoader />
+    return <ProjectAccessGate hasProjects={projects.length > 0} onSignOut={signOut} />
   }
 
 
@@ -259,5 +281,53 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     background: 'var(--color-bg, #0f0c29)',
+  },
+  gate: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    background: 'linear-gradient(180deg, rgba(99,102,241,0.06), rgba(255,255,255,0))',
+  },
+  gateCard: {
+    width: '100%',
+    maxWidth: 520,
+    padding: '28px 24px',
+    borderRadius: 20,
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    boxShadow: '0 18px 40px rgba(15,23,42,0.08)',
+    textAlign: 'center',
+  },
+  gateIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    margin: '0 auto 16px',
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: 24,
+    background: 'rgba(99,102,241,0.12)',
+  },
+  gateTitle: {
+    margin: '0 0 10px',
+    fontSize: 22,
+    lineHeight: 1.2,
+    color: 'var(--color-text)',
+  },
+  gateText: {
+    margin: '0 0 18px',
+    color: 'var(--color-text-secondary)',
+    lineHeight: 1.6,
+  },
+  gateButton: {
+    padding: '10px 18px',
+    borderRadius: 12,
+    border: 'none',
+    background: 'var(--color-accent)',
+    color: '#fff',
+    fontWeight: 700,
+    cursor: 'pointer',
   },
 }

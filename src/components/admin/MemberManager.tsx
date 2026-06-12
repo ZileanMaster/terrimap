@@ -24,6 +24,8 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   const inviteMember  = useAuthStore((s) => s.inviteMember)
   const updateRole    = useAuthStore((s) => s.updateMemberRole)
   const removeMember  = useAuthStore((s) => s.removeMember)
+  const blockMember   = useAuthStore((s) => s.blockMember)
+  const unblockMember = useAuthStore((s) => s.unblockMember)
   const loadMembers   = useAuthStore((s) => s.loadMembers)
   const clearError    = useAuthStore((s) => s.clearError)
   const authError     = useAuthStore((s) => s.authError)
@@ -51,7 +53,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
     const doLoad = async (): Promise<MemberWithProfile[]> => {
       // Lấy danh sách thành viên
-      const rawMembers = await loadMembers()
+      const rawMembers = await loadMembers(true)
       if (!rawMembers || rawMembers.length === 0) return []
 
       // Lấy hồ sơ người dùng
@@ -94,7 +96,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   }, [open, reload, clearError])
 
   // Đếm số admin
-  const adminCount = members.filter(m => m.role === 'admin').length
+  const adminCount = members.filter(m => m.role === 'admin' && m.status !== 'blocked').length
 
   // Xác định vai trò có thể phân quyền
   const assignableRoles: string[] = myRole === 'admin'
@@ -131,6 +133,25 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       setSubmitting(false)
     }
   }, [inviteEmail, inviteRole, inviteMember, clearError, reload])
+
+  const handleToggleRestriction = useCallback(async (member: MemberWithProfile) => {
+    if (member.status === 'blocked') {
+      if (!window.confirm(`Bỏ chặn ${member.profile?.full_name ?? 'thành viên'}?`)) return
+      await unblockMember(member.id)
+      reload()
+      return
+    }
+
+    if (member.role === 'admin' && adminCount <= 1) {
+      alert('Phải có ít nhất 1 quản trị viên trong dự án')
+      return
+    }
+
+    const reason = window.prompt(`Lý do hạn chế ${member.profile?.full_name ?? 'thành viên'} (không bắt buộc):`, '') ?? ''
+    if (!window.confirm(`Hạn chế ${member.profile?.full_name ?? 'thành viên'} khỏi dự án?`)) return
+    await blockMember(member.id, reason)
+    reload()
+  }, [adminCount, blockMember, unblockMember, reload])
 
   const handleRoleChange = useCallback(async (member: MemberWithProfile, newRole: string) => {
     if (member.user_id === user?.id) {
@@ -258,7 +279,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
               const cfg = ROLE_CONFIG[member.role] ?? ROLE_CONFIG.sales!
               const isSelf = member.user_id === user?.id
               const memberLevel = cfg.level
-              const canManage = !isSelf && memberLevel < myLevel
+              const canManage = !isSelf && memberLevel < myLevel && member.status !== 'blocked'
 
               return (
                 <div
@@ -286,7 +307,18 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
                   {/* Badge vai trò + thao tác */}
                   <div style={styles.memberActions}>
-                    {canManage ? (
+                    {member.status === 'blocked' ? (
+                      <span
+                        style={{
+                          ...styles.roleBadge,
+                          background: 'rgba(148,163,184,0.18)',
+                          color: '#64748b',
+                          borderColor: 'rgba(148,163,184,0.35)',
+                        }}
+                      >
+                        🚫 Hạn chế
+                      </span>
+                    ) : canManage ? (
                       <select
                         value={member.role}
                         onChange={(e) => handleRoleChange(member, e.target.value)}
@@ -318,6 +350,26 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
                       >
                         {cfg.icon} {cfg.label}
                       </span>
+                    )}
+
+                    {canManage && (
+                      <button
+                        onClick={() => handleToggleRestriction(member)}
+                        style={styles.removeBtn}
+                        title="Hạn chế khỏi dự án"
+                      >
+                        🚫
+                      </button>
+                    )}
+
+                    {member.status === 'blocked' && (
+                      <button
+                        onClick={() => handleToggleRestriction(member)}
+                        style={styles.removeBtn}
+                        title="Bỏ hạn chế"
+                      >
+                        ↩️
+                      </button>
                     )}
 
                     {canManage && (

@@ -29,6 +29,11 @@ export interface ProjectMember {
   role: 'admin' | 'coordinator' | 'sales'
   region_id: string | null
   joined_at: string
+  status?: 'active' | 'blocked' | string | null
+  blocked_reason?: string | null
+  blocked_at?: string | null
+  blocked_by?: string | null
+  unblocked_at?: string | null
 }
 
 interface AuthStore {
@@ -62,7 +67,9 @@ interface AuthStore {
   inviteMember: (email: string, role: string, regionId?: string) => Promise<boolean>
   updateMemberRole: (memberId: string, newRole: string) => Promise<boolean>
   removeMember: (memberId: string) => Promise<boolean>
-  loadMembers: () => Promise<ProjectMember[]>
+  blockMember: (memberId: string, reason?: string) => Promise<boolean>
+  unblockMember: (memberId: string) => Promise<boolean>
+  loadMembers: (includeBlocked?: boolean) => Promise<ProjectMember[]>
   updateProfile: (data: string | { full_name: string; date_of_birth?: string | null; phone?: string | null }) => Promise<boolean>
 }
 
@@ -110,11 +117,50 @@ async function resolveDefaultProject(): Promise<Project | null> {
 }
 
 async function pickFallbackProject(projects: Project[]): Promise<string | null> {
-  const preferred = pickInitialProject(projects)
-  if (preferred) return preferred
+  return pickInitialProject(projects)
+}
 
-  const defaultProject = await resolveDefaultProject()
-  return defaultProject?.id ?? null
+function isBlockedMember(member?: Pick<ProjectMember, 'status'> | null): boolean {
+  return member?.status === 'blocked'
+}
+
+async function syncSalesAgentMembership(member: ProjectMember, projectId: string, active: boolean): Promise<void> {
+  if (!supabase || member.role !== 'sales') return
+
+  if (!active) {
+    await supabase.from('assignments').delete().eq('sales_agent_id', member.user_id)
+    await supabase.from('sales_agents').delete().eq('id', member.user_id)
+    return
+  }
+
+  const [{ data: profile }, { data: region }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('id', member.user_id)
+      .maybeSingle(),
+    member.region_id
+      ? supabase
+          .from('regions')
+          .select('id, name')
+          .eq('id', member.region_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ])
+
+  const activeRegionName = (region as any)?.name ?? ''
+  const { error } = await supabase.from('sales_agents').upsert({
+    id: member.user_id,
+    name: (profile as any)?.full_name || (profile as any)?.email?.split('@')[0] || 'Sales Agent',
+    active_region: activeRegionName,
+    capacity: 500,
+    region_id: member.region_id ?? null,
+    project_id: projectId,
+  })
+
+  if (error) {
+    console.warn('[AuthStore] syncSalesAgentMembership warning:', error)
+  }
 }
 
 async function ensureDefaultProjectMembership(userId: string): Promise<void> {
@@ -125,11 +171,29 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
 
   const { data: existing } = await supabase
     .from('project_members')
-    .select('id')
+    .select('*')
     .eq('project_id', defaultProject.id)
     .eq('user_id', userId)
     .maybeSingle()
 
+  if (isBlockedMember(existing as ProjectMember)) {
+    if (defaultProject.owner_id !== userId) return
+
+    const { error: restoreError } = await supabase
+      .from('project_members')
+      .upsert({
+        project_id: defaultProject.id,
+        user_id: userId,
+        role: 'admin',
+        region_id: null,
+        status: 'active',
+      }, { onConflict: 'project_id,user_id' })
+
+    if (restoreError) {
+      console.warn('[AuthStore] ensureDefaultProjectMembership restore warning:', restoreError)
+    }
+    return
+  }
   if (existing) return
 
   const { error } = await supabase
@@ -381,10 +445,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const { data: memberData } = await supabase
       .from('project_members')
-      .select('project_id')
+      .select('*')
       .eq('user_id', user.id)
 
-    const memberProjectIds = (memberData ?? []).map(m => m.project_id)
+    const memberProjectIds = (memberData ?? [])
+      .filter((member: any) => !isBlockedMember(member))
+      .map((m: any) => m.project_id)
 
     const { data: ownedProjects } = await supabase
       .from('projects')
@@ -416,23 +482,36 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return
 
-    useDataStore.getState().setCurrentRegion(null)
-    set({ currentProjectId: projectId, membership: null })
     const project = get().projects.find((p) => p.id === projectId)
-    if (project?.owner_id === user.id) {
-      useUIStore.getState().setRole('admin')
-    }
-    localStorage.setItem('terrimap_project', projectId)
-
-    // Tải membership (vai trò)
     const { data } = await supabase
       .from('project_members')
       .select('*')
       .eq('project_id', projectId)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (data) {
+    const isOwner = project?.owner_id === user.id
+
+    if (isBlockedMember(data as ProjectMember) && !isOwner) {
+      set({
+        authError: 'Tài khoản đang bị hạn chế trong dự án này',
+        membership: null,
+      })
+      if (get().currentProjectId === projectId) {
+        set({ currentProjectId: null })
+        localStorage.removeItem('terrimap_project')
+      }
+      return
+    }
+
+    useDataStore.getState().setCurrentRegion(null)
+    set({ currentProjectId: projectId, membership: null, authError: null })
+    if (isOwner) {
+      useUIStore.getState().setRole('admin')
+    }
+    localStorage.setItem('terrimap_project', projectId)
+
+    if (data && !(isOwner && isBlockedMember(data as ProjectMember))) {
       set({ membership: data as ProjectMember })
     } else {
 
@@ -590,12 +669,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         const { data: existing } = await client
           .from('project_members')
-          .select('id')
+          .select('*')
           .eq('project_id', projectId)
           .eq('user_id', profileId)
-          .single()
+          .maybeSingle()
 
         if (existing) {
+          if (isBlockedMember(existing as ProjectMember)) {
+            set({ authError: 'Người dùng đang bị hạn chế trong dự án này. Hãy bỏ chặn trước khi mời lại.' })
+            return false
+          }
           set({ authError: 'Người dùng đã là thành viên của dự án' })
           return false
         }
@@ -607,6 +690,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             user_id: profileId,
             role,
             region_id: regionId || null,
+            status: 'active',
           })
 
         if (error) {
@@ -636,18 +720,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const { data: member } = await supabase
       .from('project_members')
-      .select('role')
+      .select('*')
       .eq('id', memberId)
       .single()
 
-    if (member?.role === 'admin' && newRole !== 'admin') {
-      const { count } = await supabase
+    if ((member as any)?.status === 'blocked') {
+      set({ authError: 'Vui lòng bỏ chặn thành viên trước khi đổi vai trò' })
+      return false
+    }
+
+    if ((member as any)?.role === 'admin' && newRole !== 'admin') {
+      const { data: adminMembers } = await supabase
         .from('project_members')
-        .select('id', { count: 'exact', head: true })
+        .select('*')
         .eq('project_id', projectId)
         .eq('role', 'admin')
 
-      if ((count ?? 0) <= 1) {
+      const activeAdminCount = (adminMembers ?? []).filter((item: any) => !isBlockedMember(item)).length
+      if (activeAdminCount <= 1) {
         set({ authError: 'Phải có ít nhất 1 quản trị viên trong dự án' })
         return false
       }
@@ -674,18 +764,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const { data: member } = await supabase
       .from('project_members')
-      .select('role')
+      .select('*')
       .eq('id', memberId)
       .single()
 
-    if (member?.role === 'admin') {
-      const { count } = await supabase
+    if ((member as any)?.role === 'admin') {
+      const { data: adminMembers } = await supabase
         .from('project_members')
-        .select('id', { count: 'exact', head: true })
+        .select('*')
         .eq('project_id', projectId)
         .eq('role', 'admin')
 
-      if ((count ?? 0) <= 1) {
+      const activeAdminCount = (adminMembers ?? []).filter((item: any) => !isBlockedMember(item)).length
+      if (activeAdminCount <= 1) {
         set({ authError: 'Không thể xóa quản trị viên duy nhất' })
         return false
       }
@@ -703,8 +794,103 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 
+  blockMember: async (memberId, reason = '') => {
+    if (!supabase) return false
+    const projectId = get().currentProjectId
+    const actor = get().user
+    if (!projectId || !actor) return false
+
+    const { data: member } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('id', memberId)
+      .eq('project_id', projectId)
+      .maybeSingle()
+
+    if (!member) {
+      set({ authError: 'Không tìm thấy thành viên cần hạn chế' })
+      return false
+    }
+
+    if (isBlockedMember(member as ProjectMember)) {
+      set({ authError: 'Thành viên này đã bị hạn chế' })
+      return false
+    }
+
+    if ((member as any)?.role === 'admin') {
+      const { data: adminMembers } = await supabase
+        .from('project_members')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('role', 'admin')
+
+      const activeAdminCount = (adminMembers ?? []).filter((item: any) => !isBlockedMember(item)).length
+      if (activeAdminCount <= 1) {
+        set({ authError: 'Phải có ít nhất 1 quản trị viên trong dự án' })
+        return false
+      }
+    }
+
+    const { error } = await supabase
+      .from('project_members')
+      .update({
+        status: 'blocked',
+        blocked_reason: reason.trim() || null,
+        blocked_at: new Date().toISOString(),
+        blocked_by: actor.id,
+        unblocked_at: null,
+      })
+      .eq('id', memberId)
+
+    if (error) {
+      set({ authError: error.message })
+      return false
+    }
+
+    await syncSalesAgentMembership(member as ProjectMember, projectId, false)
+    return true
+  },
+
+  unblockMember: async (memberId) => {
+    if (!supabase) return false
+    const projectId = get().currentProjectId
+    if (!projectId) return false
+
+    const { data: member } = await supabase
+      .from('project_members')
+      .select('*')
+      .eq('id', memberId)
+      .eq('project_id', projectId)
+      .maybeSingle()
+
+    if (!member) {
+      set({ authError: 'Không tìm thấy thành viên cần bỏ chặn' })
+      return false
+    }
+
+    if (!isBlockedMember(member as ProjectMember)) {
+      return true
+    }
+
+    const { error } = await supabase
+      .from('project_members')
+      .update({
+        status: 'active',
+        unblocked_at: new Date().toISOString(),
+      })
+      .eq('id', memberId)
+
+    if (error) {
+      set({ authError: error.message })
+      return false
+    }
+
+    await syncSalesAgentMembership(member as ProjectMember, projectId, true)
+    return true
+  },
+
   //  Tải thành viên 
-  loadMembers: async () => {
+  loadMembers: async (includeBlocked = false) => {
     if (!supabase) return []
     const client = supabase
     const projectId = get().currentProjectId
@@ -722,7 +908,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return []
       }
 
-      return (data ?? []) as ProjectMember[]
+      const rows = (data ?? []) as ProjectMember[]
+      return includeBlocked
+        ? rows
+        : rows.filter((member) => !isBlockedMember(member))
     }
 
     const loadProjectById = async (): Promise<Project | null> => {
@@ -755,6 +944,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           role: 'admin' as const,
           region_id: null,
           joined_at: project.created_at ?? new Date().toISOString(),
+          status: 'active' as const,
         }
 
         const { error: repairError } = await client

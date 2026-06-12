@@ -291,6 +291,8 @@ export function OverviewView() {
 export function UsersView() {
   const currentProjectId = useAuthStore((s) => s.currentProjectId);
   const loadMembers = useAuthStore((s) => s.loadMembers);
+  const blockMember = useAuthStore((s) => s.blockMember);
+  const unblockMember = useAuthStore((s) => s.unblockMember);
   const regions = useDataStore((s) => s.regions);
 
   const [members, setMembers] = useState<any[]>([]);
@@ -337,7 +339,7 @@ export function UsersView() {
     setLoading(true);
     try {
       const rawMembers = await runWithTimeout(
-        Promise.resolve(loadMembers()),
+        Promise.resolve(loadMembers(true)),
         6000,
         [] as any,
       );
@@ -383,12 +385,20 @@ export function UsersView() {
   }, [currentProjectId]);
 
   const handleStartEdit = (member: any) => {
+    if (member.status === 'blocked') {
+      alert('Vui lòng bỏ chặn thành viên trước khi chỉnh sửa.')
+      return;
+    }
     setEditingId(member.id);
     setEditRole(member.role);
     setEditRegionId(member.region_id || '');
   };
 
   const handleSaveEdit = async (member: any) => {
+    if (member.status === 'blocked') {
+      alert('Vui lòng bỏ chặn thành viên trước khi lưu chỉnh sửa.')
+      return;
+    }
     if (!supabase || !currentProjectId) {
       // Offline edit fallback
       const updated = members.map((m) => {
@@ -455,7 +465,7 @@ export function UsersView() {
   };
 
   const handleDeleteMember = async (member: any) => {
-    if (member.role === 'admin' && members.filter((m) => m.role === 'admin').length <= 1) {
+    if (member.role === 'admin' && members.filter((m) => m.role === 'admin' && m.status !== 'blocked').length <= 1) {
       alert('⚠️ Không thể xóa Quản trị viên duy nhất của dự án.');
       return;
     }
@@ -494,6 +504,25 @@ export function UsersView() {
     }
   };
 
+  const handleToggleRestriction = async (member: any) => {
+    if (member.status === 'blocked') {
+      if (!window.confirm(`Bỏ chặn "${member.profile?.full_name || member.profile?.email}"?`)) return;
+      const ok = await unblockMember(member.id);
+      if (ok) await reloadMembers();
+      return;
+    }
+
+    if (member.role === 'admin' && members.filter((m) => m.role === 'admin' && m.status !== 'blocked').length <= 1) {
+      alert('⚠️ Không thể hạn chế quản trị viên duy nhất của dự án.');
+      return;
+    }
+
+    const reason = window.prompt(`Lý do hạn chế "${member.profile?.full_name || member.profile?.email}" (không bắt buộc):`, '') ?? '';
+    if (!window.confirm(`Hạn chế "${member.profile?.full_name || member.profile?.email}" khỏi dự án này?`)) return;
+    const ok = await blockMember(member.id, reason);
+    if (ok) await reloadMembers();
+  };
+
   const ROLE_LABELS: Record<string, string> = {
     admin: 'Quản trị viên',
     coordinator: 'Điều phối viên',
@@ -521,6 +550,7 @@ export function UsersView() {
             <tbody>
               {members.map((m) => {
                 const isEditing = editingId === m.id;
+                const isBlocked = m.status === 'blocked';
                 const regionName = regions.find((r) => r.id === m.region_id)?.name || 'Chưa gán';
 
                 return (
@@ -534,24 +564,36 @@ export function UsersView() {
                       <td style={styles.td}>
                         {isEditing ? (
                           <select
-                          value={editRole}
-                          onChange={(e) => setEditRole(e.target.value)}
-                          style={styles.inlineSelect}
-                        >
-                          <option value="admin">Quản trị viên</option>
-                          <option value="coordinator">Điều phối viên</option>
-                          <option value="sales">Nhân sự</option>
-                        </select>
-                      ) : (
-                        <span style={{
-                          ...styles.roleBadge,
-                          background: m.role === 'admin' ? 'rgba(99,102,241,0.15)' : m.role === 'coordinator' ? 'rgba(52,211,153,0.15)' : 'rgba(251,191,36,0.15)',
-                          color: m.role === 'admin' ? '#818cf8' : m.role === 'coordinator' ? '#34d399' : '#fbbf24',
-                        }}>
-                          {ROLE_LABELS[m.role] || m.role}
-                        </span>
-                      )}
-                    </td>
+                            value={editRole}
+                            onChange={(e) => setEditRole(e.target.value)}
+                            style={styles.inlineSelect}
+                          >
+                            <option value="admin">Quản trị viên</option>
+                            <option value="coordinator">Điều phối viên</option>
+                            <option value="sales">Nhân sự</option>
+                          </select>
+                        ) : (
+                          <span style={{
+                            ...styles.roleBadge,
+                            background: isBlocked
+                              ? 'rgba(148,163,184,0.18)'
+                              : m.role === 'admin'
+                                ? 'rgba(99,102,241,0.15)'
+                                : m.role === 'coordinator'
+                                  ? 'rgba(52,211,153,0.15)'
+                                  : 'rgba(251,191,36,0.15)',
+                            color: isBlocked
+                              ? '#64748b'
+                              : m.role === 'admin'
+                                ? '#818cf8'
+                                : m.role === 'coordinator'
+                                  ? '#34d399'
+                                  : '#fbbf24',
+                          }}>
+                            {isBlocked ? '🚫 Hạn chế' : (ROLE_LABELS[m.role] || m.role)}
+                          </span>
+                        )}
+                      </td>
                     <td style={styles.td}>
                       {isEditing ? (
                         (editRole === 'coordinator' || editRole === 'sales') ? (
@@ -570,9 +612,9 @@ export function UsersView() {
                         m.role === 'admin' ? 'Tất cả' : regionName
                       )}
                     </td>
-                      <td style={{ ...styles.td, textAlign: 'right', paddingRight: '20px' }}>
-                        {isEditing ? (
-                          <div style={styles.btnGroup}>
+                    <td style={{ ...styles.td, textAlign: 'right', paddingRight: '20px' }}>
+                      {isEditing ? (
+                        <div style={styles.btnGroup}>
                           <button onClick={() => handleSaveEdit(m)} style={styles.inlineSaveBtn}>
                             {'Lưu'}
                           </button>
@@ -582,8 +624,13 @@ export function UsersView() {
                         </div>
                       ) : (
                         <div style={styles.btnGroup}>
-                          <button onClick={() => handleStartEdit(m)} style={styles.inlineEditBtn}>
-                            {'Sửa'}
+                          {!isBlocked && (
+                            <button onClick={() => handleStartEdit(m)} style={styles.inlineEditBtn}>
+                              {'Sửa'}
+                            </button>
+                          )}
+                          <button onClick={() => handleToggleRestriction(m)} style={isBlocked ? styles.inlineRecoverBtn : styles.inlineBlockBtn}>
+                            {isBlocked ? 'Bỏ chặn' : 'Hạn chế'}
                           </button>
                           <button onClick={() => handleDeleteMember(m)} style={styles.inlineDeleteBtn}>
                             {'Xoá'}
@@ -1314,6 +1361,26 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
     border: '1px solid var(--color-border)',
     color: 'var(--color-accent)',
+    borderRadius: '4px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  inlineBlockBtn: {
+    padding: '4px 10px',
+    backgroundColor: 'transparent',
+    border: '1px solid rgba(245, 158, 11, 0.4)',
+    color: '#d97706',
+    borderRadius: '4px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 600,
+  },
+  inlineRecoverBtn: {
+    padding: '4px 10px',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    border: '1px solid rgba(16, 185, 129, 0.35)',
+    color: '#10b981',
     borderRadius: '4px',
     fontSize: '12px',
     cursor: 'pointer',
