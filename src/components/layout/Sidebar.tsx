@@ -17,8 +17,6 @@ import AgentManager from '../agent/AgentManager.js'
 import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
 import ClusterInsightsPanel from './ClusterInsightsPanel.js'
-import { AssignmentWorkspacePanel } from './WorkspacePanels.js'
-import { getActiveDistrictIds } from '../../utils/districtAssignments.js'
 import type { Assignment, HistoryEntry, SalesAgent, Zone } from '../../../facades/viewmodels.js'
 
 interface SidebarProps {
@@ -270,7 +268,6 @@ function AdminSidebar({
 
   if (ctx.role !== 'admin') return null
   const mgmt = ctx.facade.getSalesManagement(zones, assignments, agents)
-  const districtCount = getActiveDistrictIds(assignments, zones).length
 
   return (
     <div style={styles.content}>
@@ -286,8 +283,6 @@ function AdminSidebar({
         </div>
       )}
       <RegionManager onFlyTo={onFlyTo} assignments={assignments} />
-      <div style={styles.divider} />
-      <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
       <div style={styles.divider} />
       <ClusterInsightsPanel zones={zones} assignments={assignments} agents={agents} compact={!workspaceExpanded} />
       <div style={styles.divider} />
@@ -331,7 +326,6 @@ function CoordinatorSidebar({
 
   if (ctx.role !== 'coordinator') return null
   const overview = ctx.facade.getTeamOverview(zones, assignments, agents)
-  const districtCount = getActiveDistrictIds(assignments, zones).length
 
   return (
     <div style={styles.content} data-testid="team-overview">
@@ -347,8 +341,6 @@ function CoordinatorSidebar({
         </div>
       )}
       <RegionManager onFlyTo={undefined} assignments={assignments} />
-      <div style={styles.divider} />
-      <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
       <div style={styles.divider} />
       <ClusterInsightsPanel zones={zones} assignments={assignments} agents={agents} compact={!workspaceExpanded} />
       <div style={styles.divider} />

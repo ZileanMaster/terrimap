@@ -295,10 +295,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   leftColOverlay: {
     position:    'absolute',
-    top:         0,
-    left:        0,
-    bottom:      0,
-    width:       'min(460px, 92vw)',
+    inset:       0,
+    width:       '100vw',
     zIndex:      1300,
     boxShadow:   '0 24px 64px rgba(15,23,42,.22)',
     borderRight: '1px solid var(--color-border)',
