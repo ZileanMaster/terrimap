@@ -8,9 +8,9 @@
  * Hoạt động cả ở chế độ online (Supabase) và offline (localStorage).
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
-import { saveSnapshot, loadSnapshots, deleteSnapshot, readSnapshotCache } from '../../services/db.js'
+import { saveSnapshot, loadSnapshots, deleteSnapshot } from '../../services/db.js'
 import { supabase, isOnline } from '../../lib/supabase.js'
 import SnapshotCompare from './SnapshotCompare.js'
 
@@ -29,6 +29,9 @@ export default function SnapshotManager() {
   const [saving, setSaving]         = useState(false)
   const [hoveredId, setHoveredId]   = useState<string | null>(null)
   const [periodFilter, setPeriodFilter] = useState<string>('all')
+  const [activeSnapshot, setActiveSnapshot] = useState<SnapshotItem | null>(null)
+  const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null)
+  const autoOpenedProjectIdRef = useRef<string | null>(null)
 
 
   const [compareMode, setCompareMode]             = useState(false)
@@ -41,12 +44,16 @@ export default function SnapshotManager() {
   const setZones       = useDataStore((s) => s.setZones)
   const setAssignments = useDataStore((s) => s.setAssignments)
 
-  const refreshSnapshots = useCallback(async () => {
-    const projectSnapshots = readSnapshotCache(currentProjectId ?? undefined) as SnapshotItem[]
-    setSnapshots(projectSnapshots)
+  const restoreSnapshot = useCallback((snap: SnapshotItem) => {
+    setZones(snap.data.zones as any)
+    setAssignments(snap.data.assignments as any)
+    setActiveSnapshot(snap)
+  }, [setZones, setAssignments])
 
+  const refreshSnapshots = useCallback(async () => {
     const data = await loadSnapshots(currentProjectId ?? undefined)
     setSnapshots(data as SnapshotItem[])
+    setLoadedProjectId(currentProjectId ?? null)
   }, [currentProjectId])
 
 
@@ -55,6 +62,19 @@ export default function SnapshotManager() {
       console.error('[SnapshotManager] load error:', error)
     })
   }, [refreshSnapshots, currentProjectId])
+
+  useEffect(() => {
+    if (!currentProjectId || loadedProjectId !== currentProjectId) return
+    if (snapshots.length === 0) {
+      setActiveSnapshot(null)
+      return
+    }
+
+    const latest = snapshots[0]!
+    if (autoOpenedProjectIdRef.current === currentProjectId) return
+    autoOpenedProjectIdRef.current = currentProjectId
+    restoreSnapshot(latest)
+  }, [currentProjectId, loadedProjectId, restoreSnapshot, snapshots])
 
 
 
@@ -172,10 +192,9 @@ export default function SnapshotManager() {
   const handleRestore = useCallback((snap: SnapshotItem) => {
     if (compareMode) return
     if (!window.confirm(`Khôi phục map "${snap.label}"?\nDữ liệu hiện tại sẽ bị thay thế.`)) return
-    setZones(snap.data.zones as any)
-    setAssignments(snap.data.assignments as any)
+    restoreSnapshot(snap)
     setIsOpen(false)
-  }, [setZones, setAssignments, compareMode])
+  }, [compareMode, restoreSnapshot])
 
 
   const toggleCompareSelect = useCallback((snap: SnapshotItem) => {
@@ -222,6 +241,18 @@ export default function SnapshotManager() {
       data-snapshot-manager
       style={styles.container}
     >
+      {activeSnapshot && (
+        <div style={styles.activeBanner}>
+          <span style={styles.activeBannerLabel}>Đang mở:</span>
+          <strong style={styles.activeBannerValue}>{activeSnapshot.label}</strong>
+          {activeSnapshot.period && (
+            <span style={styles.activeBannerPeriod}>
+              T{activeSnapshot.period.split('-')[1]}/{activeSnapshot.period.split('-')[0]}
+            </span>
+          )}
+        </div>
+      )}
+
       <button
         id="snapshot-save-btn"
         onClick={handleSave}
@@ -392,6 +423,38 @@ const styles: Record<string, React.CSSProperties> = {
     display:   'flex',
     gap:       8,
     alignItems: 'flex-start',
+    flexDirection: 'column',
+  },
+  activeBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '7px 11px',
+    borderRadius: 10,
+    border: '1px solid rgba(37,99,235,0.20)',
+    background: 'color-mix(in srgb, var(--color-surface) 92%, white)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+    fontSize: 12,
+    color: 'var(--color-text)',
+    maxWidth: 320,
+  },
+  activeBannerLabel: {
+    color: 'var(--color-text-3)',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
+  },
+  activeBannerValue: {
+    fontWeight: 900,
+    color: '#1d4ed8',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  activeBannerPeriod: {
+    marginLeft: 'auto',
+    color: 'var(--color-text-3)',
+    fontWeight: 700,
+    whiteSpace: 'nowrap',
   },
   btn: {
     display:      'flex',
