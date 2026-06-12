@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
@@ -72,6 +72,7 @@ export default function ClusterInsightsPanel({
   const ctx = useFacade()
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
+  const persistAssignments = useDataStore((s) => s.persistAssignments)
   const [loading, setLoading] = useState(false)
   const [periodReports, setPeriodReports] = useState<Record<string, DistrictReport[]>>({})
 
@@ -115,6 +116,27 @@ export default function ClusterInsightsPanel({
     () => new Map<string, TeamOverviewSales>(overview.sales.map((sales) => [sales.salesId, sales])),
     [overview.sales],
   )
+
+  const regionAgents = useMemo(() => {
+    const normalizedAgents = agents.map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      regionId: (agent as any).regionId ?? (agent as any).region_id ?? undefined,
+    }))
+
+    if (!currentRegionId) return normalizedAgents
+    return normalizedAgents.filter((agent) => agent.regionId === currentRegionId)
+  }, [agents, currentRegionId])
+
+  const handleAssignAgent = useCallback(async (districtId: number, newAgentId: string) => {
+    const updated = assignments.map((assignment) =>
+      assignment.districtId === districtId
+        ? { ...assignment, salesAgentId: newAgentId }
+        : assignment,
+    )
+
+    await persistAssignments(updated)
+  }, [assignments, persistAssignments])
 
   useEffect(() => {
     let mounted = true
@@ -239,6 +261,14 @@ export default function ClusterInsightsPanel({
           const assignedSalesZones = item.assignedSales?.assignedZones ?? []
           const assignedSalesCustomers = assignedSalesZones.reduce((sum, zone) => sum + zone.customers, 0)
           const assignedSalesOrders = assignedSalesZones.reduce((sum, zone) => sum + zone.orders, 0)
+          const currentAgentId = item.districtAssignment?.salesAgentId ?? ''
+          const currentAgent = regionAgents.find((agent) => agent.id === currentAgentId)
+          const usedElsewhere = new Set(
+            districtInsights
+              .map((district) => district.districtAssignment?.salesAgentId ?? '')
+              .filter((agentId) => agentId && agentId !== currentAgentId),
+          )
+          const availableAgents = regionAgents.filter((agent) => !usedElsewhere.has(agent.id))
 
           return (
             <div key={item.districtId} style={styles.card}>
@@ -305,6 +335,26 @@ export default function ClusterInsightsPanel({
 
                   <div style={styles.detailCard}>
                     <div style={styles.detailTitle}>Lịch sử nhân viên</div>
+                    <div style={styles.assignRow}>
+                      <div style={styles.assignLabelCol}>
+                        <span style={styles.assignLabel}>Phân công nhân viên</span>
+                        <span style={styles.assignMeta}>
+                          {currentAgent ? currentAgent.name : 'Chưa chọn'}
+                        </span>
+                      </div>
+                      <select
+                        value={availableAgents.some((agent) => agent.id === currentAgentId) ? currentAgentId : ''}
+                        onChange={(e) => void handleAssignAgent(item.districtId, e.target.value)}
+                        style={styles.assignSelect}
+                      >
+                        <option value="">-- Chọn nhân viên --</option>
+                        {availableAgents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     <div style={styles.agentCard}>
                       <div style={styles.agentTitle}>{assignedLabel}</div>
                       <div style={styles.agentSummary}>
@@ -520,6 +570,36 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 4,
+  },
+  assignRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  assignLabelCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+    minWidth: 0,
+  },
+  assignLabel: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  assignMeta: {
+    fontSize: 11,
+    color: 'var(--color-text-3)',
+  },
+  assignSelect: {
+    padding: '7px 10px',
+    borderRadius: 10,
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    fontSize: 12,
+    minWidth: 180,
   },
   agentTitle: {
     fontSize: 12,

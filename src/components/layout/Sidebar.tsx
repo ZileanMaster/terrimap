@@ -14,7 +14,6 @@ import { useFacade } from '../../context/FacadeContext.js'
 import { useDataStore } from '../../store/dataStore.js'
 import { getDistrictFillColor } from '../../data/district-colors.js'
 import AgentManager from '../agent/AgentManager.js'
-import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
 import ClusterInsightsPanel from './ClusterInsightsPanel.js'
 import type { Assignment, HistoryEntry, SalesAgent, Zone } from '../../../facades/viewmodels.js'
@@ -286,9 +285,6 @@ function AdminSidebar({
       <div style={styles.divider} />
       <ClusterInsightsPanel zones={zones} assignments={assignments} agents={agents} compact={!workspaceExpanded} />
       <div style={styles.divider} />
-      <DistrictAgentAssigner regionId={currentRegionId ?? undefined} />
-
-      <div style={styles.divider} />
       <ZoneCardList zones={zones} assignments={assignments} islandZoneIds={islandZoneIds} onFlyTo={onFlyTo} />
 
       <div style={styles.divider} />
@@ -376,9 +372,6 @@ function CoordinatorSidebar({
           </div>
         )
       })}
-
-      <div style={styles.divider} />
-      <DistrictAgentAssigner regionId={currentRegionId ?? undefined} />
 
       <div style={styles.divider} />
       <ZoneCardList zones={zones} assignments={assignments} mode="assignments" />
