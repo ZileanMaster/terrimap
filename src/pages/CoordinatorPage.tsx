@@ -168,8 +168,6 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
   return (
     <div style={styles.layout}>
-      {workspaceExpanded && <button type="button" aria-label="Đóng bảng phân chia" style={styles.backdrop} onClick={() => setWorkspaceExpanded(false)} />}
-
       <div
         style={{
           ...styles.leftCol,
@@ -221,7 +219,12 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
         />
       </div>
 
-        <div style={styles.mapArea}>
+        <div
+          style={{
+            ...styles.mapArea,
+            ...(workspaceExpanded ? styles.mapAreaHidden : {}),
+          }}
+        >
           <TerritoryMap
             zones={displayZones}
             assignments={displayAssignments}
@@ -294,20 +297,16 @@ const styles: Record<string, React.CSSProperties> = {
     transition:    'all 180ms ease',
   },
   leftColOverlay: {
-    position:    'absolute',
-    inset:       0,
-    width:       '100vw',
+    position:    'fixed',
+    top:         0,
+    left:        280,
+    right:       0,
+    bottom:      0,
+    width:       'auto',
     zIndex:      1300,
     boxShadow:   '0 24px 64px rgba(15,23,42,.22)',
+    overflowY:   'auto',
     borderRight: '1px solid var(--color-border)',
-  },
-  backdrop: {
-    position: 'absolute',
-    inset: 0,
-    zIndex: 1200,
-    border: 'none',
-    background: 'rgba(15, 23, 42, 0.14)',
-    cursor: 'pointer',
   },
   mapHud: {
     position: 'absolute',
@@ -445,6 +444,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   mapArea:  { flex: 1, position: 'relative', overflow: 'hidden' },
+  mapAreaHidden: { display: 'none' },
 
   loading: {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
