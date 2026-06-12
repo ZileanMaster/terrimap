@@ -125,6 +125,12 @@ interface MoveCandidate {
   cost: number;
 }
 
+/**
+ * Helper chọn move theo phân phối Boltzmann.
+ *
+ * Hiện tại SA production path không dùng helper này nữa; giữ lại để phục vụ
+ * các biến thể thử nghiệm hoặc nhánh thuật toán khác trong tương lai.
+ */
 function pickTopKMove(candidates: MoveCandidate[], currentCost: number, temperature: number): MoveCandidate {
   if (candidates.length === 1) return candidates[0]!
 
@@ -800,7 +806,10 @@ export function partitionSimulatedAnnealing(
 
   // Khởi tạo từ Greedy solution rồii refine chất lượng trước khi anneal
   const initialResult = partitionGreedy(zones, m, { adjThresholdKm });
-  const warmupBudget = Math.max(0, Math.min(maxIter, Math.floor(maxIter * 0.1)));
+  const warmupBudget = Math.min(
+    Math.floor(maxIter * 0.05),       // tối đa 5% SA budget
+    Math.ceil(zones.length * 0.8),    // hoặc 80% số zones (thực nghiệm hợp lý)
+  );
   const warmupAssignment = new Array<number>(zones.length);
   for (const { zoneId, districtId } of initialResult) {
     const idx = idToIdx.get(zoneId);
@@ -891,23 +900,18 @@ export function partitionSimulatedAnnealing(
 
     candidates.sort((a, b) => a.cost - b.cost || a.idx - b.idx || a.from - b.from || a.to - b.to);
     const movePool = candidates.slice(0, Math.min(topK, candidates.length));
-    const chosenMove = pickTopKMove(movePool, currentCost, T);
-
-    assignment[chosenMove.idx] = chosenMove.to;
-    districtSizes[chosenMove.from]!--;
-    districtSizes[chosenMove.to] = (districtSizes[chosenMove.to] ?? 0) + 1;
+    const chosenMove = movePool[Math.floor(Math.random() * movePool.length)]!;
 
     const deltaE = chosenMove.cost - currentCost;
     if (deltaE <= 0 || Math.random() < Math.exp(-deltaE / T)) {
+      assignment[chosenMove.idx] = chosenMove.to;
+      districtSizes[chosenMove.from]!--;
+      districtSizes[chosenMove.to] = (districtSizes[chosenMove.to] ?? 0) + 1;
       currentCost = chosenMove.cost;
       if (currentCost < bestCost) {
         bestCost = currentCost;
         bestAssignment = new Int32Array(assignment);
       }
-    } else {
-      assignment[chosenMove.idx] = chosenMove.from;
-      districtSizes[chosenMove.from] = (districtSizes[chosenMove.from] ?? 0) + 1;
-      districtSizes[chosenMove.to] = (districtSizes[chosenMove.to] ?? 0) - 1;
     }
 
     T *= cooling;

@@ -17,7 +17,7 @@ import AgentManager from '../agent/AgentManager.js'
 import DistrictAgentAssigner from '../assignment/DistrictAgentAssigner.js'
 import RegionManager from '../admin/RegionManager.js'
 import ClusterInsightsPanel from './ClusterInsightsPanel.js'
-import { AssignmentWorkspacePanel, MapDataWorkspacePanel } from './WorkspacePanels.js'
+import { AssignmentWorkspacePanel } from './WorkspacePanels.js'
 import { getActiveDistrictIds } from '../../utils/districtAssignments.js'
 import type { Assignment, HistoryEntry, SalesAgent, Zone } from '../../../facades/viewmodels.js'
 
@@ -285,8 +285,6 @@ function AdminSidebar({
           </button>
         </div>
       )}
-      <MapDataWorkspacePanel zones={zones} assignments={assignments} />
-      <div style={styles.divider} />
       <RegionManager onFlyTo={onFlyTo} assignments={assignments} />
       <div style={styles.divider} />
       <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
@@ -348,8 +346,6 @@ function CoordinatorSidebar({
           </button>
         </div>
       )}
-      <MapDataWorkspacePanel zones={zones} assignments={assignments} canExport={false} />
-      <div style={styles.divider} />
       <RegionManager onFlyTo={undefined} assignments={assignments} />
       <div style={styles.divider} />
       <AssignmentWorkspacePanel zoneCount={zones.length} districtCount={districtCount} />
