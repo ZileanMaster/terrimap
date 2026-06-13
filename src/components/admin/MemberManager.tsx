@@ -124,6 +124,14 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     if (member.status === 'blocked') {
       if (!window.confirm(`Bỏ chặn ${member.profile?.full_name ?? 'thành viên'}?`)) return
       const ok = await unblockMember(member.id)
+      if (!ok) {
+        push({
+          kind: 'error',
+          title: 'Cannot unblock member',
+          message: useAuthStore.getState().authError || 'Please try again.',
+        })
+        return
+      }
       if (ok) {
         setMembers((prev) =>
           prev.map((item) =>
@@ -156,7 +164,15 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
     const reason = window.prompt(`Lý do hạn chế ${member.profile?.full_name ?? 'thành viên'} (không bắt buộc):`, '') ?? ''
     if (!window.confirm(`Hạn chế ${member.profile?.full_name ?? 'thành viên'} khỏi dự án?`)) return
-    await blockMember(member.id, reason)
+    const okBlock = await blockMember(member.id, reason)
+    if (!okBlock) {
+      push({
+        kind: 'error',
+        title: 'Cannot block member',
+        message: useAuthStore.getState().authError || 'Please try again.',
+      })
+      return
+    }
     push({
       kind: 'success',
       title: '?? h?n ch?',
@@ -181,7 +197,15 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
     if (!window.confirm(`Đổi vai trò ${member.profile?.full_name ?? 'thành viên'} thành ${ROLE_CONFIG[newRole]?.label}?`)) return
     try {
-      await updateRole(member.id, newRole)
+      const ok = await updateRole(member.id, newRole)
+      if (!ok) {
+        push({
+          kind: 'error',
+          title: 'Cannot update role',
+          message: useAuthStore.getState().authError || 'Please try again.',
+        })
+        return
+      }
       push({
         kind: 'success',
         title: '?? c?p nh?t vai tr?',
@@ -211,7 +235,15 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
     if (!window.confirm(`Xóa ${member.profile?.full_name ?? member.user_id} khỏi dự án?`)) return
     try {
-      await removeMember(member.id)
+      const ok = await removeMember(member.id)
+      if (!ok) {
+        push({
+          kind: 'error',
+          title: 'Cannot remove member',
+          message: useAuthStore.getState().authError || 'Please try again.',
+        })
+        return
+      }
       push({
         kind: 'success',
         title: '?? x?a th?nh vi?n',
