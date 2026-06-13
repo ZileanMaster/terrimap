@@ -320,25 +320,6 @@ export function UsersView() {
     [members],
   );
 
-  const runWithTimeout = <T,>(task: PromiseLike<T>, timeoutMs: number, fallback: T) => {
-    let finished = false;
-    const timeout = new Promise<T>((resolve) =>
-      setTimeout(() => {
-        if (!finished) {
-          console.warn(`[UsersView] load timeout after ${timeoutMs}ms`);
-          resolve(fallback);
-        }
-      }, timeoutMs),
-    );
-
-    return Promise.race([
-      Promise.resolve(task).finally(() => {
-        finished = true;
-      }),
-      timeout,
-    ]);
-  };
-
   const reloadMembers = async () => {
     if (!supabase || !currentProjectId) {
 
@@ -347,11 +328,7 @@ export function UsersView() {
     }
     setLoading(true);
     try {
-      const rawMembers = await runWithTimeout(
-        Promise.resolve(loadMembers(true)),
-        6000,
-        [] as any,
-      );
+      const rawMembers = await loadMembers(true);
 
       if (!rawMembers || rawMembers.length === 0) {
         setMembers([]);
@@ -359,14 +336,10 @@ export function UsersView() {
       }
 
       const userIds = rawMembers.map((m: any) => m.user_id);
-      const profilesRes = await runWithTimeout(
-        supabase
-          .from('profiles')
-          .select('id, email, full_name, date_of_birth, phone')
-          .in('id', userIds),
-        6000,
-        { data: null, error: new Error('timeout') } as any,
-      );
+      const profilesRes = await supabase
+        .from('profiles')
+        .select('id, email, full_name, date_of_birth, phone')
+        .in('id', userIds);
       const profiles = profilesRes.data;
       if (profilesRes.error) {
         console.error('[UsersView] load profiles error:', profilesRes.error.message);
