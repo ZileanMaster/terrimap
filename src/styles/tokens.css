@@ -130,8 +130,15 @@ html, body, #root {
 
 
 .leaflet-top.leaflet-right .leaflet-draw {
-  /* SnapshotManager sits at top:60px; this pushes the draw toolbar below it. */
-  margin-top: 112px;
+  /* SnapshotManager sits at top:60px; keep the draw toolbar below it and above
+     any overlaying HUD so polygon draw/edit buttons remain clickable. */
+  margin-top: 168px;
+  z-index: 1400 !important;
+  pointer-events: auto;
+}
+
+.leaflet-top.leaflet-right .leaflet-draw * {
+  pointer-events: auto;
 }
 
 /*  Utility classes  */
