@@ -120,7 +120,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
   const handleToggleRestriction = useCallback(async (member: MemberWithProfile) => {
     if (member.status === 'blocked') {
-      if (!window.confirm(`Bỏ chặn ${member.profile?.full_name ?? member.profile?.email?.split('@')[0] ?? member.user_id ?? 'thành viên'}?`)) return
+      if (!window.confirm(`Bỏ chặn ${member.profile?.full_name ?? 'thành viên'}?`)) return
       await unblockMember(member.id)
       reload()
       return
@@ -131,9 +131,8 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       return
     }
 
-    const memberLabel = member.profile?.full_name ?? member.profile?.email?.split('@')[0] ?? member.user_id ?? 'thành viên'
-    const reason = window.prompt(`Lý do hạn chế ${memberLabel} (không bắt buộc):`, '') ?? ''
-    if (!window.confirm(`Hạn chế ${memberLabel} khỏi dự án?`)) return
+    const reason = window.prompt(`Lý do hạn chế ${member.profile?.full_name ?? 'thành viên'} (không bắt buộc):`, '') ?? ''
+    if (!window.confirm(`Hạn chế ${member.profile?.full_name ?? 'thành viên'} khỏi dự án?`)) return
     await blockMember(member.id, reason)
     reload()
   }, [adminCount, blockMember, unblockMember, reload])
@@ -152,8 +151,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       alert('Phải có ít nhất 1 quản trị viên trong dự án')
       return
     }
-    const memberLabel = member.profile?.full_name ?? member.profile?.email?.split('@')[0] ?? member.user_id ?? 'thành viên'
-    if (!window.confirm(`Đổi vai trò ${memberLabel} thành ${ROLE_CONFIG[newRole]?.label}?`)) return
+    if (!window.confirm(`Đổi vai trò ${member.profile?.full_name ?? 'thành viên'} thành ${ROLE_CONFIG[newRole]?.label}?`)) return
     try {
       await updateRole(member.id, newRole)
       reload()
@@ -178,7 +176,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       alert('Không thể xóa quản trị viên duy nhất')
       return
     }
-    if (!window.confirm(`Xóa ${member.profile?.full_name ?? member.profile?.email?.split('@')[0] ?? member.user_id} khỏi dự án?`)) return
+    if (!window.confirm(`Xóa ${member.profile?.full_name ?? member.user_id} khỏi dự án?`)) return
     try {
       await removeMember(member.id)
       reload()
@@ -278,11 +276,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
                   {/* Avatar + thông tin */}
                   <div style={styles.memberInfo}>
                     <div style={{ ...styles.avatar, background: cfg.color }}>
-                        {member.profile?.full_name?.charAt(0)?.toUpperCase() ?? member.profile?.email?.charAt(0)?.toUpperCase() ?? '?'}
+                      {member.profile?.full_name?.charAt(0)?.toUpperCase() ?? '?'}
                     </div>
                     <div style={styles.memberDetails}>
                       <div style={styles.memberName}>
-                        {member.profile?.full_name ?? member.profile?.email?.split('@')[0] ?? member.user_id ?? 'Unknown'}
+                        {member.profile?.full_name ?? 'Unknown'}
                         {isSelf && <span style={styles.selfBadge}> (bạn)</span>}
                       </div>
                       <div style={styles.memberEmail}>

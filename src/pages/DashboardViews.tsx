@@ -527,7 +527,7 @@ export function UsersView() {
                       <td style={styles.td}>
                         <strong>{m.profile?.email || m.user_id}</strong>
                       </td>
-                      <td style={styles.td}>{m.profile?.full_name || m.profile?.email?.split('@')[0] || m.user_id}</td>
+                      <td style={styles.td}>{m.profile?.full_name}</td>
                       <td style={styles.td}>{formatDob(m.profile?.date_of_birth)}</td>
                       <td style={styles.td}>{m.profile?.phone || '-'}</td>
                       <td style={styles.td}>
@@ -634,7 +634,7 @@ export function UsersView() {
                 <div key={member.id} style={styles.blockedCard}>
                   <div style={styles.blockedTopRow}>
                     <div>
-                      <div style={styles.blockedName}>{member.profile?.full_name || member.profile?.email?.split('@')[0] || member.user_id}</div>
+                      <div style={styles.blockedName}>{member.profile?.full_name || member.profile?.email || member.user_id}</div>
                       <div style={styles.blockedEmail}>{member.profile?.email || member.user_id}</div>
                     </div>
                     <span style={styles.blockedBadge}>🚫 Hạn chế</span>
