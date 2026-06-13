@@ -1010,56 +1010,36 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       date_of_birth: payload.date_of_birth ?? null,
       phone: payload.phone ?? null,
     }
+    const optimisticProfile: Profile = {
+      ...(currentProfile ?? {
+        id: profileId,
+        email: profileEmail,
+        avatar_url: null,
+        created_at: new Date().toISOString(),
+      }),
+      ...profilePatch,
+    } as Profile
 
 
     // auth/session flows (initialize/signIn/signUp), not ordinary profile updates.
-    set({ authError: null })
-    try {
-      const selectFields = 'id,email,full_name,avatar_url,created_at,date_of_birth,phone'
+    set({ authError: null, profile: optimisticProfile })
 
-      const updateResult = await supabase
-        .from('profiles')
-        .update(profilePatch)
-        .eq('id', profileId)
-        .select(selectFields)
-        .maybeSingle()
+    void (async () => {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert(profilePatch, { onConflict: 'id' })
 
-      if (!updateResult.error && updateResult.data) {
-        set({ profile: updateResult.data as Profile })
-        return true
+        if (error) {
+          console.warn('[AuthStore] updateProfile sync warning:', error)
+          set({ authError: error.message })
+        }
+      } catch (e: any) {
+        console.warn('[AuthStore] updateProfile unexpected:', e)
+        set({ authError: e?.message || 'Lỗi cập nhật thông tin' })
       }
+    })()
 
-      const upsertResult = await supabase
-        .from('profiles')
-        .upsert(profilePatch, { onConflict: 'id' })
-        .select(selectFields)
-        .maybeSingle()
-
-      if (upsertResult.error) {
-        set({ authError: upsertResult.error.message })
-        return false
-      }
-
-      if (upsertResult.data) {
-        set({ profile: upsertResult.data as Profile })
-        return true
-      }
-
-      set({
-        profile: {
-          ...(currentProfile ?? {
-            id: profileId,
-            email: profileEmail,
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-          }),
-          ...profilePatch,
-        } as Profile,
-      })
-      return true
-    } catch (e: any) {
-      set({ authError: e?.message || 'Lỗi cập nhật thông tin' })
-      return false
-    }
+    return true
   },
 }))
