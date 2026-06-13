@@ -71,14 +71,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     }
 
     try {
-      const timeout = new Promise<MemberWithProfile[]>((resolve) =>
-        setTimeout(() => {
-          console.error('[MemberManager] Load timeout (6s)')
-          resolve([])
-        }, 6_000),
-      )
-
-      const result = await Promise.race([doLoad(), timeout])
+      const result = await doLoad()
       setMembers(result)
     } catch (e) {
       console.error('[MemberManager] load error:', e)
