@@ -322,11 +322,12 @@ export function UsersView() {
 
   const reloadMembers = async () => {
     if (!supabase || !currentProjectId) {
-
       setMembers([]);
+      setLoading(false);
       return;
     }
     const cachedMembers = readCachedProjectMembers(currentProjectId, true);
+    const hasCachedMembers = cachedMembers.length > 0;
     if (cachedMembers.length > 0) {
       setMembers(cachedMembers.map((m: any) => ({
         ...m,
@@ -341,7 +342,9 @@ export function UsersView() {
       const rawMembers = await loadMembers(true);
 
       if (!rawMembers || rawMembers.length === 0) {
-        setMembers([]);
+        if (!hasCachedMembers) {
+          setMembers([]);
+        }
         return;
       }
 

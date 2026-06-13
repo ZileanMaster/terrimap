@@ -101,13 +101,25 @@ type CachedProjectMembers = {
 }
 
 const projectMembersCache = new Map<string, CachedProjectMembers>()
-const projectMembersInFlight = new Map<string, Promise<ProjectMember[]>>()
+const PROJECT_MEMBER_REQUEST_TIMEOUT_MS = 12_000
+const PROJECT_MEMBER_INFLIGHT_STALE_MS = 15_000
+
+type InFlightProjectMembers = {
+  promise: Promise<ProjectMember[]>
+  startedAt: number
+}
+
+const projectMembersInFlight = new Map<string, InFlightProjectMembers>()
 
 function getCachedProjectMembers(projectId: string): ProjectMember[] | null {
   const cached = projectMembersCache.get(projectId)
   if (!cached) return null
   if (Date.now() - cached.fetchedAt > PROJECT_MEMBER_CACHE_TTL_MS) return null
   return cached.rows
+}
+
+function getAnyCachedProjectMembers(projectId: string): ProjectMember[] | null {
+  return projectMembersCache.get(projectId)?.rows ?? null
 }
 
 export function readCachedProjectMembers(projectId?: string, includeBlocked = false): ProjectMember[] {
@@ -124,6 +136,17 @@ function setCachedProjectMembers(projectId: string, rows: ProjectMember[]): void
 function invalidateProjectMembersCache(projectId: string): void {
   projectMembersCache.delete(projectId)
   projectMembersInFlight.delete(projectId)
+}
+
+function withProjectMemberTimeout<T>(promise: Promise<T>, projectId: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => {
+        reject(new Error(`Timed out while loading project members for ${projectId}`))
+      }, PROJECT_MEMBER_REQUEST_TIMEOUT_MS)
+    }),
+  ])
 }
 
 async function resolveDefaultProject(): Promise<Project | null> {
@@ -982,10 +1005,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const existingRequest = projectMembersInFlight.get(projectId)
     if (existingRequest) {
-      const rows = await existingRequest
-      return includeBlocked
-        ? rows
-        : rows.filter((member) => !isBlockedMember(member))
+      const isStale = Date.now() - existingRequest.startedAt > PROJECT_MEMBER_INFLIGHT_STALE_MS
+      if (!isStale) {
+        try {
+          const rows = await withProjectMemberTimeout(existingRequest.promise, projectId)
+          return includeBlocked
+            ? rows
+            : rows.filter((member) => !isBlockedMember(member))
+        } catch (error) {
+          console.warn('[AuthStore] loadMembers in-flight recovery:', error)
+          projectMembersInFlight.delete(projectId)
+          const fallbackRows = getAnyCachedProjectMembers(projectId) ?? []
+          return includeBlocked
+            ? fallbackRows
+            : fallbackRows.filter((member) => !isBlockedMember(member))
+        }
+      }
+
+      projectMembersInFlight.delete(projectId)
     }
 
     const memberRequest = (async (): Promise<ProjectMember[]> => {
@@ -1075,14 +1112,26 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return members
     })()
 
-    projectMembersInFlight.set(projectId, memberRequest)
+    projectMembersInFlight.set(projectId, {
+      promise: memberRequest,
+      startedAt: Date.now(),
+    })
     try {
-      const members = await memberRequest
+      const members = await withProjectMemberTimeout(memberRequest, projectId)
       return includeBlocked
         ? members
         : members.filter((member) => !isBlockedMember(member))
+    } catch (error) {
+      console.warn('[AuthStore] loadMembers recovery fallback:', error)
+      const fallbackRows = getAnyCachedProjectMembers(projectId) ?? []
+      return includeBlocked
+        ? fallbackRows
+        : fallbackRows.filter((member) => !isBlockedMember(member))
     } finally {
-      projectMembersInFlight.delete(projectId)
+      const activeRequest = projectMembersInFlight.get(projectId)
+      if (activeRequest?.promise === memberRequest) {
+        projectMembersInFlight.delete(projectId)
+      }
     }
   },
 

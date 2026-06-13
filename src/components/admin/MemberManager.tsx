@@ -61,6 +61,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       return
     }
     const cachedMembers = readCachedProjectMembers(currentProjectId, true)
+    const hasCachedMembers = cachedMembers.length > 0
     if (cachedMembers.length > 0) {
       setMembers(
         cachedMembers.map((m: any) => ({
@@ -86,10 +87,14 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
     try {
       const result = await doLoad()
-      setMembers(result)
+      if (result.length > 0 || !hasCachedMembers) {
+        setMembers(result)
+      }
     } catch (e) {
       console.error('[MemberManager] load error:', e)
-      setMembers([])
+      if (!hasCachedMembers) {
+        setMembers([])
+      }
     } finally {
       setLoading(false)
       window.setTimeout(() => setRefreshing(false), 250)
