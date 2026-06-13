@@ -1,6 +1,8 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuthStore } from '../../store/authStore.js'
 import { useDataStore } from '../../store/dataStore.js'
 import { useUIStore } from '../../store/uiStore.js'
+import type { ProjectMember } from '../../store/authStore.js'
 
 interface RegionManagerProps {
   onFlyTo?: ((lat: number, lng: number, zoom: number) => void) | undefined
@@ -9,14 +11,42 @@ interface RegionManagerProps {
 
 export default function RegionManager({ onFlyTo, assignments = [] }: RegionManagerProps) {
   const role = useUIStore((s) => s.role)
+  const currentProjectId = useAuthStore((s) => s.currentProjectId)
+  const loadMembers = useAuthStore((s) => s.loadMembers)
   const regions = useDataStore((s) => s.regions)
   const zones = useDataStore((s) => s.zones)
-  const agents = useDataStore((s) => s.agents)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
   const updateRegion = useDataStore((s) => s.updateRegion)
   const deleteRegion = useDataStore((s) => s.deleteRegion)
+  const [members, setMembers] = useState<ProjectMember[]>([])
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    if (!currentProjectId) {
+      setMembers([])
+      return
+    }
+
+    loadMembers(true)
+      .then((rows) => {
+        if (!mounted) return
+        setMembers(rows)
+      })
+      .catch(() => {
+        if (mounted) setMembers([])
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [currentProjectId, loadMembers])
+
+  const coordinatorMembers = useMemo(
+    () => members.filter((member) => member.role === 'coordinator' && member.status !== 'blocked'),
+    [members],
+  )
 
   const handleDeleteRegion = useCallback(async (regionId: string) => {
     const zoneCount = zones.filter((zone) => (zone as any).regionId === regionId).length
@@ -141,8 +171,10 @@ export default function RegionManager({ onFlyTo, assignments = [] }: RegionManag
             style={styles.select}
           >
             <option value="">- Chưa gán -</option>
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>{agent.name}</option>
+            {coordinatorMembers.map((member) => (
+              <option key={member.id} value={member.user_id}>
+                {member.profile?.full_name || member.profile?.email?.split('@')[0] || member.user_id}
+              </option>
             ))}
           </select>
         </div>
