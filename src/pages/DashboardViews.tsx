@@ -311,6 +311,15 @@ export function UsersView() {
   const [editRole, setEditRole] = useState<string>('sales');
   const [editRegionId, setEditRegionId] = useState<string>('');
 
+  const activeMembers = useMemo(
+    () => members.filter((member) => member.status !== 'blocked'),
+    [members],
+  );
+  const blockedMembers = useMemo(
+    () => members.filter((member) => member.status === 'blocked'),
+    [members],
+  );
+
   const runWithTimeout = <T,>(task: PromiseLike<T>, timeoutMs: number, fallback: T) => {
     let finished = false;
     const timeout = new Promise<T>((resolve) =>
@@ -465,7 +474,7 @@ export function UsersView() {
   };
 
   const handleDeleteMember = async (member: any) => {
-    if (member.role === 'admin' && members.filter((m) => m.role === 'admin' && m.status !== 'blocked').length <= 1) {
+    if (member.role === 'admin' && activeMembers.filter((m) => m.role === 'admin').length <= 1) {
       alert('⚠️ Không thể xóa Quản trị viên duy nhất của dự án.');
       return;
     }
@@ -512,7 +521,7 @@ export function UsersView() {
       return;
     }
 
-    if (member.role === 'admin' && members.filter((m) => m.role === 'admin' && m.status !== 'blocked').length <= 1) {
+    if (member.role === 'admin' && activeMembers.filter((m) => m.role === 'admin').length <= 1) {
       alert('⚠️ Không thể hạn chế quản trị viên duy nhất của dự án.');
       return;
     }
@@ -548,9 +557,8 @@ export function UsersView() {
                 </tr>
             </thead>
             <tbody>
-              {members.map((m) => {
+              {activeMembers.map((m) => {
                 const isEditing = editingId === m.id;
-                const isBlocked = m.status === 'blocked';
                 const regionName = regions.find((r) => r.id === m.region_id)?.name || 'Chưa gán';
 
                 return (
@@ -575,22 +583,18 @@ export function UsersView() {
                         ) : (
                           <span style={{
                             ...styles.roleBadge,
-                            background: isBlocked
-                              ? 'rgba(148,163,184,0.18)'
-                              : m.role === 'admin'
-                                ? 'rgba(99,102,241,0.15)'
-                                : m.role === 'coordinator'
-                                  ? 'rgba(52,211,153,0.15)'
-                                  : 'rgba(251,191,36,0.15)',
-                            color: isBlocked
-                              ? '#64748b'
-                              : m.role === 'admin'
-                                ? '#818cf8'
-                                : m.role === 'coordinator'
-                                  ? '#34d399'
-                                  : '#fbbf24',
+                            background: m.role === 'admin'
+                              ? 'rgba(99,102,241,0.15)'
+                              : m.role === 'coordinator'
+                                ? 'rgba(52,211,153,0.15)'
+                                : 'rgba(251,191,36,0.15)',
+                            color: m.role === 'admin'
+                              ? '#818cf8'
+                              : m.role === 'coordinator'
+                                ? '#34d399'
+                                : '#fbbf24',
                           }}>
-                            {isBlocked ? '🚫 Hạn chế' : (ROLE_LABELS[m.role] || m.role)}
+                            {ROLE_LABELS[m.role] || m.role}
                           </span>
                         )}
                       </td>
@@ -624,13 +628,11 @@ export function UsersView() {
                         </div>
                       ) : (
                         <div style={styles.btnGroup}>
-                          {!isBlocked && (
-                            <button onClick={() => handleStartEdit(m)} style={styles.inlineEditBtn}>
-                              {'Sửa'}
-                            </button>
-                          )}
-                          <button onClick={() => handleToggleRestriction(m)} style={isBlocked ? styles.inlineRecoverBtn : styles.inlineBlockBtn}>
-                            {isBlocked ? 'Bỏ chặn' : 'Hạn chế'}
+                          <button onClick={() => handleStartEdit(m)} style={styles.inlineEditBtn}>
+                            {'Sửa'}
+                          </button>
+                          <button onClick={() => handleToggleRestriction(m)} style={styles.inlineBlockBtn}>
+                            {'Hạn chế'}
                           </button>
                           <button onClick={() => handleDeleteMember(m)} style={styles.inlineDeleteBtn}>
                             {'Xoá'}
@@ -641,16 +643,64 @@ export function UsersView() {
                   </tr>
                 );
               })}
-                {members.length === 0 && (
+                {activeMembers.length === 0 && (
                   <tr>
                       <td colSpan={7} style={styles.tableEmpty}>
-                        {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên nào.'}
+                        {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên đang hoạt động nào.'}
                       </td>
                   </tr>
                 )}
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div style={styles.section}>
+        <div style={styles.blockedHeader}>
+          <h4 style={styles.blockedTitle}>Danh sách bị hạn chế ({blockedMembers.length})</h4>
+          <span style={styles.blockedNote}>Các tài khoản này sẽ tách riêng khỏi danh sách đang hoạt động.</span>
+        </div>
+        {blockedMembers.length === 0 ? (
+          <div style={styles.blockedEmpty}>Chưa có thành viên nào bị hạn chế.</div>
+        ) : (
+          <div style={styles.blockedGrid}>
+            {blockedMembers.map((member) => {
+              const regionName = regions.find((r) => r.id === member.region_id)?.name || 'Chưa gán';
+              return (
+                <div key={member.id} style={styles.blockedCard}>
+                  <div style={styles.blockedTopRow}>
+                    <div>
+                      <div style={styles.blockedName}>{member.profile?.full_name || member.profile?.email || member.user_id}</div>
+                      <div style={styles.blockedEmail}>{member.profile?.email || member.user_id}</div>
+                    </div>
+                    <span style={styles.blockedBadge}>🚫 Hạn chế</span>
+                  </div>
+                  <div style={styles.blockedMetaRow}>
+                    <span>Vai trò: {ROLE_LABELS[member.role] || member.role}</span>
+                    <span>Khu vực: {member.role === 'admin' ? 'Tất cả' : regionName}</span>
+                  </div>
+                  <div style={styles.blockedActionRow}>
+                    <button
+                      onClick={async () => {
+                        const ok = await unblockMember(member.id);
+                        if (ok) await reloadMembers();
+                      }}
+                      style={styles.inlineRecoverBtn}
+                    >
+                      Bỏ hạn chế
+                    </button>
+                    <button
+                      onClick={() => handleDeleteMember(member)}
+                      style={styles.inlineDeleteBtn}
+                    >
+                      Xoá
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1302,6 +1352,85 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     padding: '20px',
     color: 'var(--color-text-3)',
+  },
+  blockedHeader: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '12px',
+  },
+  blockedTitle: {
+    margin: 0,
+    fontSize: '16px',
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  blockedNote: {
+    color: 'var(--color-text-2)',
+    fontSize: '13px',
+    fontWeight: 600,
+  },
+  blockedEmpty: {
+    padding: '16px',
+    borderRadius: '14px',
+    border: '1px dashed var(--color-border)',
+    color: 'var(--color-text-2)',
+    background: 'var(--color-surface)',
+  },
+  blockedGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: '12px',
+  },
+  blockedCard: {
+    padding: '14px',
+    borderRadius: '16px',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    boxShadow: 'var(--shadow-sm)',
+  },
+  blockedTopRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginBottom: '10px',
+  },
+  blockedName: {
+    fontSize: '15px',
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  blockedEmail: {
+    fontSize: '12px',
+    color: 'var(--color-text-2)',
+    marginTop: '4px',
+    wordBreak: 'break-word',
+  },
+  blockedBadge: {
+    padding: '6px 10px',
+    borderRadius: '999px',
+    background: 'rgba(148,163,184,0.16)',
+    color: '#64748b',
+    fontSize: '12px',
+    fontWeight: 800,
+    whiteSpace: 'nowrap',
+  },
+  blockedMetaRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    color: 'var(--color-text-2)',
+    fontSize: '13px',
+    marginBottom: '12px',
+  },
+  blockedActionRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
   },
   cardContainer: {
     backgroundColor: 'var(--color-surface, #161b22)',
