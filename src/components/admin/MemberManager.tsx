@@ -151,6 +151,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Unblocked',
         message: `${member.profile?.full_name ?? 'member'} has been unblocked.`,
       })
+      void reload()
       return
     }
 
@@ -189,6 +190,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       title: 'Blocked',
       message: `${member.profile?.full_name ?? 'member'} has been added to the blocked list.`,
     })
+    void reload()
   }, [adminCount, blockMember, unblockMember, push, user?.id])
 
   const handleRoleChange = useCallback(async (member: MemberWithProfile, newRole: string) => {
@@ -231,6 +233,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Role updated',
         message: `${member.profile?.full_name ?? 'member'} changed to ${ROLE_CONFIG[newRole]?.label}.`,
       })
+      void reload()
     } catch (e) {
       console.error('[MemberManager] role change error:', e)
       alert('Error changing role. Please try again.')
@@ -268,6 +271,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Member removed',
         message: `${member.profile?.full_name ?? member.user_id} was removed from the project.`,
       })
+      void reload()
     } catch (e) {
       console.error('[MemberManager] remove error:', e)
       alert('Error removing member. Please try again.')
