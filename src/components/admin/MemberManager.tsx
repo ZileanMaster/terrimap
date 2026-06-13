@@ -218,16 +218,6 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         })
         return
       }
-      setMembers((prev) =>
-        prev.map((item) =>
-          item.id === member.id
-            ? {
-                ...item,
-                role: newRole as ProjectMember['role'],
-              }
-            : item,
-        ),
-      )
       push({
         kind: 'success',
         title: 'Role updated',
