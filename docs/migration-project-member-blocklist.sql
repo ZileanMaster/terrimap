@@ -25,18 +25,61 @@ END $$;
 
 ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
 
+-- Helper functions to avoid RLS recursion in policies
+CREATE OR REPLACE FUNCTION public.is_project_owner(target_project_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.projects p
+    WHERE p.id = target_project_id
+      AND p.owner_id = auth.uid()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_active_project_member(target_project_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.project_members pm
+    WHERE pm.project_id = target_project_id
+      AND pm.user_id = auth.uid()
+      AND COALESCE(pm.status, 'active') = 'active'
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_active_project_admin(target_project_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.project_members pm
+    WHERE pm.project_id = target_project_id
+      AND pm.user_id = auth.uid()
+      AND COALESCE(pm.status, 'active') = 'active'
+      AND pm.role = 'admin'
+  );
+$$;
+
 -- 2) Projects are visible only to active members or owners
 DROP POLICY IF EXISTS "members_read_project" ON public.projects;
 CREATE POLICY "members_read_project" ON public.projects
   FOR SELECT USING (
     owner_id = auth.uid()
-    OR EXISTS (
-      SELECT 1
-      FROM public.project_members pm
-      WHERE pm.project_id = public.projects.id
-        AND pm.user_id = auth.uid()
-        AND COALESCE(pm.status, 'active') = 'active'
-    )
+    OR public.is_active_project_member(id)
   );
 
 -- 3) Members table: active members and owners can read all rows for their project
@@ -47,72 +90,24 @@ DROP POLICY IF EXISTS "admin_delete_members" ON public.project_members;
 
 CREATE POLICY "members_read_members" ON public.project_members
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1
-      FROM public.project_members pm
-      WHERE pm.project_id = public.project_members.project_id
-        AND pm.user_id = auth.uid()
-        AND COALESCE(pm.status, 'active') = 'active'
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM public.projects p
-      WHERE p.id = public.project_members.project_id
-        AND p.owner_id = auth.uid()
-    )
+    public.is_active_project_member(project_id)
+    OR public.is_project_owner(project_id)
   );
 
 CREATE POLICY "admin_coord_invite" ON public.project_members
   FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1
-      FROM public.project_members pm
-      WHERE pm.project_id = public.project_members.project_id
-        AND pm.user_id = auth.uid()
-        AND COALESCE(pm.status, 'active') = 'active'
-        AND pm.role IN ('admin', 'coordinator')
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM public.projects p
-      WHERE p.id = public.project_members.project_id
-        AND p.owner_id = auth.uid()
-    )
+    public.is_active_project_admin(project_id)
+    OR public.is_project_owner(project_id)
   );
 
 CREATE POLICY "admin_update_members" ON public.project_members
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1
-      FROM public.project_members pm
-      WHERE pm.project_id = public.project_members.project_id
-        AND pm.user_id = auth.uid()
-        AND COALESCE(pm.status, 'active') = 'active'
-        AND pm.role = 'admin'
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM public.projects p
-      WHERE p.id = public.project_members.project_id
-        AND p.owner_id = auth.uid()
-    )
+    public.is_active_project_admin(project_id)
+    OR public.is_project_owner(project_id)
   );
 
 CREATE POLICY "admin_delete_members" ON public.project_members
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1
-      FROM public.project_members pm
-      WHERE pm.project_id = public.project_members.project_id
-        AND pm.user_id = auth.uid()
-        AND COALESCE(pm.status, 'active') = 'active'
-        AND pm.role = 'admin'
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM public.projects p
-      WHERE p.id = public.project_members.project_id
-        AND p.owner_id = auth.uid()
-    )
+    public.is_active_project_admin(project_id)
+    OR public.is_project_owner(project_id)
   );
-
