@@ -170,13 +170,15 @@ function buildDefaultProjectForUser(userId: string, email?: string | null): Proj
 }
 
 async function syncSalesAgentMembership(member: ProjectMember, projectId: string, active: boolean): Promise<void> {
-  if (!supabase || member.role !== 'sales') return
+  if (!supabase) return
 
   if (!active) {
     await supabase.from('assignments').delete().eq('sales_agent_id', member.user_id)
     await supabase.from('sales_agents').delete().eq('id', member.user_id)
     return
   }
+
+  if (member.role !== 'sales') return
 
   const [{ data: profile }, { data: region }] = await Promise.all([
     supabase
@@ -813,6 +815,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ authError: error.message })
       return false
     }
+
+    const updatedMember = {
+      ...(member as any),
+      role: newRole,
+    } as ProjectMember
+    await syncSalesAgentMembership(updatedMember, projectId, newRole === 'sales')
     invalidateProjectMembersCache(projectId)
     return true
   },

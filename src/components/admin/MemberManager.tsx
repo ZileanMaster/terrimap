@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
+import { useDataStore } from '../../store/dataStore.js'
 import type { ProjectMember, Profile } from '../../store/authStore.js'
 import { supabase } from '../../lib/supabase.js'
 import { useToast } from '../ui/Toast.js'
@@ -44,6 +45,12 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
   const myRole  = membership?.role ?? 'sales'
   const myLevel = ROLE_CONFIG[myRole]?.level ?? 0
+
+  const refreshProjectData = useCallback(() => {
+    const projectId = currentProjectId ?? undefined
+    useDataStore.setState({ initialized: false })
+    void useDataStore.getState().init(projectId)
+  }, [currentProjectId])
 
   // Tải thành viên kèm hồ sơ
   const reload = useCallback(async () => {
@@ -154,6 +161,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Unblocked',
         message: `${member.profile?.full_name ?? 'member'} has been unblocked.`,
       })
+      refreshProjectData()
       void reload()
       return
     }
@@ -193,8 +201,9 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       title: 'Blocked',
       message: `${member.profile?.full_name ?? 'member'} has been added to the blocked list.`,
     })
+    refreshProjectData()
     void reload()
-  }, [adminCount, blockMember, unblockMember, push, user?.id])
+  }, [adminCount, blockMember, unblockMember, push, user?.id, refreshProjectData])
 
   const handleRoleChange = useCallback(async (member: MemberWithProfile, newRole: string) => {
     if (member.user_id === user?.id) {
@@ -226,12 +235,13 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Role updated',
         message: `${member.profile?.full_name ?? 'member'} changed to ${ROLE_CONFIG[newRole]?.label}.`,
       })
+      refreshProjectData()
       await reload()
     } catch (e) {
       console.error('[MemberManager] role change error:', e)
       alert('Error changing role. Please try again.')
     }
-  }, [user, myLevel, adminCount, updateRole, push])
+  }, [user, myLevel, adminCount, updateRole, push, refreshProjectData])
 
   const handleRemove = useCallback(async (member: MemberWithProfile) => {
     if (member.user_id === user?.id) {
@@ -264,12 +274,13 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Member removed',
         message: `${member.profile?.full_name ?? member.user_id} was removed from the project.`,
       })
+      refreshProjectData()
       void reload()
     } catch (e) {
       console.error('[MemberManager] remove error:', e)
       alert('Error removing member. Please try again.')
     }
-  }, [user, myLevel, adminCount, removeMember, push])
+  }, [user, myLevel, adminCount, removeMember, push, refreshProjectData])
 
   if (!open) return null
 
