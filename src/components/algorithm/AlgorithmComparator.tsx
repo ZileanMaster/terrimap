@@ -10,6 +10,7 @@ import TerritoryMap from '../map/TerritoryMap.js'
 import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
 import type { AlgorithmName } from '../../../lib/partition.js'
+import { validatePartition } from '../../../lib/validator.js'
 
 type Algo = AlgorithmName
 
@@ -56,6 +57,7 @@ function formatAlgoLabel(algo: Algo): string {
 
   export default function AlgorithmComparator() {
   const zones = useDataStore((s) => s.zones)
+  const assignments = useDataStore((s) => s.assignments)
   const regions = useDataStore((s) => s.regions)
   const agents = useDataStore((s) => s.agents)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
@@ -188,7 +190,23 @@ function formatAlgoLabel(algo: Algo): string {
 
   const handleApply = async (side: 'A' | 'B') => {
     const chosen = side === 'A' ? assignmentsA : assignmentsB
-    await persistAssignments(chosen)
+    if (chosen.length === 0) return
+
+    const scopedZoneIds = new Set(displayZones.map((zone) => zone.id))
+    const mergedAssignments = [
+      ...assignments.filter((assignment) => !scopedZoneIds.has(assignment.zoneId)),
+      ...chosen,
+    ]
+
+    const scopedAssignments = mergedAssignments.filter((assignment) => scopedZoneIds.has(assignment.zoneId))
+    const validation = validatePartition(displayZones, scopedAssignments, { adjThresholdKm: 50 })
+    const disconnected = validation.violations.find((violation) => 'type' in violation && violation.type === 'DISCONNECTED')
+    if (disconnected) {
+      setError('Không thể áp dụng vì phương án này làm cụm mất liên thông.')
+      return
+    }
+
+    await persistAssignments(mergedAssignments)
     setSuccessMessage(`Đã áp dụng thành công kịch bản ${side}.`)
     window.setTimeout(() => setSuccessMessage(null), 2200)
   }
