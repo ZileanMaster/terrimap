@@ -93,6 +93,31 @@ function normalizeDateInput(value?: string | null): string | null {
 const DEFAULT_PROJECT_ID = 'test-project-terrimap'
 const DEFAULT_PROJECT_OWNER_EMAIL = 'admin.test@terrimap.vn'
 const PROJECT_MEMBER_SELECT_COLUMNS = 'id, project_id, user_id, role, region_id, joined_at, status, blocked_reason, blocked_at, blocked_by, unblocked_at'
+const PROJECT_MEMBER_CACHE_TTL_MS = 30_000
+
+type CachedProjectMembers = {
+  rows: ProjectMember[]
+  fetchedAt: number
+}
+
+const projectMembersCache = new Map<string, CachedProjectMembers>()
+const projectMembersInFlight = new Map<string, Promise<ProjectMember[]>>()
+
+function getCachedProjectMembers(projectId: string): ProjectMember[] | null {
+  const cached = projectMembersCache.get(projectId)
+  if (!cached) return null
+  if (Date.now() - cached.fetchedAt > PROJECT_MEMBER_CACHE_TTL_MS) return null
+  return cached.rows
+}
+
+function setCachedProjectMembers(projectId: string, rows: ProjectMember[]): void {
+  projectMembersCache.set(projectId, { rows, fetchedAt: Date.now() })
+}
+
+function invalidateProjectMembersCache(projectId: string): void {
+  projectMembersCache.delete(projectId)
+  projectMembersInFlight.delete(projectId)
+}
 
 async function resolveDefaultProject(): Promise<Project | null> {
   if (!supabase) return null
@@ -200,6 +225,8 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
 
     if (restoreError) {
       console.warn('[AuthStore] ensureDefaultProjectMembership restore warning:', restoreError)
+    } else {
+      invalidateProjectMembersCache(defaultProject.id)
     }
     return
   }
@@ -217,6 +244,8 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
 
   if (error) {
     console.warn('[AuthStore] ensureDefaultProjectMembership warning:', error)
+  } else {
+    invalidateProjectMembersCache(defaultProject.id)
   }
 }
 
@@ -531,6 +560,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       useUIStore.getState().setRole('admin')
     }
     localStorage.setItem('terrimap_project', projectId)
+    void get().loadMembers(true)
 
     if (data && !(isOwner && isBlockedMember(data as unknown as ProjectMember))) {
       set({ membership: data as unknown as ProjectMember })
@@ -772,6 +802,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ authError: error.message })
       return false
     }
+    invalidateProjectMembersCache(projectId)
     return true
   },
 
@@ -810,6 +841,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       set({ authError: error.message })
       return false
     }
+    invalidateProjectMembersCache(projectId)
     return true
   },
 
@@ -866,6 +898,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, false)
+    invalidateProjectMembersCache(projectId)
     return true
   },
 
@@ -903,6 +936,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, true)
+    invalidateProjectMembersCache(projectId)
     return true
   },
 
@@ -912,88 +946,122 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const client = supabase
     const projectId = get().currentProjectId
     if (!projectId) return []
-    const selectColumns = `${PROJECT_MEMBER_SELECT_COLUMNS}, profile:profiles(id, email, full_name, date_of_birth, phone)`
 
-    const readMembers = async (): Promise<ProjectMember[]> => {
-      const { data, error } = await client
-        .from('project_members')
-        .select(selectColumns)
-        .eq('project_id', projectId)
-        .order('joined_at', { ascending: true })
+    const cachedMembers = getCachedProjectMembers(projectId)
+    if (cachedMembers) {
+      return includeBlocked
+        ? cachedMembers
+        : cachedMembers.filter((member) => !isBlockedMember(member))
+    }
 
-      if (error) {
-        console.warn('[AuthStore] loadMembers error:', error.message)
-        return []
-      }
-
-      const rows = (data ?? []).map((member: any) => ({
-        ...member,
-        profile: Array.isArray(member.profile)
-          ? member.profile[0] ?? null
-          : member.profile ?? null,
-      })) as ProjectMember[]
+    const existingRequest = projectMembersInFlight.get(projectId)
+    if (existingRequest) {
+      const rows = await existingRequest
       return includeBlocked
         ? rows
         : rows.filter((member) => !isBlockedMember(member))
     }
 
-    const loadProjectById = async (): Promise<Project | null> => {
+    const memberRequest = (async (): Promise<ProjectMember[]> => {
       const localProject = get().projects.find((p) => p.id === projectId)
-      if (localProject) return localProject
 
-      const { data: remoteProject, error } = await client
-        .from('projects')
-        .select('id, name, description, owner_id, created_at')
-        .eq('id', projectId)
-        .maybeSingle()
-
-      if (error) {
-        console.warn('[AuthStore] loadMembers project lookup warning:', error)
-        return null
-      }
-
-      return (remoteProject as Project | null) ?? null
-    }
-
-    let members = await readMembers()
-    const project = await loadProjectById()
-
-    if (project?.owner_id) {
-      const ownerExists = members.some((member) => member.user_id === project.owner_id)
-      if (!ownerExists) {
-        const ownerMember = {
-          project_id: projectId,
-          user_id: project.owner_id,
-          role: 'admin' as const,
-          region_id: null,
-          joined_at: project.created_at ?? new Date().toISOString(),
-          status: 'active' as const,
-          profile: null,
-        }
-
-        const { error: repairError } = await client
+      const [memberResult, remoteProjectResult] = await Promise.all([
+        client
           .from('project_members')
-          .upsert(ownerMember, { onConflict: 'project_id,user_id' })
+          .select(PROJECT_MEMBER_SELECT_COLUMNS)
+          .eq('project_id', projectId)
+          .order('joined_at', { ascending: true }),
+        localProject
+          ? Promise.resolve({ data: localProject, error: null })
+          : client
+              .from('projects')
+              .select('id, name, description, owner_id, created_at')
+              .eq('id', projectId)
+              .maybeSingle(),
+      ])
 
-        if (!repairError) {
-          members = await readMembers()
-        } else {
-          console.warn('[AuthStore] owner membership repair warning:', repairError.message)
-          members = [
-            {
-              id: `owner-${projectId}`,
-              ...ownerMember,
-            },
-            ...members,
-          ] as ProjectMember[]
+      const { data, error } = memberResult
+      if (error) {
+        console.warn('[AuthStore] loadMembers error:', error.message)
+        return []
+      }
+
+      let members = (data ?? []) as ProjectMember[]
+      const project = (remoteProjectResult as any)?.data ?? localProject ?? null
+
+      if (project?.owner_id) {
+        const ownerExists = members.some((member) => member.user_id === project.owner_id)
+        if (!ownerExists) {
+          const ownerMember = {
+            project_id: projectId,
+            user_id: project.owner_id,
+            role: 'admin' as const,
+            region_id: null,
+            joined_at: project.created_at ?? new Date().toISOString(),
+            status: 'active' as const,
+            profile: null,
+          }
+
+          const { error: repairError } = await client
+            .from('project_members')
+            .upsert(ownerMember, { onConflict: 'project_id,user_id' })
+
+          if (!repairError) {
+            const { data: repaired } = await client
+              .from('project_members')
+              .select(PROJECT_MEMBER_SELECT_COLUMNS)
+              .eq('project_id', projectId)
+              .order('joined_at', { ascending: true })
+
+            members = (repaired ?? []) as ProjectMember[]
+          } else {
+            console.warn('[AuthStore] owner membership repair warning:', repairError.message)
+            members = [
+              {
+                id: `owner-${projectId}`,
+                ...ownerMember,
+              },
+              ...members,
+            ] as ProjectMember[]
+          }
         }
       }
-    }
 
-    return members
+      const profileIds = [...new Set(members.map((member) => member.user_id).filter(Boolean))]
+      if (profileIds.length > 0) {
+        const { data: profiles, error: profilesError } = await client
+          .from('profiles')
+          .select('id, email, full_name, date_of_birth, phone')
+          .in('id', profileIds)
+
+        if (profilesError) {
+          console.warn('[AuthStore] loadMembers profile lookup warning:', profilesError.message)
+        } else {
+          const profileMap = new Map((profiles ?? []).map((profile: any) => [profile.id, profile]))
+          members = members.map((member) => ({
+            ...member,
+            profile: profileMap.get(member.user_id) ?? null,
+          }))
+        }
+      }
+
+      setCachedProjectMembers(projectId, members)
+      return members
+    })()
+
+    projectMembersInFlight.set(projectId, memberRequest)
+    try {
+      const members = await memberRequest
+      return includeBlocked
+        ? members
+        : members.filter((member) => !isBlockedMember(member))
+    } finally {
+      projectMembersInFlight.delete(projectId)
+    }
   },
 
   //  Update Profile 
+
   updateProfile: async (data) => {
     const payload = typeof data === 'string'
       ? { full_name: data }
