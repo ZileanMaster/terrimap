@@ -310,6 +310,8 @@ export function UsersView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<string>('sales');
   const [editRegionId, setEditRegionId] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'email' | 'name' | 'role' | 'region'>('role');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const activeMembers = useMemo(
     () => members.filter((member) => member.status !== 'blocked'),
@@ -318,6 +320,62 @@ export function UsersView() {
   const blockedMembers = useMemo(
     () => members.filter((member) => member.status === 'blocked'),
     [members],
+  );
+
+  const roleSortOrder: Record<string, number> = {
+    admin: 0,
+    coordinator: 1,
+    sales: 2,
+  };
+
+  const getRegionLabel = (member: any) => {
+    if (member.role === 'admin') return 'Tất cả';
+    return regions.find((region) => region.id === member.region_id)?.name || 'Chưa gán';
+  };
+
+  const getMemberSortValue = (member: any) => {
+    switch (sortBy) {
+      case 'email':
+        return String(member.profile?.email || member.user_id || '').toLocaleLowerCase('vi');
+      case 'name':
+        return String(member.profile?.full_name || member.profile?.email || member.user_id || '').toLocaleLowerCase('vi');
+      case 'region':
+        return getRegionLabel(member).toLocaleLowerCase('vi');
+      case 'role':
+      default:
+        return roleSortOrder[member.role] ?? 99;
+    }
+  };
+
+  const sortMemberList = (list: any[]) => {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    return [...list].sort((left, right) => {
+      const leftValue = getMemberSortValue(left);
+      const rightValue = getMemberSortValue(right);
+
+      if (typeof leftValue === 'number' && typeof rightValue === 'number') {
+        if (leftValue !== rightValue) return (leftValue - rightValue) * direction;
+      } else {
+        const compare = String(leftValue).localeCompare(String(rightValue), 'vi', { numeric: true, sensitivity: 'base' });
+        if (compare !== 0) return compare * direction;
+      }
+
+      return String(left.profile?.email || left.user_id || '').localeCompare(
+        String(right.profile?.email || right.user_id || ''),
+        'vi',
+        { numeric: true, sensitivity: 'base' },
+      );
+    });
+  };
+
+  const sortedActiveMembers = useMemo(
+    () => sortMemberList(activeMembers),
+    [activeMembers, sortBy, sortDirection, regions],
+  );
+
+  const sortedBlockedMembers = useMemo(
+    () => sortMemberList(blockedMembers),
+    [blockedMembers, sortBy, sortDirection, regions],
   );
 
   const reloadMembers = async () => {
@@ -525,6 +583,31 @@ export function UsersView() {
       <h3 style={styles.viewHeader}>👥 Quản lý Thành viên Dự án</h3>
 
       <div style={styles.section}>
+        <div style={styles.membersToolbar}>
+          <div style={styles.membersToolbarGroup}>
+            <span style={styles.membersToolbarLabel}>Sắp xếp</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'email' | 'name' | 'role' | 'region')}
+              style={styles.inlineSelect}
+            >
+              <option value="role">Vai trò</option>
+              <option value="name">Họ và tên</option>
+              <option value="email">Email</option>
+              <option value="region">Khu vực</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+              style={styles.sortDirectionBtn}
+            >
+              {sortDirection === 'asc' ? 'Tăng dần ↑' : 'Giảm dần ↓'}
+            </button>
+          </div>
+          <span style={styles.membersToolbarMeta}>
+            {sortedActiveMembers.length} đang hoạt động · {sortedBlockedMembers.length} bị hạn chế
+          </span>
+        </div>
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
             <thead>
@@ -539,9 +622,9 @@ export function UsersView() {
                 </tr>
             </thead>
             <tbody>
-              {activeMembers.map((m) => {
+              {sortedActiveMembers.map((m) => {
                 const isEditing = editingId === m.id;
-                const regionName = regions.find((r) => r.id === m.region_id)?.name || 'Chưa gán';
+                const regionName = getRegionLabel(m);
 
                 return (
                   <tr key={m.id} style={styles.tr}>
@@ -625,7 +708,7 @@ export function UsersView() {
                   </tr>
                 );
               })}
-                {activeMembers.length === 0 && (
+                {sortedActiveMembers.length === 0 && (
                   <tr>
                       <td colSpan={7} style={styles.tableEmpty}>
                         {loading ? '⏳ Đang tải thành viên...' : '📭 Dự án hiện chưa có thành viên đang hoạt động nào.'}
@@ -641,16 +724,16 @@ export function UsersView() {
         <div style={styles.blockedHeader}>
           <div style={styles.blockedTitleRow}>
             <h4 style={styles.blockedTitle}>Danh sách bị hạn chế</h4>
-            <span style={styles.blockedCountBadge}>{blockedMembers.length}</span>
+            <span style={styles.blockedCountBadge}>{sortedBlockedMembers.length}</span>
           </div>
           <span style={styles.blockedNote}>Các tài khoản này sẽ tách riêng khỏi danh sách đang hoạt động.</span>
         </div>
-        {blockedMembers.length === 0 ? (
+        {sortedBlockedMembers.length === 0 ? (
           <div style={styles.blockedEmpty}>Chưa có thành viên nào bị hạn chế.</div>
         ) : (
           <div style={styles.blockedGrid}>
-            {blockedMembers.map((member) => {
-              const regionName = regions.find((r) => r.id === member.region_id)?.name || 'Chưa gán';
+            {sortedBlockedMembers.map((member) => {
+              const regionName = getRegionLabel(member);
               return (
                 <div key={member.id} style={styles.blockedCard}>
                   <div style={styles.blockedTopRow}>
@@ -1337,6 +1420,40 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     padding: '20px',
     color: 'var(--color-text-3)',
+  },
+  membersToolbar: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginBottom: '12px',
+  },
+  membersToolbarGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+  membersToolbarLabel: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: 'var(--color-text-2)',
+  },
+  membersToolbarMeta: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: 'var(--color-text-2)',
+  },
+  sortDirectionBtn: {
+    padding: '8px 12px',
+    borderRadius: '10px',
+    border: '1px solid var(--color-border)',
+    background: 'var(--color-surface)',
+    color: 'var(--color-text)',
+    fontSize: '12px',
+    fontWeight: 700,
+    cursor: 'pointer',
   },
   blockedHeader: {
     display: 'flex',
