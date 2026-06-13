@@ -110,6 +110,8 @@ export default function App() {
 
   // lấy dữ liệu bản đồ
   const initData       = useDataStore((s) => s.init)
+  const dataLoading    = useDataStore((s) => s.loading)
+  const dataInitialized = useDataStore((s) => s.initialized)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
 
   // Khởi tạo auth khi app load
@@ -149,13 +151,18 @@ export default function App() {
     return <OfflineApp />
   }
 
+  const isBootingProject = Boolean(authUser && authSession && currentProjectId && (dataLoading || !dataInitialized))
+
   // Đang tải
-  if (authLoading) {
+  if (authLoading || isBootingProject) {
     return (
       <div style={styles.splash}>
         <div style={styles.splashContent}>
           <span style={styles.splashIcon}>⬡</span>
           <span style={styles.splashText}>TerriMap</span>
+          <span style={styles.splashHint}>
+            {authLoading ? 'Đang xác thực tài khoản...' : 'Đang tải toàn bộ dữ liệu dự án...'}
+          </span>
           <div style={styles.splashSpinner} />
         </div>
       </div>
@@ -211,9 +218,29 @@ export default function App() {
 function OfflineApp() {
   const role = useUIStore((s) => s.role)
   const init = useDataStore((s) => s.init)
+  const dataLoading = useDataStore((s) => s.loading)
+  const dataInitialized = useDataStore((s) => s.initialized)
+  const authUser = useAuthStore((s) => s.user)
+  const authSession = useAuthStore((s) => s.session)
+  const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
 
   React.useEffect(() => { init() }, [init])
+
+  const isBootingProject = Boolean(authUser && authSession && currentProjectId && (dataLoading || !dataInitialized))
+
+  if (isBootingProject) {
+    return (
+      <div style={styles.splash}>
+        <div style={styles.splashContent}>
+          <span style={styles.splashIcon}>⬡</span>
+          <span style={styles.splashText}>TerriMap</span>
+          <span style={styles.splashHint}>Đang tải toàn bộ dữ liệu dự án...</span>
+          <div style={styles.splashSpinner} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -281,6 +308,11 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     color: '#fff',
     letterSpacing: '-0.03em',
+  },
+  splashHint: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: 600,
   },
   splashSpinner: {
     width: 24,
