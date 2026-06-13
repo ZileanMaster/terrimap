@@ -122,7 +122,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
   const handleToggleRestriction = useCallback(async (member: MemberWithProfile) => {
     if (member.status === 'blocked') {
-      if (!window.confirm(`Bỏ chặn ${member.profile?.full_name ?? 'thành viên'}?`)) return
+      if (!window.confirm(`Unblock ${member.profile?.full_name ?? 'member'}?`)) return
       const ok = await unblockMember(member.id)
       if (!ok) {
         push({
@@ -132,38 +132,35 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         })
         return
       }
-      if (ok) {
-        setMembers((prev) =>
-          prev.map((item) =>
-            item.id === member.id
-              ? {
-                  ...item,
-                  status: 'active',
-                  blocked_reason: null,
-                  blocked_at: null,
-                  blocked_by: null,
-                  unblocked_at: new Date().toISOString(),
-                }
-              : item,
-          ),
-        )
-        push({
-          kind: 'success',
-          title: '?? b? h?n ch?',
-          message: `?? b? h?n ch? cho ${member.profile?.full_name ?? 'th?nh vi?n'}.`,
-        })
-        reload()
-      }
+      setMembers((prev) =>
+        prev.map((item) =>
+          item.id === member.id
+            ? {
+                ...item,
+                status: 'active',
+                blocked_reason: null,
+                blocked_at: null,
+                blocked_by: null,
+                unblocked_at: new Date().toISOString(),
+              }
+            : item,
+        ),
+      )
+      push({
+        kind: 'success',
+        title: 'Unblocked',
+        message: `${member.profile?.full_name ?? 'member'} has been unblocked.`,
+      })
       return
     }
 
     if (member.role === 'admin' && adminCount <= 1) {
-      alert('Phải có ít nhất 1 quản trị viên trong dự án')
+      alert('There must be at least 1 admin in the project')
       return
     }
 
-    const reason = window.prompt(`Lý do hạn chế ${member.profile?.full_name ?? 'thành viên'} (không bắt buộc):`, '') ?? ''
-    if (!window.confirm(`Hạn chế ${member.profile?.full_name ?? 'thành viên'} khỏi dự án?`)) return
+    const reason = window.prompt(`Reason for blocking ${member.profile?.full_name ?? 'member'} (optional):`, '') ?? ''
+    if (!window.confirm(`Block ${member.profile?.full_name ?? 'member'} from the project?`)) return
     const okBlock = await blockMember(member.id, reason)
     if (!okBlock) {
       push({
@@ -173,29 +170,42 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       })
       return
     }
+    setMembers((prev) =>
+      prev.map((item) =>
+        item.id === member.id
+          ? {
+              ...item,
+              status: 'blocked',
+              blocked_reason: reason || null,
+              blocked_at: new Date().toISOString(),
+              blocked_by: user?.id ?? null,
+              unblocked_at: null,
+            }
+          : item,
+      ),
+    )
     push({
       kind: 'success',
-      title: '?? h?n ch?',
-      message: `${member.profile?.full_name ?? 'Th?nh vi?n'} ?? ???c ??a v?o danh s?ch h?n ch?.`,
+      title: 'Blocked',
+      message: `${member.profile?.full_name ?? 'member'} has been added to the blocked list.`,
     })
-    reload()
-  }, [adminCount, blockMember, unblockMember, reload])
+  }, [adminCount, blockMember, unblockMember, push, user?.id])
 
   const handleRoleChange = useCallback(async (member: MemberWithProfile, newRole: string) => {
     if (member.user_id === user?.id) {
-      alert('Không thể tự đổi vai trò của mình')
+      alert('Cannot change your own role')
       return
     }
     const targetLevel = ROLE_CONFIG[newRole]?.level ?? 0
     if (targetLevel > myLevel) {
-      alert('Không thể phân quyền cao hơn vai trò của bạn')
+      alert('Cannot assign a role higher than your own')
       return
     }
     if (member.role === 'admin' && newRole !== 'admin' && adminCount <= 1) {
-      alert('Phải có ít nhất 1 quản trị viên trong dự án')
+      alert('There must be at least 1 admin in the project')
       return
     }
-    if (!window.confirm(`Đổi vai trò ${member.profile?.full_name ?? 'thành viên'} thành ${ROLE_CONFIG[newRole]?.label}?`)) return
+    if (!window.confirm(`Change ${member.profile?.full_name ?? 'member'} to ${ROLE_CONFIG[newRole]?.label}?`)) return
     try {
       const ok = await updateRole(member.id, newRole)
       if (!ok) {
@@ -206,34 +216,42 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         })
         return
       }
+      setMembers((prev) =>
+        prev.map((item) =>
+          item.id === member.id
+            ? {
+                ...item,
+                role: newRole as ProjectMember['role'],
+              }
+            : item,
+        ),
+      )
       push({
         kind: 'success',
-        title: '?? c?p nh?t vai tr?',
-        message: `${member.profile?.full_name ?? 'Th?nh vi?n'} ?? ???c ??i sang ${ROLE_CONFIG[newRole]?.label}.`,
+        title: 'Role updated',
+        message: `${member.profile?.full_name ?? 'member'} changed to ${ROLE_CONFIG[newRole]?.label}.`,
       })
-      reload()
     } catch (e) {
       console.error('[MemberManager] role change error:', e)
-      alert('❌ Lỗi khi đổi vai trò. Vui lòng thử lại.')
+      alert('Error changing role. Please try again.')
     }
-  }, [user, myLevel, adminCount, updateRole, reload])
+  }, [user, myLevel, adminCount, updateRole, push])
 
-  // Xoá thành viên
   const handleRemove = useCallback(async (member: MemberWithProfile) => {
     if (member.user_id === user?.id) {
-      alert('Không thể tự xóa mình khỏi dự án')
+      alert('Cannot remove yourself from the project')
       return
     }
     const memberLevel = ROLE_CONFIG[member.role]?.level ?? 0
     if (memberLevel >= myLevel) {
-      alert('Không thể xóa thành viên có vai trò bằng hoặc cao hơn bạn')
+      alert('Cannot remove a member with equal or higher role')
       return
     }
     if (member.role === 'admin' && adminCount <= 1) {
-      alert('Không thể xóa quản trị viên duy nhất')
+      alert('Cannot remove the last admin')
       return
     }
-    if (!window.confirm(`Xóa ${member.profile?.full_name ?? member.user_id} khỏi dự án?`)) return
+    if (!window.confirm(`Remove ${member.profile?.full_name ?? member.user_id} from the project?`)) return
     try {
       const ok = await removeMember(member.id)
       if (!ok) {
@@ -244,17 +262,17 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         })
         return
       }
+      setMembers((prev) => prev.filter((item) => item.id !== member.id))
       push({
         kind: 'success',
-        title: '?? x?a th?nh vi?n',
-        message: `${member.profile?.full_name ?? member.user_id} ?? ???c x?a kh?i d? ?n.`,
+        title: 'Member removed',
+        message: `${member.profile?.full_name ?? member.user_id} was removed from the project.`,
       })
-      reload()
     } catch (e) {
       console.error('[MemberManager] remove error:', e)
-      alert('❌ Lỗi khi xóa thành viên. Vui lòng thử lại.')
+      alert('Error removing member. Please try again.')
     }
-  }, [user, myLevel, adminCount, removeMember, reload])
+  }, [user, myLevel, adminCount, removeMember, push])
 
   if (!open) return null
 
