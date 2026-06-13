@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
-import { saveSnapshot, loadSnapshots, deleteSnapshot, readSnapshotCache } from '../../services/db.js'
+import { saveSnapshot, loadSnapshots, deleteSnapshot, readSnapshotCache, inferSnapshotRegionId } from '../../services/db.js'
 import { supabase, isOnline } from '../../lib/supabase.js'
 import SnapshotCompare from './SnapshotCompare.js'
 
@@ -18,7 +18,7 @@ import SnapshotCompare from './SnapshotCompare.js'
 export interface SnapshotItem {
   id:         string
   label:      string
-  data:       { zones: any[]; assignments: any[] }
+  data:       { zones: any[]; assignments: any[]; regionId?: string | null }
   created_at: string
   period?:    string   // '2026-04' — tùy chọn, gắn tháng
 }
@@ -42,8 +42,14 @@ export default function SnapshotManager() {
   const zones          = useDataStore((s) => s.zones)
   const assignments    = useDataStore((s) => s.assignments)
   const currentProjectId = useDataStore((s) => s.currentProjectId)
+  const currentRegionId = useDataStore((s) => s.currentRegionId)
   const setZones       = useDataStore((s) => s.setZones)
   const setAssignments = useDataStore((s) => s.setAssignments)
+
+  const visibleSnapshots = useMemo(() => {
+    if (!currentRegionId) return snapshots
+    return snapshots.filter((snapshot) => inferSnapshotRegionId(snapshot) === currentRegionId)
+  }, [currentRegionId, snapshots])
 
   const restoreSnapshot = useCallback((snap: SnapshotItem) => {
     setZones(snap.data.zones as any)
@@ -63,8 +69,11 @@ export default function SnapshotManager() {
     setSnapshots(cached)
     setLoadedProjectId(currentProjectId ?? null)
 
-    if (cached.length > 0) {
-      const latestCached = cached[0]!
+    const latestCached = currentRegionId
+      ? cached.find((snap) => inferSnapshotRegionId(snap) === currentRegionId)
+      : cached[0]
+
+    if (latestCached) {
       lastOpenedSnapshotIdRef.current = latestCached.id
       restoreSnapshot(latestCached)
       setHydrating(false)
@@ -76,17 +85,17 @@ export default function SnapshotManager() {
       console.error('[SnapshotManager] load error:', error)
       setHydrating(false)
     })
-  }, [refreshSnapshots, currentProjectId])
+  }, [refreshSnapshots, currentProjectId, currentRegionId])
 
   useEffect(() => {
     if (!currentProjectId || loadedProjectId !== currentProjectId) return
-    if (snapshots.length === 0) {
+    if (visibleSnapshots.length === 0) {
       setActiveSnapshot(null)
       setHydrating(false)
       return
     }
 
-    const latest = snapshots[0]!
+    const latest = visibleSnapshots[0]!
     if (lastOpenedSnapshotIdRef.current === latest.id) {
       setHydrating(false)
       return
@@ -94,7 +103,7 @@ export default function SnapshotManager() {
     lastOpenedSnapshotIdRef.current = latest.id
     restoreSnapshot(latest)
     setHydrating(false)
-  }, [currentProjectId, loadedProjectId, restoreSnapshot, snapshots])
+  }, [currentProjectId, currentRegionId, loadedProjectId, restoreSnapshot, visibleSnapshots])
 
 
 
@@ -179,7 +188,7 @@ export default function SnapshotManager() {
       alert('⚠️ Chưa có vùng nào để lưu. Hãy vẽ hoặc import vùng trước.')
       return
     }
-    const defaultLabel = snapshots[0]?.label?.trim() || ''
+    const defaultLabel = visibleSnapshots[0]?.label?.trim() || ''
     const label = window.prompt('Tên bản đồ:', defaultLabel)
     if (!label?.trim()) return
 
@@ -194,20 +203,27 @@ export default function SnapshotManager() {
       const snapshot: SnapshotItem = {
         id,
         label: label.trim(),
-        data: { zones, assignments },
+        data: { zones, assignments, regionId: currentRegionId ?? null },
         created_at: createdAt,
         period,
       }
 
       setSnapshots((prev) => [snapshot, ...prev.filter((s) => s.id !== id)].slice(0, 50))
-      await saveSnapshot(id, label.trim(), { zones, assignments }, period, currentProjectId ?? undefined)
+      await saveSnapshot(
+        id,
+        label.trim(),
+        { zones, assignments },
+        period,
+        currentProjectId ?? undefined,
+        currentRegionId ?? null,
+      )
       // Không cần alert thành công — badge count tăng lên là feedback đủ
     } catch (e) {
       alert('❌ Lưu thất bại: ' + (e as Error).message)
     } finally {
       setSaving(false)
     }
-  }, [zones, assignments, snapshots, refreshSnapshots])
+  }, [zones, assignments, visibleSnapshots, refreshSnapshots, currentProjectId, currentRegionId])
 
   const handleRestore = useCallback((snap: SnapshotItem) => {
     if (compareMode) return
@@ -245,15 +261,15 @@ export default function SnapshotManager() {
 
 
   const availablePeriods = useMemo(() => {
-    const ps = snapshots.map((s) => s.period).filter(Boolean) as string[]
+    const ps = visibleSnapshots.map((s) => s.period).filter(Boolean) as string[]
     return [...new Set(ps)].sort((a, b) => b.localeCompare(a))
-  }, [snapshots])
+  }, [visibleSnapshots])
 
   const filteredSnapshots = useMemo(() =>
     periodFilter === 'all'
-      ? snapshots
-      : snapshots.filter((s) => s.period === periodFilter),
-    [snapshots, periodFilter],
+      ? visibleSnapshots
+      : visibleSnapshots.filter((s) => s.period === periodFilter),
+    [visibleSnapshots, periodFilter],
   )
 
   return (
@@ -268,8 +284,8 @@ export default function SnapshotManager() {
             <div style={styles.hydrationTextBlock}>
               <strong style={styles.hydrationTitle}>Đang mở</strong>
               <span style={styles.hydrationSubtitle}>
-                {snapshots[0]?.label
-                  ? `Chuẩn bị tải: ${snapshots[0].label}`
+                {visibleSnapshots[0]?.label
+                  ? `Chuẩn bị tải: ${visibleSnapshots[0].label}`
                   : 'Đang đồng bộ dữ liệu bản lưu cho dự án hiện tại...'}
               </span>
             </div>
@@ -280,11 +296,11 @@ export default function SnapshotManager() {
       {activeSnapshot && (
         <div style={styles.activeBanner}>
           <span style={styles.activeBannerLabel}>Đang mở:</span>
-          <strong style={styles.activeBannerValue}>{activeSnapshot.label}</strong>
-          {activeSnapshot.period && (
-            <span style={styles.activeBannerPeriod}>
-              T{activeSnapshot.period.split('-')[1]}/{activeSnapshot.period.split('-')[0]}
-            </span>
+        <strong style={styles.activeBannerValue}>{activeSnapshot.label}</strong>
+        {activeSnapshot.period && (
+          <span style={styles.activeBannerPeriod}>
+            T{activeSnapshot.period.split('-')[1]}/{activeSnapshot.period.split('-')[0]}
+          </span>
           )}
         </div>
       )}
@@ -311,7 +327,7 @@ export default function SnapshotManager() {
           title="Mở bản đồ đã lưu"
         >
           📂 Mở map
-          <span style={styles.badge}>{snapshots.length}</span>
+          <span style={styles.badge}>{visibleSnapshots.length}</span>
         </button>
 
         {isOpen && (
@@ -363,12 +379,16 @@ export default function SnapshotManager() {
               </div>
             )}
 
-            {filteredSnapshots.length === 0 ? (
-              <div style={styles.empty}>
-                <span style={{ fontSize: 20 }}>🗺️</span>
-                <span>Chưa có bản đồ nào</span>
-              </div>
-            ) : (
+                {filteredSnapshots.length === 0 ? (
+                  <div style={styles.empty}>
+                    <span style={{ fontSize: 20 }}>🗺️</span>
+                    <span>
+                      {currentRegionId
+                        ? 'Khu vực này chưa có bản lưu nào'
+                        : 'Chưa có bản đồ nào'}
+                    </span>
+                  </div>
+                ) : (
               <div style={styles.itemList}>
                 {filteredSnapshots.map((snap) => {
                   const isSelectedForCompare = selectedForCompare.some((s) => s.id === snap.id)

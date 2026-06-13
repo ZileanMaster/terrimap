@@ -94,13 +94,28 @@ function dispatchSnapshotChange(projectId?: string, snapshotId?: string) {
 export function readSnapshotCache(projectId?: string): Array<{
   id: string
   label: string
-  data: { zones: Zone[]; assignments: Assignment[] }
+  data: { zones: Zone[]; assignments: Assignment[]; regionId?: string | null }
   created_at: string
   period?: string
 }> {
   const scopedProjectId = projectId ?? _currentProjectId
   const key = scopedKey('terrimap_snapshots', scopedProjectId)
   return readJsonArray<any>(key)
+}
+
+export function inferSnapshotRegionId(snapshot: {
+  data?: { zones?: Array<{ regionId?: string; region_id?: string }>; regionId?: string | null }
+}): string | null {
+  const explicitRegionId = snapshot?.data?.regionId ?? null
+  if (explicitRegionId) return explicitRegionId
+
+  const zones = snapshot?.data?.zones ?? []
+  const regionIds = new Set(
+    zones
+      .map((zone) => zone.regionId ?? zone.region_id ?? null)
+      .filter((value): value is string => Boolean(value)),
+  )
+  return regionIds.size === 1 ? [...regionIds][0] ?? null : null
 }
 
 //  DB row shapes (snake_case) 
@@ -422,13 +437,20 @@ export async function saveSnapshot(
   data: { zones: Zone[]; assignments: Assignment[] } | object,
   period?: string,  // '2026-04' - tùy chọn, gắn tháng với snapshot
   projectId?: string,
+  regionId?: string | null,
 ): Promise<{ ok: boolean; error?: string }> {
   const scopedProjectId = projectId ?? _currentProjectId
   // LUÔN lưu localStorage (scoped by project)
   const key = scopedKey('terrimap_snapshots', scopedProjectId)
   try {
     const existing = readSnapshotCache(scopedProjectId) as unknown[]
-    existing.unshift({ id, label, data, period, created_at: new Date().toISOString() })
+    existing.unshift({
+      id,
+      label,
+      data: { ...(data as Record<string, unknown>), regionId: regionId ?? null },
+      period,
+      created_at: new Date().toISOString(),
+    })
     if (existing.length > 50) existing.pop()
     localStorage.setItem(key, JSON.stringify(existing))
     dispatchSnapshotChange(scopedProjectId, id)
@@ -439,7 +461,12 @@ export async function saveSnapshot(
   // If online -> sync to Supabase in background so the UI never waits on network.
   if (isOnline()) {
     try {
-      const row: Record<string, unknown> = { id, label, data, period }
+      const row: Record<string, unknown> = {
+        id,
+        label,
+        data: { ...(data as Record<string, unknown>), regionId: regionId ?? null },
+        period,
+      }
       if (scopedProjectId) row.project_id = scopedProjectId
       void (async () => {
         try {
@@ -460,7 +487,7 @@ export async function saveSnapshot(
 
 export async function loadSnapshots(projectId?: string): Promise<Array<{
   id: string; label: string
-  data: { zones: Zone[]; assignments: Assignment[] }
+  data: { zones: Zone[]; assignments: Assignment[]; regionId?: string | null }
   created_at: string
 }>> {
   return loadSnapshotsForProject(projectId ?? _currentProjectId)
@@ -468,7 +495,7 @@ export async function loadSnapshots(projectId?: string): Promise<Array<{
 
 export async function loadSnapshotsForProject(projectId?: string): Promise<Array<{
   id: string; label: string
-  data: { zones: Zone[]; assignments: Assignment[] }
+  data: { zones: Zone[]; assignments: Assignment[]; regionId?: string | null }
   created_at: string
 }>> {
 
