@@ -92,9 +92,32 @@ function normalizeDateInput(value?: string | null): string | null {
 
 const DEFAULT_PROJECT_ID = 'test-project-terrimap'
 const DEFAULT_PROJECT_OWNER_EMAIL = 'admin.test@terrimap.vn'
+const PROJECT_MEMBER_BLOCKLIST_PREFIX = 'terrimap_blocked_members'
 const PROJECT_MEMBER_BASE_COLUMNS = 'id, project_id, user_id, role, region_id, joined_at'
 const PROJECT_MEMBER_FULL_COLUMNS = 'id, project_id, user_id, role, region_id, joined_at, status, blocked_reason, blocked_at, blocked_by, unblocked_at'
 let projectMemberStatusSupport: boolean | null = null
+
+function getLocalBlockedMemberIds(projectId: string): Set<string> {
+  try {
+    const raw = localStorage.getItem(`${PROJECT_MEMBER_BLOCKLIST_PREFIX}_${projectId}`)
+    const parsed = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(parsed) ? parsed.filter((value) => typeof value === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function setLocalBlockedMember(projectId: string, memberId: string, blocked: boolean): void {
+  try {
+    const key = `${PROJECT_MEMBER_BLOCKLIST_PREFIX}_${projectId}`
+    const current = getLocalBlockedMemberIds(projectId)
+    if (blocked) current.add(memberId)
+    else current.delete(memberId)
+    localStorage.setItem(key, JSON.stringify([...current]))
+  } catch {
+    // ignore local cache errors
+  }
+}
 
 async function getProjectMemberSelectColumns(): Promise<string> {
   if (!supabase) return PROJECT_MEMBER_BASE_COLUMNS
@@ -832,11 +855,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!projectId || !actor) return false
     const memberColumns = await getProjectMemberSelectColumns()
 
-    if (!projectMemberStatusSupport) {
-      set({ authError: 'Cần cập nhật database để dùng chức năng hạn chế thành viên' })
-      return false
-    }
-
     const { data: member } = await supabase
       .from('project_members')
       .select(memberColumns)
@@ -880,10 +898,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       .eq('id', memberId)
 
     if (error) {
+      if (!projectMemberStatusSupport || /status/i.test(error.message)) {
+        setLocalBlockedMember(projectId, memberId, true)
+        set({ authError: 'Đã áp dụng hạn chế tạm trên trình duyệt. Cần cập nhật database để đồng bộ.' })
+        await syncSalesAgentMembership({
+          ...(member as unknown as ProjectMember),
+          status: 'blocked',
+          blocked_reason: reason.trim() || 'Tạm khóa trên trình duyệt',
+          blocked_at: new Date().toISOString(),
+          blocked_by: actor.id,
+          unblocked_at: null,
+        }, projectId, false)
+        return true
+      }
       set({ authError: error.message })
       return false
     }
 
+    setLocalBlockedMember(projectId, memberId, true)
     await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, false)
     return true
   },
@@ -893,11 +925,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return false
     const memberColumns = await getProjectMemberSelectColumns()
-
-    if (!projectMemberStatusSupport) {
-      set({ authError: 'Cần cập nhật database để dùng chức năng hạn chế thành viên' })
-      return false
-    }
 
     const { data: member } = await supabase
       .from('project_members')
@@ -924,10 +951,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       .eq('id', memberId)
 
     if (error) {
+      if (!projectMemberStatusSupport || /status/i.test(error.message)) {
+        setLocalBlockedMember(projectId, memberId, false)
+        set({ authError: 'Đã bỏ hạn chế tạm trên trình duyệt. Cần cập nhật database để đồng bộ.' })
+        await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, true)
+        return true
+      }
       set({ authError: error.message })
       return false
     }
 
+    setLocalBlockedMember(projectId, memberId, false)
     await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, true)
     return true
   },
@@ -953,7 +987,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return []
       }
 
-      const rows = (data ?? []) as unknown as ProjectMember[]
+      const localBlockedIds = projectMemberStatusSupport ? new Set<string>() : getLocalBlockedMemberIds(projectId)
+      const rows = (data ?? []).map((member: any) => {
+        if (!projectMemberStatusSupport && localBlockedIds.has(member.id)) {
+          return {
+            ...member,
+            status: 'blocked' as const,
+            blocked_reason: member.blocked_reason ?? 'Tạm khóa trên trình duyệt',
+            blocked_at: member.blocked_at ?? new Date().toISOString(),
+            blocked_by: member.blocked_by ?? null,
+            unblocked_at: member.unblocked_at ?? null,
+          }
+        }
+        return member
+      }) as unknown as ProjectMember[]
       return includeBlocked
         ? rows
         : rows.filter((member) => !isBlockedMember(member))
@@ -1089,3 +1136,5 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return true
   },
 }))
+
+
