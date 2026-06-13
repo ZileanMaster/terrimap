@@ -1027,23 +1027,6 @@ export function OperationsView() {
           </table>
         </div>
 
-        <div style={{ marginTop: 12 }}>
-          <h4 style={{ ...styles.sectionTitle, marginBottom: 8 }}>✅ Tỷ lệ hoàn thành theo khu vực</h4>
-          <div style={styles.opsRegionGrid}>
-            {regionOptions.map((r) => {
-              const stat = completion.byRegion.get(r.id) ?? { expected: 0, submitted: 0, missing: 0 }
-              const pct = stat.expected > 0 ? Math.round((stat.submitted / stat.expected) * 100) : 0
-              return (
-                <div key={r.id} style={styles.opsRegionCard}>
-                  <div style={styles.opsRegionName}>{r.name}</div>
-                  <div style={styles.opsRegionMeta}>{stat.submitted}/{stat.expected} ({pct}%) · thiếu {stat.missing}</div>
-                  <div style={styles.opsBar}><div style={{ ...styles.opsBarFill, width: `${pct}%` }} /></div>
-                </div>
-              )
-            })}
-            {regionOptions.length === 0 && (<div style={styles.tableEmpty}>Chưa có khu vực hoặc chưa có cụm kỳ vọng để thống kê.</div>)}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -1691,40 +1674,5 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 800,
     color: 'var(--color-text-2)',
-  },
-  opsRegionGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: 10,
-  },
-  opsRegionCard: {
-    border: '1px solid var(--color-border)',
-    background: 'var(--color-surface-2)',
-    borderRadius: 10,
-    padding: '10px 12px',
-    minWidth: 0,
-  },
-  opsRegionName: {
-    fontSize: 13,
-    fontWeight: 900,
-    color: 'var(--color-text)',
-  },
-  opsRegionMeta: {
-    marginTop: 6,
-    fontSize: 12,
-    fontWeight: 800,
-    color: 'var(--color-text-2)',
-  },
-  opsBar: {
-    marginTop: 8,
-    height: 8,
-    borderRadius: 999,
-    overflow: 'hidden',
-    background: 'rgba(148,163,184,0.35)',
-  },
-  opsBarFill: {
-    height: '100%',
-    background: '#22c55e',
-    borderRadius: 999,
   },
 };
