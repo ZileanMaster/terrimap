@@ -690,6 +690,7 @@ export function OperationsView() {
 
   const [period, setPeriod] = useState(currentReportPeriod());
   const [loading, setLoading] = useState(false);
+  const [hasLoadedReports, setHasLoadedReports] = useState(false);
   const [districtReports, setDistrictReports] = useState<any[]>([]);
   const [regionFilter, setRegionFilter] = useState<string>('__all__');
   const [query, setQuery] = useState('');
@@ -697,10 +698,16 @@ export function OperationsView() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+    setHasLoadedReports(false);
     loadDistrictReports(period, currentProjectId ?? undefined)
       .then((rs) => { if (mounted) setDistrictReports(rs as any); })
       .catch(() => { if (mounted) setDistrictReports([]); })
-      .finally(() => { if (mounted) setLoading(false); });
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
+          setHasLoadedReports(true);
+        }
+      });
     return () => { mounted = false; };
   }, [period, currentProjectId]);
 
@@ -881,6 +888,20 @@ export function OperationsView() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  if (loading || !hasLoadedReports) {
+    return (
+      <div style={styles.opsBoot}>
+        <div style={styles.opsBootCard}>
+          <div style={styles.opsBootSpinner} />
+          <div>
+            <div style={styles.opsBootTitle}>Đang tải dữ liệu vận hành</div>
+            <div style={styles.opsBootText}>Hệ thống đang đồng bộ báo cáo theo tháng và theo khu vực, vui lòng chờ một chút.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.viewContainer}>
@@ -1294,6 +1315,42 @@ const styles: Record<string, React.CSSProperties> = {
   },
   reportCard: {
     padding: '18px 16px',
+  },
+  opsBoot: {
+    minHeight: 'calc(100vh - 120px)',
+    display: 'grid',
+    placeItems: 'center',
+    padding: 24,
+  },
+  opsBootCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    padding: '18px 20px',
+    borderRadius: 16,
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-border)',
+    boxShadow: '0 14px 40px rgba(15,23,42,0.08)',
+    minWidth: 320,
+  },
+  opsBootSpinner: {
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    border: '3px solid var(--color-border)',
+    borderTopColor: 'var(--color-accent)',
+    animation: 'spin 0.8s linear infinite',
+  },
+  opsBootTitle: {
+    fontSize: 16,
+    fontWeight: 800,
+    color: 'var(--color-text)',
+  },
+  opsBootText: {
+    marginTop: 4,
+    fontSize: 13,
+    color: 'var(--color-text-secondary)',
+    lineHeight: 1.45,
   },
   tableWrapper: {
     overflowX: 'auto',
