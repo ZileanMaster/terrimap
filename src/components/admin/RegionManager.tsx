@@ -79,17 +79,7 @@ export default function RegionManager({ onFlyTo, assignments = [] }: RegionManag
 
   return (
     <div style={styles.wrapper}>
-      {visibleRegions.length === 0 ? (
-        <div style={styles.emptyState}>
-          <div style={styles.emptyIcon}>🗺️</div>
-          <div style={styles.emptyText}>Chưa có khu vực nào</div>
-          <div style={styles.emptyHint}>
-            {role === 'admin'
-              ? 'Hãy dùng nút tạo khu vực ở góc trên bên phải để khởi tạo dữ liệu.'
-              : 'Chờ quản trị viên tạo khu vực để bắt đầu làm việc.'}
-          </div>
-        </div>
-      ) : (
+      {visibleRegions.length > 0 && (
         <div style={styles.pillBar}>
           {visibleRegions.map((region) => {
             const isActive = currentRegionId === region.id
@@ -188,30 +178,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
-  },
-  emptyState: {
-    padding: 16,
-    borderRadius: 14,
-    border: '1px dashed var(--color-border)',
-    background: 'var(--color-surface-2)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    alignItems: 'center',
-    textAlign: 'center',
-  },
-  emptyIcon: {
-    fontSize: 24,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: 800,
-    color: 'var(--color-text)',
-  },
-  emptyHint: {
-    fontSize: 12,
-    lineHeight: 1.5,
-    color: 'var(--color-text-2)',
   },
   pillBar: {
     display: 'flex',
