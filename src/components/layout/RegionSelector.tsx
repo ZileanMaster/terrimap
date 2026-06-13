@@ -280,8 +280,6 @@ export default function RegionSelector() {
               <div style={styles.metrics}>
                 <Metric label="Vùng" value={regionZones.length} />
                 <Metric label="Nhân sự" value={regionAgents.length} />
-                <Metric label="Liên thông" value={topologyErrors} warn={topologyErrors > 0} />
-                <Metric label="Cụm liên thông" value={components} warn={components > 1} />
               </div>
 
               <div style={styles.cardFooter}>
