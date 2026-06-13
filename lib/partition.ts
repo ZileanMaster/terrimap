@@ -153,6 +153,82 @@ function pickTopKMove(candidates: MoveCandidate[], currentCost: number, temperat
   return candidates[candidates.length - 1]!
 }
 
+function collectMoveCandidates(
+  zones: Zone[],
+  assignment: Int32Array,
+  districtSizes: number[],
+  adjMatrix: AdjacencyMatrix,
+  idToIdx: Map<string, number>,
+  m: number,
+  alpha: number,
+  beta: number,
+  balanceWeights?: { customers: number; orders: number },
+  objective?: 'p-center' | 'p-median',
+  activityTotals?: ZoneActivityTotals,
+): MoveCandidate[] {
+  const candidates: MoveCandidate[] = [];
+
+  for (let i = 0; i < zones.length; i++) {
+    const currentDistrict = assignment[i]!;
+    if ((districtSizes[currentDistrict] ?? 0) <= 1) continue;
+
+    const zoneId = zones[i]!.id;
+    const neighborDistricts = new Set<number>();
+    for (const neighborId of (adjMatrix[zoneId] ?? [])) {
+      const nIdx = idToIdx.get(neighborId);
+      if (nIdx !== undefined && assignment[nIdx] !== currentDistrict) {
+        neighborDistricts.add(assignment[nIdx]!);
+      }
+    }
+    if (neighborDistricts.size === 0) continue;
+
+    for (const targetDistrict of neighborDistricts) {
+      if (targetDistrict === currentDistrict) continue;
+
+      assignment[i] = targetDistrict;
+      const sourceStillConnected = isDistrictConnected(
+        zones,
+        assignment,
+        currentDistrict,
+        adjMatrix,
+        idToIdx,
+      );
+
+      if (!sourceStillConnected) {
+        assignment[i] = currentDistrict;
+        continue;
+      }
+
+      const newCost = computeCost(
+        zones,
+        assignment,
+        m,
+        alpha,
+        beta,
+        adjMatrix,
+        balanceWeights,
+        objective,
+        activityTotals,
+      );
+
+      assignment[i] = currentDistrict;
+      candidates.push({ idx: i, from: currentDistrict, to: targetDistrict, cost: newCost });
+    }
+  }
+
+  return candidates;
+}
+
+function applyMoveCandidate(
+  assignment: Int32Array,
+  districtSizes: number[],
+  move: MoveCandidate,
+): void {
+  assignment[move.idx] = move.to;
+  districtSizes[move.from]!--;
+  districtSizes[move.to] = (districtSizes[move.to] ?? 0) + 1;
+}
+
 /**
  * Tính tổng customers của một zone.
  * @internal
@@ -832,11 +908,6 @@ export function partitionSimulatedAnnealing(
   );
 
   const assignment = Int32Array.from(warmup.assignment);
-  let currentCost = warmup.cost;
-  let bestAssignment = new Int32Array(assignment);
-  let bestCost = currentCost;
-  let T = initialTemp;
-  let iter = 0;
   const remainingIter = Math.max(0, maxIter - warmupBudget);
 
   const districtSizes = new Array<number>(m).fill(0);
@@ -844,57 +915,58 @@ export function partitionSimulatedAnnealing(
     districtSizes[districtId] = (districtSizes[districtId] ?? 0) + 1;
   }
 
+  const kickoffCandidates = collectMoveCandidates(
+    zones,
+    assignment,
+    districtSizes,
+    adjMatrix,
+    idToIdx,
+    m,
+    alpha,
+    beta,
+    balanceWeights,
+    objective,
+    activityTotals,
+  );
+
+  if (kickoffCandidates.length > 0) {
+    // Bước kick nhẹ để SA thoát khỏi đúng cùng basin với hill climbing.
+    kickoffCandidates.sort((a, b) => a.cost - b.cost || a.idx - b.idx || a.from - b.from || a.to - b.to);
+    const kickoffPool = kickoffCandidates.slice(0, Math.min(topK, kickoffCandidates.length));
+    const kickoffMove = kickoffPool[Math.floor(Math.random() * kickoffPool.length)]!;
+    applyMoveCandidate(assignment, districtSizes, kickoffMove);
+  }
+
+  let currentCost = computeCost(
+    zones,
+    assignment,
+    m,
+    alpha,
+    beta,
+    adjMatrix,
+    balanceWeights,
+    objective,
+    activityTotals,
+  );
+  let bestAssignment = new Int32Array(assignment);
+  let bestCost = currentCost;
+  let T = initialTemp;
+  let iter = 0;
+
   while (iter < remainingIter && T >= 1) {
-    const candidates: MoveCandidate[] = [];
-
-    for (let i = 0; i < zones.length; i++) {
-      const currentDistrict = assignment[i]!;
-      if ((districtSizes[currentDistrict] ?? 0) <= 1) continue;
-
-      const zoneId = zones[i]!.id;
-      const neighborDistricts = new Set<number>();
-      for (const neighborId of (adjMatrix[zoneId] ?? [])) {
-        const nIdx = idToIdx.get(neighborId);
-        if (nIdx !== undefined && assignment[nIdx] !== currentDistrict) {
-          neighborDistricts.add(assignment[nIdx]!);
-        }
-      }
-      if (neighborDistricts.size === 0) continue;
-
-      for (const targetDistrict of neighborDistricts) {
-        if (targetDistrict === currentDistrict) continue;
-
-        assignment[i] = targetDistrict;
-        const sourceStillConnected = isDistrictConnected(
-          zones,
-          assignment,
-          currentDistrict,
-          adjMatrix,
-          idToIdx,
-        );
-
-        if (!sourceStillConnected) {
-          assignment[i] = currentDistrict;
-          continue;
-        }
-
-        const newCost = computeCost(
-          zones,
-          assignment,
-          m,
-          alpha,
-          beta,
-          adjMatrix,
-          balanceWeights,
-          objective,
-          activityTotals,
-        );
-
-        assignment[i] = currentDistrict;
-
-        candidates.push({ idx: i, from: currentDistrict, to: targetDistrict, cost: newCost });
-      }
-    }
+    const candidates = collectMoveCandidates(
+      zones,
+      assignment,
+      districtSizes,
+      adjMatrix,
+      idToIdx,
+      m,
+      alpha,
+      beta,
+      balanceWeights,
+      objective,
+      activityTotals,
+    );
 
     if (candidates.length === 0) break;
 
@@ -904,9 +976,7 @@ export function partitionSimulatedAnnealing(
 
     const deltaE = chosenMove.cost - currentCost;
     if (deltaE <= 0 || Math.random() < Math.exp(-deltaE / T)) {
-      assignment[chosenMove.idx] = chosenMove.to;
-      districtSizes[chosenMove.from]!--;
-      districtSizes[chosenMove.to] = (districtSizes[chosenMove.to] ?? 0) + 1;
+      applyMoveCandidate(assignment, districtSizes, chosenMove);
       currentCost = chosenMove.cost;
       if (currentCost < bestCost) {
         bestCost = currentCost;
@@ -930,7 +1000,7 @@ export function partitionSimulatedAnnealing(
     balanceWeights,
     objective,
     activityTotals,
-    Math.max(0, Math.floor(maxIter * 0.2)),
+    Math.max(1, Math.floor(maxIter * 0.03)),
     onProgress,
   );
 
