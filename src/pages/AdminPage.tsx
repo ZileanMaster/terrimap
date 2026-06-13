@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { useUIStore } from '../store/uiStore.js'
 import { useDataStore } from '../store/dataStore.js'
 import { useFacade } from '../context/FacadeContext.js'
+import { useToast } from '../components/ui/Toast.js'
 import { isOnline } from '../lib/supabase.js'
 import type {
   Zone, GeoJSONPolygon, Assignment, AlgorithmResultVM, Snapshot,
@@ -39,6 +40,7 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
   const removeZone         = useDataStore((s) => s.removeZone)
   const updateZone         = useDataStore((s) => s.updateZone)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
+  const { push } = useToast()
 
   const authUser = useAuthStore((s) => s.user)
   const profile  = useAuthStore((s) => s.profile)
@@ -224,10 +226,20 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
     try {
       await ctx.facade.createVersion(label, displayZones, displayAssignments)
       setSnapshots(ctx.facade.getVersionHistory())
+      push({
+        kind: 'success',
+        title: 'Đã lưu snapshot',
+        message: 'Bản lưu hiện tại đã được tạo thành công.',
+      })
     } catch (e) {
       console.error('[AdminPage] createVersion error:', e)
+      push({
+        kind: 'error',
+        title: 'Không thể lưu snapshot',
+        message: e instanceof Error ? e.message : 'Đã xảy ra lỗi khi lưu bản lưu.',
+      })
     }
-  }, [ctx, displayZones, displayAssignments])
+  }, [ctx, displayZones, displayAssignments, push])
 
   //  Update activity 
 
@@ -276,12 +288,17 @@ export default function AdminPage({ mode = 'assignments' }: AdminPageProps) {
 
       await persistAssignments(mergedAssignments)
       selectZone(null)
+      push({
+        kind: 'success',
+        title: 'Đã lưu phân chia',
+        message: 'Thay đổi phân chia lãnh thổ đã được áp dụng thành công.',
+      })
     } catch (e) {
       console.error('[AdminPage] assignZone error:', e)
       const message = e instanceof Error ? e.message : 'Không thể lưu thay đổi phân vùng'
-      alert(message)
+      push({ kind: 'error', title: 'Không thể lưu', message })
     }
-  }, [ctx, displayAssignments, displayAgents, displayZones, assignments, persistAssignments, selectZone])
+  }, [ctx, displayAssignments, displayAgents, displayZones, assignments, persistAssignments, push, selectZone])
 
   //  Draw zone 
 

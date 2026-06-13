@@ -9,6 +9,7 @@ import MapLegend from '../components/map/MapLegend.js'
 import MetricsInput from '../components/coordinator/MetricsInput.js'
 import SnapshotManager from '../components/snapshot/SnapshotManager.js'
 import MyClusterReports from '../components/reports/MyClusterReports.js'
+import { useToast } from '../components/ui/Toast.js'
 import { useAuthStore } from '../store/authStore.js'
 import { resolveUserKey } from '../utils/userIdentity.js'
 import { buildAdjacencyMatrix } from '../../lib/geometry.js'
@@ -46,6 +47,7 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
   const selectZone         = useUIStore((s) => s.selectZone)
   const highlightedSalesId = useUIStore((s) => s.highlightedSalesId)
   const ctx                = useFacade()
+  const { push } = useToast()
 
   //  Local UI state 
   const [currentPeriod, setCurrentPeriod]       = useState(currentPeriodDefault())
@@ -136,12 +138,17 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
       ]
       await persistAssignments(mergedAssignments)
       selectZone(null)
+      push({
+        kind: 'success',
+        title: 'Đã lưu phân chia',
+        message: 'Thay đổi phân chia của điều phối đã được áp dụng thành công.',
+      })
     } catch (e) {
       console.error('[CoordinatorPage] assignZone error:', e)
       const message = e instanceof Error ? e.message : 'Không thể lưu thay đổi phân vùng'
-      alert(message)
+      push({ kind: 'error', title: 'Không thể lưu', message })
     }
-  }, [ctx, assignments, displayAssignments, displayZones, persistAssignments, selectZone])
+  }, [ctx, assignments, displayAssignments, displayZones, persistAssignments, push, selectZone])
 
   /**
    * Adjust 2: Chạy thuật toán với bản copy zones (metrics override).
@@ -151,19 +158,32 @@ export default function CoordinatorPage({ mode = 'assignments' }: CoordinatorPag
 
     // Hiện tại: thông báo user về zones đã được cập nhật metrics
     console.info('[CoordinatorPage] Running algorithm with metrics-overridden zones:', zonesWithMetrics.length)
-    alert(`✅ Chạy phân vùng với ${zonesWithMetrics.length} zones (chỉ số tháng ${currentPeriod}).\nTính năng chạy thuật toán sẽ được tích hợp sau.`)
-  }, [currentPeriod])
+    push({
+      kind: 'info',
+      title: 'Đã ghi nhận',
+      message: `Chạy phân vùng với ${zonesWithMetrics.length} zones (chỉ số tháng ${currentPeriod}).`,
+    })
+  }, [currentPeriod, push])
 
   const handleSnapshot = useCallback(async () => {
     if (ctx.role !== 'coordinator') return
     const label = `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
     try {
       await ctx.facade.createVersion(label, displayZones, displayAssignments)
+      push({
+        kind: 'success',
+        title: 'Đã lưu snapshot',
+        message: 'Bản lưu hiện tại đã được tạo thành công.',
+      })
     } catch (e) {
       console.error('[CoordinatorPage] createVersion error:', e)
-      alert('Không thể lưu snapshot hiện tại.')
+      push({
+        kind: 'error',
+        title: 'Không thể lưu snapshot',
+        message: e instanceof Error ? e.message : 'Không thể lưu snapshot hiện tại.',
+      })
     }
-  }, [ctx, displayZones, displayAssignments])
+  }, [ctx, displayZones, displayAssignments, push])
 
   const districtCount = districtIds.length
   const showPolygons = useUIStore((s) => s.showPolygons)

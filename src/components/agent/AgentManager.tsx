@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import type { SalesAgent } from '../../../facades/viewmodels.js'
+import { useToast } from '../ui/Toast.js'
 
 interface AgentManagerProps {
   open: boolean
@@ -15,6 +16,7 @@ export default function AgentManager({ open, onClose }: AgentManagerProps) {
   const removeAgent = useDataStore((s) => s.removeAgent)
 
   const [editing, setEditing] = useState<SalesAgent | null>(null)
+  const { push } = useToast()
   const [form, setForm]       = useState({ name: '', activeRegion: '', regionId: '', capacity: 400 })
 
   // Mở form thêm mới
@@ -36,7 +38,10 @@ export default function AgentManager({ open, onClose }: AgentManagerProps) {
 
   // Submit form (thêm hoặc sửa)
   const handleSubmit = useCallback(async () => {
-    if (!form.name.trim()) return alert('Tên nhân viên không được trống')
+    if (!form.name.trim()) {
+      push({ kind: 'warning', title: 'Thi?u t?n nh?n vi?n', message: 'T?n nh?n vi?n kh?ng ???c tr?ng.' })
+      return
+    }
 
 
     const regionName = regions.find((r) => r.id === form.regionId)?.name ?? form.activeRegion.trim()

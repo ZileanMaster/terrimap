@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
 import type { ProjectMember, Profile } from '../../store/authStore.js'
 import { supabase } from '../../lib/supabase.js'
+import { useToast } from '../ui/Toast.js'
 
 // Cấu hình hiển thị vai trò
 const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string; level: number }> = {
@@ -31,6 +32,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   const authError     = useAuthStore((s) => s.authError)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const user          = useAuthStore((s) => s.user)
+  const { push } = useToast()
 
   const [members, setMembers]       = useState<MemberWithProfile[]>([])
   const [loading, setLoading]       = useState(false)
@@ -98,7 +100,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       const timeoutId = setTimeout(() => {
         timedOut = true
         setSubmitting(false)
-        alert('⏳ Vui lòng thử lại.')
+        push({ kind: 'warning', title: 'Đang chậm', message: 'Vui lòng thử lại.' })
       }, 10_000)
 
       const ok = await inviteMember(inviteEmail.trim(), inviteRole)
@@ -112,11 +114,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       }
     } catch (e) {
       console.error('[MemberManager] invite error:', e)
-      alert('❌ Lỗi khi mời thành viên. Vui lòng thử lại.')
+      push({ kind: 'error', title: 'Không thể mời thành viên', message: 'Vui lòng thử lại.' })
     } finally {
       setSubmitting(false)
     }
-  }, [inviteEmail, inviteRole, inviteMember, clearError, reload])
+  }, [inviteEmail, inviteRole, inviteMember, clearError, reload, push])
 
   const handleToggleRestriction = useCallback(async (member: MemberWithProfile) => {
     if (member.status === 'blocked') {
@@ -137,7 +139,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
               : item,
           ),
         )
-        window.alert(`✅ Đã bỏ hạn chế cho ${member.profile?.full_name ?? 'thành viên'}.`)
+        push({
+          kind: 'success',
+          title: '?? b? h?n ch?',
+          message: `?? b? h?n ch? cho ${member.profile?.full_name ?? 'th?nh vi?n'}.`,
+        })
         reload()
       }
       return
@@ -151,6 +157,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     const reason = window.prompt(`Lý do hạn chế ${member.profile?.full_name ?? 'thành viên'} (không bắt buộc):`, '') ?? ''
     if (!window.confirm(`Hạn chế ${member.profile?.full_name ?? 'thành viên'} khỏi dự án?`)) return
     await blockMember(member.id, reason)
+    push({
+      kind: 'success',
+      title: '?? h?n ch?',
+      message: `${member.profile?.full_name ?? 'Th?nh vi?n'} ?? ???c ??a v?o danh s?ch h?n ch?.`,
+    })
     reload()
   }, [adminCount, blockMember, unblockMember, reload])
 
@@ -171,6 +182,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     if (!window.confirm(`Đổi vai trò ${member.profile?.full_name ?? 'thành viên'} thành ${ROLE_CONFIG[newRole]?.label}?`)) return
     try {
       await updateRole(member.id, newRole)
+      push({
+        kind: 'success',
+        title: '?? c?p nh?t vai tr?',
+        message: `${member.profile?.full_name ?? 'Th?nh vi?n'} ?? ???c ??i sang ${ROLE_CONFIG[newRole]?.label}.`,
+      })
       reload()
     } catch (e) {
       console.error('[MemberManager] role change error:', e)
@@ -196,6 +212,11 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     if (!window.confirm(`Xóa ${member.profile?.full_name ?? member.user_id} khỏi dự án?`)) return
     try {
       await removeMember(member.id)
+      push({
+        kind: 'success',
+        title: '?? x?a th?nh vi?n',
+        message: `${member.profile?.full_name ?? member.user_id} ?? ???c x?a kh?i d? ?n.`,
+      })
       reload()
     } catch (e) {
       console.error('[MemberManager] remove error:', e)
