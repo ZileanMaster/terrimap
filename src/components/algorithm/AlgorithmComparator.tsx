@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
 import { useSAWorker } from '../../hooks/useSAWorker.js'
+import { useToast } from '../ui/Toast.js'
 import TerritoryMap from '../map/TerritoryMap.js'
 import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
@@ -65,13 +66,13 @@ function formatAlgoLabel(algo: Algo): string {
   const persistAssignments = useDataStore((s) => s.persistAssignments)
   const ctx = useFacade()
   const { runSA } = useSAWorker()
+  const { push } = useToast()
 
   const [selectedRegionId, setSelectedRegionId] = useState(currentRegionId || regions[0]?.id || '')
   const [isRunning, setIsRunning] = useState(false)
   const [hasRun, setHasRun] = useState(false)
   const [syncViewport, setSyncViewport] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [currentCost, setCurrentCost] = useState<number | null>(null)
 
@@ -207,8 +208,11 @@ function formatAlgoLabel(algo: Algo): string {
     }
 
     await persistAssignments(mergedAssignments)
-    setSuccessMessage(`Đã áp dụng thành công kịch bản ${side}.`)
-    window.setTimeout(() => setSuccessMessage(null), 2200)
+    push({
+      kind: 'success',
+      title: 'Áp dụng thành công',
+      message: `Đã áp dụng kịch bản ${side} vào dữ liệu hiện tại.`,
+    })
   }
 
   const recommendation = useMemo(() => {
@@ -239,17 +243,6 @@ function formatAlgoLabel(algo: Algo): string {
                 {currentCost !== null && <span>Cost {currentCost.toFixed(2)}</span>}
               </div>
             </div>
-          </div>
-        </div>
-      )}
-      {successMessage && (
-        <div style={styles.successOverlay} role="status" aria-live="polite">
-          <div style={styles.successToast}>
-            <strong style={styles.successTitle}>Áp dụng thành công</strong>
-            <span style={styles.successText}>{successMessage}</span>
-            <button type="button" style={styles.successCloseBtn} onClick={() => setSuccessMessage(null)}>
-              Đóng
-            </button>
           </div>
         </div>
       )}
@@ -462,45 +455,6 @@ function Metric({ label, value }: { label: string; value: number | string }) {
     paddingTop: 80,
     background: 'color-mix(in srgb, var(--color-bg) 42%, transparent)',
     backdropFilter: 'blur(2px)',
-  },
-  successOverlay: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 40,
-    display: 'grid',
-    placeItems: 'start center',
-    paddingTop: 80,
-    pointerEvents: 'none',
-  },
-  successToast: {
-    pointerEvents: 'auto',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: '14px 16px',
-    borderRadius: 14,
-    border: '1px solid rgba(16,185,129,0.24)',
-    background: 'color-mix(in srgb, var(--color-surface) 96%, white)',
-    boxShadow: '0 18px 40px rgba(15, 23, 42, 0.18)',
-  },
-  successTitle: {
-    fontSize: 14,
-    color: '#047857',
-    fontWeight: 900,
-    whiteSpace: 'nowrap',
-  },
-  successText: {
-    fontSize: 13,
-    color: 'var(--color-text)',
-  },
-  successCloseBtn: {
-    border: '1px solid var(--color-border)',
-    borderRadius: 10,
-    background: 'var(--color-surface)',
-    color: 'var(--color-text)',
-    padding: '6px 10px',
-    fontWeight: 800,
-    cursor: 'pointer',
   },
   runningCard: {
     display: 'flex',
