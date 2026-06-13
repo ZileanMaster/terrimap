@@ -461,14 +461,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   metrics: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 8,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
   },
   metric: {
     border: '1px solid var(--color-border)',
     borderRadius: 7,
-    padding: 10,
+    padding: '14px 12px',
     background: 'var(--color-surface)',
+    minHeight: 88,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
   metricValue: {
     display: 'block',
