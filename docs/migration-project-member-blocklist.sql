@@ -26,7 +26,7 @@ END $$;
 ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
 
 -- Helper functions to avoid RLS recursion in policies
-CREATE OR REPLACE FUNCTION public.is_project_owner(target_project_id uuid)
+CREATE OR REPLACE FUNCTION public.is_project_owner(target_project_id text)
 RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -41,7 +41,7 @@ AS $$
   );
 $$;
 
-CREATE OR REPLACE FUNCTION public.is_active_project_member(target_project_id uuid)
+CREATE OR REPLACE FUNCTION public.is_active_project_member(target_project_id text)
 RETURNS boolean
 LANGUAGE sql
 STABLE
@@ -57,7 +57,7 @@ AS $$
   );
 $$;
 
-CREATE OR REPLACE FUNCTION public.is_active_project_admin(target_project_id uuid)
+CREATE OR REPLACE FUNCTION public.is_active_project_admin(target_project_id text)
 RETURNS boolean
 LANGUAGE sql
 STABLE
