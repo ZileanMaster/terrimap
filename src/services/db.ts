@@ -66,6 +66,22 @@ function readScopedCollections<T>(base: string, projectId?: string): T[] {
   return readJsonArray<T>(base)
 }
 
+export function readCachedZones(projectId?: string): Zone[] {
+  return readScopedCollections<Zone>('terrimap_zones', projectId)
+}
+
+export function readCachedAssignments(projectId?: string): Assignment[] {
+  return readScopedCollections<Assignment>('terrimap_assignments', projectId)
+}
+
+export function readCachedAgents(projectId?: string): SalesAgent[] {
+  return readScopedCollections<SalesAgent>('terrimap_agents', projectId)
+}
+
+export function readCachedRegions(projectId?: string): Region[] {
+  return readScopedCollections<Region>('terrimap_regions', projectId)
+}
+
 function dispatchSnapshotChange(projectId?: string, snapshotId?: string) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(

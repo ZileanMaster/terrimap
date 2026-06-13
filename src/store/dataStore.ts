@@ -18,9 +18,8 @@ import {
   saveAgent, deleteAgent,
   loadRegions, saveRegion, deleteRegion as dbDeleteRegion,
   setActiveProject,
+  readCachedZones, readCachedAssignments, readCachedAgents, readCachedRegions,
 } from '../services/db.js'
-import { MOCK_ZONES, MOCK_ASSIGNMENTS } from '../data/mock-zones.js'
-import { MOCK_AGENTS } from '../data/mock-agents.js'
 import type { Region } from '../data/regions.js'
 import { assertNoPolygonTopologyViolations } from '../../lib/geometry.js'
 
@@ -147,31 +146,43 @@ export const useDataStore = create<DataStore>((set, get) => ({
     setActiveProject(projectId)
     // Reset on project change
     set({ loading: true, initialized: false, currentProjectId: projectId })
+
+    const cachedZones = readCachedZones(projectId)
+    const cachedAssignments = readCachedAssignments(projectId)
+    const cachedAgents = readCachedAgents(projectId)
+    const cachedRegions = buildRegionsFromZones(cachedZones, readCachedRegions(projectId))
+
+    set({
+      zones: cachedZones,
+      assignments: cachedAssignments,
+      agents: cachedAgents,
+      regions: cachedRegions,
+      loading: false,
+      initialized: true,
+    })
+
     try {
-      // 10s timeout: if Supabase queries hang, fallback to mock data
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Data load timeout (10s)')), 10_000),
-      )
-      const [z, a, ag, rg] = await Promise.race([
-        Promise.all([
-          loadZones(projectId),
-          loadAssignments(projectId),
-          loadAgents(projectId),
-          loadRegions(projectId),
-        ]),
-        timeout,
-      ]) as [typeof MOCK_ZONES, typeof MOCK_ASSIGNMENTS, typeof MOCK_AGENTS, never[]]
-      const safeRegions = buildRegionsFromZones(z as Zone[], (rg as Region[]) ?? [])
+      const [z, a, ag, rg] = await Promise.all([
+        loadZones(projectId),
+        loadAssignments(projectId),
+        loadAgents(projectId),
+        loadRegions(projectId),
+      ])
+      const safeRegions = buildRegionsFromZones(z, rg as Region[])
       if ((rg as Region[]).length === 0 && safeRegions.length > 0) {
         console.warn('[DataStore] Regions table empty or unavailable, rebuilt region list from zones')
       }
 
-      set({ zones: z, assignments: a, agents: ag, regions: safeRegions })
+      if (get().currentProjectId === projectId) {
+        set({ zones: z, assignments: a, agents: ag, regions: safeRegions })
+      }
     } catch (e) {
       console.error('[DataStore] init error:', e)
       // Important: never leak MOCK data into real accounts/projects when online.
 
-      set({ zones: [], assignments: [], agents: [], regions: [] })
+      if (get().currentProjectId === projectId && cachedZones.length === 0 && cachedAssignments.length === 0 && cachedAgents.length === 0 && cachedRegions.length === 0) {
+        set({ zones: [], assignments: [], agents: [], regions: [] })
+      }
     } finally {
       set({ loading: false, initialized: true })
     }
