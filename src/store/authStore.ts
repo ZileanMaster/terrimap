@@ -34,6 +34,13 @@ export interface ProjectMember {
   blocked_at?: string | null
   blocked_by?: string | null
   unblocked_at?: string | null
+  profile?: {
+    id: string
+    email: string
+    full_name: string
+    date_of_birth?: string | null
+    phone?: string | null
+  } | null
 }
 
 interface AuthStore {
@@ -932,11 +939,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     if (!projectId) return []
     const memberColumns = await getProjectMemberSelectColumns()
+    const selectColumns = `${memberColumns}, profile:profiles(id, email, full_name, date_of_birth, phone)`
 
     const readMembers = async (): Promise<ProjectMember[]> => {
       const { data, error } = await client
         .from('project_members')
-        .select(memberColumns)
+        .select(selectColumns)
         .eq('project_id', projectId)
         .order('joined_at', { ascending: true })
 
@@ -982,6 +990,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           region_id: null,
           joined_at: project.created_at ?? new Date().toISOString(),
           ...(projectMemberStatusSupport ? { status: 'active' as const } : {}),
+          profile: null,
         }
 
         const { error: repairError } = await client

@@ -335,21 +335,9 @@ export function UsersView() {
         return;
       }
 
-      const userIds = rawMembers.map((m: any) => m.user_id);
-      const profilesRes = await supabase
-        .from('profiles')
-        .select('id, email, full_name, date_of_birth, phone')
-        .in('id', userIds);
-      const profiles = profilesRes.data;
-      if (profilesRes.error) {
-        console.error('[UsersView] load profiles error:', profilesRes.error.message);
-      }
-
-      const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
-
       const merged = rawMembers.map((m: any) => ({
         ...m,
-        profile: profileMap.get(m.user_id) || { email: m.user_id, full_name: 'Chưa cập nhật' },
+        profile: m.profile || { email: m.user_id, full_name: 'Chưa cập nhật' },
 
         capacity: m.capacity ?? 500,
       }));

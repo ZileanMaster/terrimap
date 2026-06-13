@@ -10,8 +10,8 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; icon: string; 
   sales:       { label: 'Bán hàng',   color: '#22c55e', icon: '💼', level: 1 },
 }
 
-interface MemberWithProfile extends ProjectMember {
-  profile?: { email: string; full_name: string }
+type MemberWithProfile = ProjectMember & {
+  profile?: ProjectMember['profile']
 }
 
 interface MemberManagerProps {
@@ -55,18 +55,9 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       // Lấy danh sách thành viên
       const rawMembers = await loadMembers(true)
       if (!rawMembers || rawMembers.length === 0) return []
-
-      // Lấy hồ sơ người dùng
-      const userIds = rawMembers.map((m: any) => m.user_id)
-      const { data: profiles } = await client
-        .from('profiles')
-        .select('id, email, full_name')
-        .in('id', userIds)
-
-      const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]))
       return rawMembers.map((m: any) => ({
         ...m,
-        profile: profileMap.get(m.user_id) ?? undefined,
+        profile: m.profile ?? undefined,
       })) as MemberWithProfile[]
     }
 
