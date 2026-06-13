@@ -426,7 +426,6 @@ export function UsersView() {
       }
 
 
-      await useDataStore.getState().init(currentProjectId);
       await reloadMembers();
       setEditingId(null);
     } catch (e: any) {
@@ -467,7 +466,6 @@ export function UsersView() {
         await supabase.from('sales_agents').delete().eq('id', member.user_id);
       }
 
-      await useDataStore.getState().init(currentProjectId);
       await reloadMembers();
     } catch (e: any) {
       alert(`❌ Lỗi: ${e.message}`);
