@@ -157,6 +157,18 @@ function isBlockedMember(member?: Pick<ProjectMember, 'status'> | null): boolean
   return member?.status === 'blocked'
 }
 
+function buildDefaultProjectForUser(userId: string, email?: string | null): Project {
+  const isDefaultAdmin = (email ?? '').toLowerCase() === DEFAULT_PROJECT_OWNER_EMAIL.toLowerCase()
+
+  return {
+    id: DEFAULT_PROJECT_ID,
+    name: 'TerriMap',
+    description: '',
+    owner_id: isDefaultAdmin ? userId : '',
+    created_at: new Date().toISOString(),
+  }
+}
+
 async function syncSalesAgentMembership(member: ProjectMember, projectId: string, active: boolean): Promise<void> {
   if (!supabase || member.role !== 'sales') return
 
@@ -196,29 +208,28 @@ async function syncSalesAgentMembership(member: ProjectMember, projectId: string
   }
 }
 
-async function ensureDefaultProjectMembership(userId: string): Promise<void> {
+async function ensureDefaultProjectMembership(user: User): Promise<void> {
   if (!supabase) return
 
   const defaultProject = await resolveDefaultProject()
-  if (!defaultProject) return
+  const defaultProjectId = defaultProject?.id ?? DEFAULT_PROJECT_ID
+  const isDefaultAdmin = (user.email ?? '').toLowerCase() === DEFAULT_PROJECT_OWNER_EMAIL.toLowerCase()
 
   
   const { data: existing } = await supabase
     .from('project_members')
     .select(PROJECT_MEMBER_SELECT_COLUMNS)
-    .eq('project_id', defaultProject.id)
-    .eq('user_id', userId)
+    .eq('project_id', defaultProjectId)
+    .eq('user_id', user.id)
     .maybeSingle()
 
   if (isBlockedMember(existing as unknown as ProjectMember)) {
-    if (defaultProject.owner_id !== userId) return
-
     const { error: restoreError } = await supabase
       .from('project_members')
       .upsert({
-        project_id: defaultProject.id,
-        user_id: userId,
-        role: 'admin',
+        project_id: defaultProjectId,
+        user_id: user.id,
+        role: isDefaultAdmin ? 'admin' : 'sales',
         region_id: null,
         status: 'active',
       }, { onConflict: 'project_id,user_id' })
@@ -226,7 +237,7 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
     if (restoreError) {
       console.warn('[AuthStore] ensureDefaultProjectMembership restore warning:', restoreError)
     } else {
-      invalidateProjectMembersCache(defaultProject.id)
+      invalidateProjectMembersCache(defaultProjectId)
     }
     return
   }
@@ -235,9 +246,9 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
   const { error } = await supabase
     .from('project_members')
     .upsert({
-      project_id: defaultProject.id,
-      user_id: userId,
-      role: defaultProject.owner_id === userId ? 'admin' : 'sales',
+      project_id: defaultProjectId,
+      user_id: user.id,
+      role: isDefaultAdmin ? 'admin' : 'sales',
       region_id: null,
       status: 'active',
     }, { onConflict: 'project_id,user_id' })
@@ -245,7 +256,7 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
   if (error) {
     console.warn('[AuthStore] ensureDefaultProjectMembership warning:', error)
   } else {
-    invalidateProjectMembersCache(defaultProject.id)
+    invalidateProjectMembersCache(defaultProjectId)
   }
 }
 
@@ -289,7 +300,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
         set({ user: session.user, session })
-        await ensureDefaultProjectMembership(session.user.id)
+        await ensureDefaultProjectMembership(session.user)
         await Promise.all([
           get().loadProfile(),
           get().loadProjects(),
@@ -313,7 +324,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (!session) {
         set({ profile: null, projects: [], currentProjectId: null, membership: null })
       } else {
-        await ensureDefaultProjectMembership(session.user.id)
+        await ensureDefaultProjectMembership(session.user)
         await get().loadProfile()
         await get().loadProjects()
         const nextProjectId = await pickFallbackProject(get().projects)
@@ -348,7 +359,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       set({ user: data.user, session: data.session })
       if (data.user) {
-        await ensureDefaultProjectMembership(data.user.id)
+        await ensureDefaultProjectMembership(data.user)
       }
       await Promise.all([
         get().loadProfile(),
@@ -396,10 +407,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false
     }
 
-    set({ user: data.user, session: data.session })
-    if (data.user) {
-      await ensureDefaultProjectMembership(data.user.id)
-    }
+      set({ user: data.user, session: data.session })
+      if (data.user) {
+        await ensureDefaultProjectMembership(data.user)
+      }
 
     // Wait for the trigger to create the profile (retry loop instead of brittle setTimeout)
     for (let attempt = 0; attempt < 5; attempt++) {
@@ -512,15 +523,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const mergedProjects = [...owned, ...memberProjects]
     if (mergedProjects.length === 0) {
-      const fallbackProject = await resolveDefaultProject()
-      if (fallbackProject) {
-        const blockedDefaultProject = (memberData ?? []).some((member: any) =>
-          member.project_id === fallbackProject.id && isBlockedMember(member),
-        )
-        if (!blockedDefaultProject) {
-          mergedProjects.push(fallbackProject)
-        }
-      }
+      const fallbackProject = (await resolveDefaultProject()) ?? buildDefaultProjectForUser(user.id, user.email)
+      const blockedDefaultProject = (memberData ?? []).some((member: any) =>
+        member.project_id === fallbackProject.id && isBlockedMember(member),
+      )
+      if (!blockedDefaultProject) mergedProjects.push(fallbackProject)
     }
 
     set({ projects: mergedProjects })
@@ -532,7 +539,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return
     
-    const project = get().projects.find((p) => p.id === projectId)
+    const project = get().projects.find((p) => p.id === projectId) ?? (
+      projectId === DEFAULT_PROJECT_ID ? buildDefaultProjectForUser(user.id, user.email) : null
+    )
     const { data } = await supabase
       .from('project_members')
       .select(PROJECT_MEMBER_SELECT_COLUMNS)
@@ -567,7 +576,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } else {
 
       const projects = get().projects
-      const project = projects.find(p => p.id === projectId)
+      const project = projects.find(p => p.id === projectId) ?? (
+        projectId === DEFAULT_PROJECT_ID ? buildDefaultProjectForUser(user.id, user.email) : null
+      )
       if (project?.owner_id === user.id) {
         set({
           membership: {
