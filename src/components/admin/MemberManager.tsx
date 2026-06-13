@@ -121,8 +121,25 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
   const handleToggleRestriction = useCallback(async (member: MemberWithProfile) => {
     if (member.status === 'blocked') {
       if (!window.confirm(`Bỏ chặn ${member.profile?.full_name ?? 'thành viên'}?`)) return
-      await unblockMember(member.id)
-      reload()
+      const ok = await unblockMember(member.id)
+      if (ok) {
+        setMembers((prev) =>
+          prev.map((item) =>
+            item.id === member.id
+              ? {
+                  ...item,
+                  status: 'active',
+                  blocked_reason: null,
+                  blocked_at: null,
+                  blocked_by: null,
+                  unblocked_at: new Date().toISOString(),
+                }
+              : item,
+          ),
+        )
+        window.alert(`✅ Đã bỏ hạn chế cho ${member.profile?.full_name ?? 'thành viên'}.`)
+        reload()
+      }
       return
     }
 
