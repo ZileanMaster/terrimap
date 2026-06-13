@@ -452,7 +452,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return
 
-    
     const { data: memberData } = await supabase
       .from('project_members')
       .select(PROJECT_MEMBER_SELECT_COLUMNS)
@@ -469,7 +468,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const owned = (ownedProjects ?? []) as Project[]
 
-
     let memberProjects: Project[] = []
     if (memberProjectIds.length > 0) {
       const ownedIds = new Set(owned.map(p => p.id))
@@ -483,7 +481,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
     }
 
-    set({ projects: [...owned, ...memberProjects] })
+    const mergedProjects = [...owned, ...memberProjects]
+    if (mergedProjects.length === 0) {
+      const fallbackProject = await resolveDefaultProject()
+      if (fallbackProject) {
+        const blockedDefaultProject = (memberData ?? []).some((member: any) =>
+          member.project_id === fallbackProject.id && isBlockedMember(member),
+        )
+        if (!blockedDefaultProject) {
+          mergedProjects.push(fallbackProject)
+        }
+      }
+    }
+
+    set({ projects: mergedProjects })
   },
 
   //  Select Project 

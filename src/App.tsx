@@ -55,18 +55,29 @@ function PageLoader() {
   )
 }
 
-function ProjectAccessGate({ hasProjects, onSignOut }: { hasProjects: boolean; onSignOut: () => Promise<void> | void }) {
+function ProjectAccessPending({ onSignOut }: { onSignOut: () => Promise<void> | void }) {
   return (
     <div style={styles.gate}>
       <div style={styles.gateCard}>
         <div style={styles.gateIcon}>🔒</div>
-        <h2 style={styles.gateTitle}>
-          {hasProjects ? 'Không thể mở dự án hiện tại' : 'Chưa có dự án khả dụng'}
-        </h2>
+        <h2 style={styles.gateTitle}>Đang vào dự án</h2>
+        <p style={styles.gateText}>Hệ thống đang tự mở dự án khả dụng mới nhất cho tài khoản của bạn.</p>
+        <button type="button" onClick={onSignOut} style={styles.gateButton}>
+          Đăng xuất
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ProjectAccessRestricted({ onSignOut }: { onSignOut: () => Promise<void> | void }) {
+  return (
+    <div style={styles.gate}>
+      <div style={styles.gateCard}>
+        <div style={styles.gateIcon}>🔒</div>
+        <h2 style={styles.gateTitle}>Tài khoản bị hạn chế</h2>
         <p style={styles.gateText}>
-          {hasProjects
-            ? 'Tài khoản của bạn đang bị hạn chế hoặc không còn quyền vào dự án đang được chọn. Vui lòng liên hệ quản trị viên để được gỡ hạn chế.'
-            : 'Tài khoản này chưa được gán vào dự án nào, hoặc đang bị hạn chế khỏi toàn bộ dự án khả dụng.'}
+          Tài khoản này đang bị chặn khỏi dự án khả dụng. Vui lòng liên hệ quản trị viên để được gỡ hạn chế.
         </p>
         <button type="button" onClick={onSignOut} style={styles.gateButton}>
           Đăng xuất
@@ -81,6 +92,7 @@ export default function App() {
   const authUser       = useAuthStore((s) => s.user)
   const authSession    = useAuthStore((s) => s.session)
   const authLoading    = useAuthStore((s) => s.loading)
+  const authError      = useAuthStore((s) => s.authError)
   const currentProjectId = useAuthStore((s) => s.currentProjectId)
   const membership     = useAuthStore((s) => s.membership)
   const projects       = useAuthStore((s) => s.projects)
@@ -91,6 +103,7 @@ export default function App() {
   const viewAsRole     = useUIStore((s) => s.role)
   const currentProject  = projects.find((project) => project.id === currentProjectId)
   const activeMembership = membership?.project_id === currentProjectId ? membership : null
+  const isRestricted = /hạn chế|bị chặn|restricted|blocked/i.test(authError ?? '')
   const effectiveRole  = activeMembership?.role === 'admin'
     ? viewAsRole
     : (activeMembership?.role ?? (currentProject?.owner_id === authUser?.id ? 'admin' : 'sales'))
@@ -160,7 +173,9 @@ export default function App() {
 
   // Tải dữ liệu khi đã có project
   if (!currentProjectId) {
-    return <ProjectAccessGate hasProjects={projects.length > 0} onSignOut={signOut} />
+    return isRestricted
+      ? <ProjectAccessRestricted onSignOut={signOut} />
+      : <ProjectAccessPending onSignOut={signOut} />
   }
 
 
