@@ -1027,24 +1027,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
       }
 
-      const profileIds = [...new Set(members.map((member) => member.user_id).filter(Boolean))]
-      if (profileIds.length > 0) {
-        const { data: profiles, error: profilesError } = await client
-          .from('profiles')
-          .select('id, email, full_name, date_of_birth, phone')
-          .in('id', profileIds)
-
-        if (profilesError) {
-          console.warn('[AuthStore] loadMembers profile lookup warning:', profilesError.message)
-        } else {
-          const profileMap = new Map((profiles ?? []).map((profile: any) => [profile.id, profile]))
-          members = members.map((member) => ({
-            ...member,
-            profile: profileMap.get(member.user_id) ?? null,
-          }))
-        }
-      }
-
       setCachedProjectMembers(projectId, members)
       return members
     })()
