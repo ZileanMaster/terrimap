@@ -696,12 +696,28 @@ export function OperationsView() {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
-    setDistrictReports(readDistrictReportsCache(period, currentProjectId ?? undefined) as any[]);
+    const cache = readDistrictReportsCache(period, currentProjectId ?? undefined) as any[];
+    setDistrictReports(cache);
+    setLoading(cache.length === 0);
+
+    const timeoutId = window.setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, cache.length > 0 ? 500 : 2500);
+
     loadDistrictReports(period, currentProjectId ?? undefined)
-      .then((rs) => { if (mounted) setDistrictReports(rs as any); })
-      .catch(() => { if (mounted) setDistrictReports([]); })
-      .finally(() => { if (mounted) setLoading(false); });
+      .then((rs) => {
+        if (!mounted) return;
+        setDistrictReports(rs as any);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        if (cache.length === 0) setDistrictReports([]);
+      })
+      .finally(() => {
+        if (!mounted) return;
+        window.clearTimeout(timeoutId);
+        setLoading(false);
+      });
     return () => { mounted = false; };
   }, [period, currentProjectId]);
 
