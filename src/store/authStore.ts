@@ -85,6 +85,24 @@ function normalizeDateInput(value?: string | null): string | null {
 
 const DEFAULT_PROJECT_ID = 'test-project-terrimap'
 const DEFAULT_PROJECT_OWNER_EMAIL = 'admin.test@terrimap.vn'
+const PROJECT_MEMBER_BASE_COLUMNS = 'id, project_id, user_id, role, region_id, joined_at'
+const PROJECT_MEMBER_FULL_COLUMNS = 'id, project_id, user_id, role, region_id, joined_at, status, blocked_reason, blocked_at, blocked_by, unblocked_at'
+let projectMemberStatusSupport: boolean | null = null
+
+async function getProjectMemberSelectColumns(): Promise<string> {
+  if (!supabase) return PROJECT_MEMBER_BASE_COLUMNS
+  if (projectMemberStatusSupport !== null) {
+    return projectMemberStatusSupport ? PROJECT_MEMBER_FULL_COLUMNS : PROJECT_MEMBER_BASE_COLUMNS
+  }
+
+  const { error } = await supabase
+    .from('project_members')
+    .select('status')
+    .maybeSingle()
+
+  projectMemberStatusSupport = !error
+  return projectMemberStatusSupport ? PROJECT_MEMBER_FULL_COLUMNS : PROJECT_MEMBER_BASE_COLUMNS
+}
 
 async function resolveDefaultProject(): Promise<Project | null> {
   if (!supabase) return null
@@ -169,14 +187,16 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
   const defaultProject = await resolveDefaultProject()
   if (!defaultProject) return
 
+  const memberColumns = await getProjectMemberSelectColumns()
+
   const { data: existing } = await supabase
     .from('project_members')
-    .select('*')
+    .select(memberColumns)
     .eq('project_id', defaultProject.id)
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (isBlockedMember(existing as ProjectMember)) {
+  if (isBlockedMember(existing as unknown as ProjectMember)) {
     if (defaultProject.owner_id !== userId) return
 
     const { error: restoreError } = await supabase
@@ -186,7 +206,7 @@ async function ensureDefaultProjectMembership(userId: string): Promise<void> {
         user_id: userId,
         role: 'admin',
         region_id: null,
-        status: 'active',
+        ...(projectMemberStatusSupport ? { status: 'active' } : {}),
       }, { onConflict: 'project_id,user_id' })
 
     if (restoreError) {
@@ -442,10 +462,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const user = get().user
     if (!user) return
 
+    const memberColumns = await getProjectMemberSelectColumns()
 
     const { data: memberData } = await supabase
       .from('project_members')
-      .select('*')
+      .select(memberColumns)
       .eq('user_id', user.id)
 
     const memberProjectIds = (memberData ?? [])
@@ -481,18 +502,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!supabase) return
     const user = get().user
     if (!user) return
+    const memberColumns = await getProjectMemberSelectColumns()
 
     const project = get().projects.find((p) => p.id === projectId)
     const { data } = await supabase
       .from('project_members')
-      .select('*')
+      .select(memberColumns)
       .eq('project_id', projectId)
       .eq('user_id', user.id)
       .maybeSingle()
 
     const isOwner = project?.owner_id === user.id
 
-    if (isBlockedMember(data as ProjectMember) && !isOwner) {
+    if (isBlockedMember(data as unknown as ProjectMember) && !isOwner) {
       set({
         authError: 'Tài khoản đang bị hạn chế trong dự án này',
         membership: null,
@@ -511,8 +533,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
     localStorage.setItem('terrimap_project', projectId)
 
-    if (data && !(isOwner && isBlockedMember(data as ProjectMember))) {
-      set({ membership: data as ProjectMember })
+    if (data && !(isOwner && isBlockedMember(data as unknown as ProjectMember))) {
+      set({ membership: data as unknown as ProjectMember })
     } else {
 
       const projects = get().projects
@@ -669,13 +691,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
         const { data: existing } = await client
           .from('project_members')
-          .select('*')
+          .select(await getProjectMemberSelectColumns())
           .eq('project_id', projectId)
           .eq('user_id', profileId)
           .maybeSingle()
 
         if (existing) {
-          if (isBlockedMember(existing as ProjectMember)) {
+          if (isBlockedMember(existing as unknown as ProjectMember)) {
             set({ authError: 'Người dùng đang bị hạn chế trong dự án này. Hãy bỏ chặn trước khi mời lại.' })
             return false
           }
@@ -690,7 +712,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             user_id: profileId,
             role,
             region_id: regionId || null,
-            status: 'active',
+            ...(projectMemberStatusSupport ? { status: 'active' } : {}),
           })
 
         if (error) {
@@ -716,11 +738,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!supabase) return false
     const projectId = get().currentProjectId
     if (!projectId) return false
+    const memberColumns = await getProjectMemberSelectColumns()
 
 
     const { data: member } = await supabase
       .from('project_members')
-      .select('*')
+      .select(memberColumns)
       .eq('id', memberId)
       .single()
 
@@ -732,7 +755,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if ((member as any)?.role === 'admin' && newRole !== 'admin') {
       const { data: adminMembers } = await supabase
         .from('project_members')
-        .select('*')
+        .select(memberColumns)
         .eq('project_id', projectId)
         .eq('role', 'admin')
 
@@ -760,18 +783,19 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!supabase) return false
     const projectId = get().currentProjectId
     if (!projectId) return false
+    const memberColumns = await getProjectMemberSelectColumns()
 
 
     const { data: member } = await supabase
       .from('project_members')
-      .select('*')
+      .select(memberColumns)
       .eq('id', memberId)
       .single()
 
     if ((member as any)?.role === 'admin') {
       const { data: adminMembers } = await supabase
         .from('project_members')
-        .select('*')
+        .select(memberColumns)
         .eq('project_id', projectId)
         .eq('role', 'admin')
 
@@ -799,10 +823,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const projectId = get().currentProjectId
     const actor = get().user
     if (!projectId || !actor) return false
+    const memberColumns = await getProjectMemberSelectColumns()
+
+    if (!projectMemberStatusSupport) {
+      set({ authError: 'Cần cập nhật database để dùng chức năng hạn chế thành viên' })
+      return false
+    }
 
     const { data: member } = await supabase
       .from('project_members')
-      .select('*')
+      .select(memberColumns)
       .eq('id', memberId)
       .eq('project_id', projectId)
       .maybeSingle()
@@ -812,7 +842,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false
     }
 
-    if (isBlockedMember(member as ProjectMember)) {
+    if (isBlockedMember(member as unknown as ProjectMember)) {
       set({ authError: 'Thành viên này đã bị hạn chế' })
       return false
     }
@@ -820,7 +850,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if ((member as any)?.role === 'admin') {
       const { data: adminMembers } = await supabase
         .from('project_members')
-        .select('*')
+        .select(memberColumns)
         .eq('project_id', projectId)
         .eq('role', 'admin')
 
@@ -847,7 +877,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false
     }
 
-    await syncSalesAgentMembership(member as ProjectMember, projectId, false)
+    await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, false)
     return true
   },
 
@@ -855,10 +885,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (!supabase) return false
     const projectId = get().currentProjectId
     if (!projectId) return false
+    const memberColumns = await getProjectMemberSelectColumns()
+
+    if (!projectMemberStatusSupport) {
+      set({ authError: 'Cần cập nhật database để dùng chức năng hạn chế thành viên' })
+      return false
+    }
 
     const { data: member } = await supabase
       .from('project_members')
-      .select('*')
+      .select(memberColumns)
       .eq('id', memberId)
       .eq('project_id', projectId)
       .maybeSingle()
@@ -868,7 +904,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false
     }
 
-    if (!isBlockedMember(member as ProjectMember)) {
+    if (!isBlockedMember(member as unknown as ProjectMember)) {
       return true
     }
 
@@ -885,7 +921,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false
     }
 
-    await syncSalesAgentMembership(member as ProjectMember, projectId, true)
+    await syncSalesAgentMembership(member as unknown as ProjectMember, projectId, true)
     return true
   },
 
@@ -895,11 +931,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const client = supabase
     const projectId = get().currentProjectId
     if (!projectId) return []
+    const memberColumns = await getProjectMemberSelectColumns()
 
     const readMembers = async (): Promise<ProjectMember[]> => {
       const { data, error } = await client
         .from('project_members')
-        .select('*')
+        .select(memberColumns)
         .eq('project_id', projectId)
         .order('joined_at', { ascending: true })
 
@@ -908,7 +945,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         return []
       }
 
-      const rows = (data ?? []) as ProjectMember[]
+      const rows = (data ?? []) as unknown as ProjectMember[]
       return includeBlocked
         ? rows
         : rows.filter((member) => !isBlockedMember(member))
@@ -944,7 +981,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           role: 'admin' as const,
           region_id: null,
           joined_at: project.created_at ?? new Date().toISOString(),
-          status: 'active' as const,
+          ...(projectMemberStatusSupport ? { status: 'active' as const } : {}),
         }
 
         const { error: repairError } = await client
