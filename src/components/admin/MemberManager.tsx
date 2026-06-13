@@ -36,6 +36,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
 
   const [members, setMembers]       = useState<MemberWithProfile[]>([])
   const [loading, setLoading]       = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole]   = useState<string>('sales')
@@ -51,6 +52,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       setLoading(false)
       return
     }
+    setRefreshing(true)
     setLoading(true)
 
     const doLoad = async (): Promise<MemberWithProfile[]> => {
@@ -71,6 +73,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       setMembers([])
     } finally {
       setLoading(false)
+      window.setTimeout(() => setRefreshing(false), 250)
     }
   }, [currentProjectId, loadMembers])
 
@@ -223,7 +226,7 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
         title: 'Role updated',
         message: `${member.profile?.full_name ?? 'member'} changed to ${ROLE_CONFIG[newRole]?.label}.`,
       })
-      void reload()
+      await reload()
     } catch (e) {
       console.error('[MemberManager] role change error:', e)
       alert('Error changing role. Please try again.')
@@ -274,7 +277,10 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div style={styles.header}>
-          <h2 style={styles.headerTitle}>👥 Quản lý thành viên</h2>
+          <h2 style={styles.headerTitle}>
+            👥 Quản lý thành viên
+            {refreshing && <span style={styles.refreshBadge}>↻ Đang cập nhật</span>}
+          </h2>
           <button onClick={onClose} style={styles.closeBtn}>×</button>
         </div>
 
@@ -485,6 +491,17 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '16px 20px 12px', borderBottom: '1px solid var(--color-border)',
   },
   headerTitle: { fontSize: 16, fontWeight: 700, margin: 0, color: 'var(--color-text)' },
+  refreshBadge: {
+    marginLeft: 10,
+    padding: '3px 8px',
+    borderRadius: 999,
+    background: 'rgba(59,130,246,0.12)',
+    color: 'var(--color-accent)',
+    fontSize: 11,
+    fontWeight: 700,
+    verticalAlign: 'middle',
+    animation: 'pulse 1s ease-in-out infinite',
+  },
   closeBtn: {
     border: 'none', background: 'transparent', fontSize: 22,
     cursor: 'pointer', color: 'var(--color-text-3)', padding: '2px 6px', borderRadius: 6,

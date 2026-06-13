@@ -157,6 +157,11 @@ html, body, #root {
   to   { transform: rotate(360deg); }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; transform: translateY(0); }
+  50%      { opacity: 1; transform: translateY(-1px); }
+}
+
 /* Focus styles for login inputs */
 input:focus {
   border-color: var(--color-accent) !important;
