@@ -29,6 +29,10 @@ function lsRead(projectId?: string): DistrictReport[] {
   }
 }
 
+export function readDistrictReportsCache(period: string, projectId?: string): DistrictReport[] {
+  return lsRead(projectId).filter((report) => report.period === period)
+}
+
 function lsWrite(reports: DistrictReport[], projectId?: string) {
   try {
     localStorage.setItem(lsKeyScoped(projectId), JSON.stringify(reports))
