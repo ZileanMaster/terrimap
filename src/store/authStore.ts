@@ -110,6 +110,13 @@ function getCachedProjectMembers(projectId: string): ProjectMember[] | null {
   return cached.rows
 }
 
+export function readCachedProjectMembers(projectId?: string, includeBlocked = false): ProjectMember[] {
+  if (!projectId) return []
+  const cached = getCachedProjectMembers(projectId)
+  if (!cached) return []
+  return includeBlocked ? cached : cached.filter((member) => !isBlockedMember(member))
+}
+
 function setCachedProjectMembers(projectId: string, rows: ProjectMember[]): void {
   projectMembersCache.set(projectId, { rows, fetchedAt: Date.now() })
 }

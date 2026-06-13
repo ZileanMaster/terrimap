@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDataStore } from '../store/dataStore.js';
 import { useUIStore } from '../store/uiStore.js';
-import { useAuthStore } from '../store/authStore.js';
+import { readCachedProjectMembers, useAuthStore } from '../store/authStore.js';
 import { isOnline, supabase } from '../lib/supabase.js';
 import { loadDistrictReports, readDistrictReportsCache, currentPeriod as currentReportPeriod } from '../services/districtReportsDb.js';
 import type { DistrictReport } from '../../facades/viewmodels.js';
@@ -326,7 +326,17 @@ export function UsersView() {
       setMembers([]);
       return;
     }
-    setLoading(true);
+    const cachedMembers = readCachedProjectMembers(currentProjectId, true);
+    if (cachedMembers.length > 0) {
+      setMembers(cachedMembers.map((m: any) => ({
+        ...m,
+        profile: m.profile || { email: m.user_id, full_name: 'Chưa cập nhật' },
+        capacity: m.capacity ?? 500,
+      })));
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     try {
       const rawMembers = await loadMembers(true);
 
@@ -351,7 +361,7 @@ export function UsersView() {
   };
 
   useEffect(() => {
-    reloadMembers();
+    void reloadMembers();
   }, [currentProjectId]);
 
   const handleStartEdit = (member: any) => {

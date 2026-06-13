@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useDataStore } from '../../store/dataStore.js'
 import type { ProjectMember, Profile } from '../../store/authStore.js'
+import { readCachedProjectMembers } from '../../store/authStore.js'
 import { supabase } from '../../lib/supabase.js'
 import { useToast } from '../ui/Toast.js'
 
@@ -59,8 +60,19 @@ export default function MemberManager({ open, onClose }: MemberManagerProps) {
       setLoading(false)
       return
     }
+    const cachedMembers = readCachedProjectMembers(currentProjectId, true)
+    if (cachedMembers.length > 0) {
+      setMembers(
+        cachedMembers.map((m: any) => ({
+          ...m,
+          profile: m.profile ?? undefined,
+        })) as MemberWithProfile[],
+      )
+      setLoading(false)
+    } else {
+      setLoading(true)
+    }
     setRefreshing(true)
-    setLoading(true)
 
     const doLoad = async (): Promise<MemberWithProfile[]> => {
       // Lấy danh sách thành viên
