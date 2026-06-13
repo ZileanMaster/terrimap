@@ -43,11 +43,6 @@ export default function RegionManager({ onFlyTo, assignments = [] }: RegionManag
     }
   }, [currentProjectId, loadMembers])
 
-  const coordinatorMembers = useMemo(
-    () => members.filter((member) => member.role === 'coordinator' && member.status !== 'blocked'),
-    [members],
-  )
-
   const handleDeleteRegion = useCallback(async (regionId: string) => {
     const zoneCount = zones.filter((zone) => (zone as any).regionId === regionId).length
     if (zoneCount > 0) {
@@ -60,6 +55,14 @@ export default function RegionManager({ onFlyTo, assignments = [] }: RegionManag
   }, [deleteRegion, zones])
 
   const activeRegion = regions.find((region) => region.id === currentRegionId)
+  const coordinatorMembers = useMemo(
+    () => members.filter((member) => (
+      member.role === 'coordinator'
+      && member.status !== 'blocked'
+      && (member.region_id === currentRegionId || member.user_id === activeRegion?.coordinatorId)
+    )),
+    [members, currentRegionId, activeRegion?.coordinatorId],
+  )
   const visibleRegions = regions.filter((region) => {
     const regionZoneIds = new Set(
       zones
@@ -167,6 +170,9 @@ export default function RegionManager({ onFlyTo, assignments = [] }: RegionManag
               </option>
             ))}
           </select>
+          {coordinatorMembers.length === 0 && (
+            <div style={styles.detailHint}>Khu vực này chưa có điều phối viên thuộc đúng vùng.</div>
+          )}
         </div>
       )}
     </div>
@@ -281,6 +287,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 700,
     color: 'var(--color-text-2)',
+  },
+  detailHint: {
+    gridColumn: '2 / 3',
+    fontSize: 11,
+    color: 'var(--color-text-3)',
+    lineHeight: 1.4,
+    marginTop: -2,
   },
   select: {
     width: '100%',
