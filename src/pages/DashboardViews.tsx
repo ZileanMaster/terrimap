@@ -657,7 +657,10 @@ export function UsersView() {
 
       <div style={styles.section}>
         <div style={styles.blockedHeader}>
-          <h4 style={styles.blockedTitle}>Danh sách bị hạn chế ({blockedMembers.length})</h4>
+          <div style={styles.blockedTitleRow}>
+            <h4 style={styles.blockedTitle}>Danh sách bị hạn chế</h4>
+            <span style={styles.blockedCountBadge}>{blockedMembers.length}</span>
+          </div>
           <span style={styles.blockedNote}>Các tài khoản này sẽ tách riêng khỏi danh sách đang hoạt động.</span>
         </div>
         {blockedMembers.length === 0 ? (
@@ -1361,11 +1364,30 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     marginBottom: '12px',
   },
+  blockedTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
   blockedTitle: {
     margin: 0,
     fontSize: '16px',
     fontWeight: 800,
     color: 'var(--color-text)',
+  },
+  blockedCountBadge: {
+    minWidth: '28px',
+    height: '28px',
+    padding: '0 8px',
+    borderRadius: '999px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(59,130,246,0.12)',
+    color: '#2563eb',
+    fontSize: '12px',
+    fontWeight: 800,
   },
   blockedNote: {
     color: 'var(--color-text-2)',
