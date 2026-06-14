@@ -120,7 +120,7 @@ interface DataStore {
   updateZone: (zone: Zone) => Promise<void>
 
   /** Replace all assignments + await DB persist */
-  persistAssignments: (assignments: Assignment[]) => Promise<void>
+  persistAssignments: (assignments: Assignment[], replaceZoneIds?: string[]) => Promise<void>
   refreshAgents: () => Promise<SalesAgent[]>
 
   addAgent:    (agent: SalesAgent) => Promise<void>
@@ -251,13 +251,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
     await saveZone(zone, get().currentProjectId)
   },
 
-  persistAssignments: async (assignments) => {
+  persistAssignments: async (assignments, replaceZoneIds) => {
     const persistableAssignments = assignments.filter((assignment) => assignment.salesAgentId?.trim())
     validateAssignmentsBeforeSave(persistableAssignments)
     const previousAssignments = get().assignments
     set({ assignments: persistableAssignments, saving: true })
     try {
-      await saveAssignments(persistableAssignments, get().currentProjectId)
+      await saveAssignments(persistableAssignments, get().currentProjectId, replaceZoneIds)
     } catch (error) {
       set({ assignments: previousAssignments })
       throw error

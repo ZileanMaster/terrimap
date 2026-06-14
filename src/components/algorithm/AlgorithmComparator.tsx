@@ -207,7 +207,7 @@ function formatAlgoLabel(algo: Algo): string {
     }
 
     try {
-      await persistAssignments(mergedAssignments)
+      await persistAssignments(mergedAssignments, [...scopedZoneIds])
       window.alert(`Đã áp dụng thành công kịch bản ${side} vào dữ liệu hiện tại.`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Không thể lưu kết quả phân chia.'

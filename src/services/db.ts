@@ -484,39 +484,51 @@ export async function deleteZone(zoneId: string, projectId?: string): Promise<vo
  * Replace all assignments in DB with the given array.
  * Fire-and-forget.
  */
-export async function saveAssignments(assignments: Assignment[], projectId?: string): Promise<void> {
+export async function saveAssignments(
+  assignments: Assignment[],
+  projectId?: string,
+  replaceZoneIds?: string[],
+): Promise<void> {
     for (const assignment of assignments) {
       if (!assignment.salesAgentId?.trim()) {
         throw new Error(`[DB] saveAssignments rejected: district ${assignment.districtId} is missing salesAgentId`)
       }
     }
 
-  writeJsonArray(scopedKey('terrimap_assignments', projectId), assignments)
+  const assignmentsKey = scopedKey('terrimap_assignments', projectId)
+  writeJsonArray(assignmentsKey, assignments)
 
   if (!isOnline()) return
 
   try {
-
-    let delQuery = supabase!.from('assignments').delete().neq('zone_id', '')
-    if (projectId) delQuery = delQuery.eq('project_id', projectId)
-    const { error: deleteError } = await delQuery
-    if (deleteError) {
-      console.error('[DB] saveAssignments delete error:', deleteError)
-      throw deleteError
-    }
+    const replaceIds = replaceZoneIds?.filter(Boolean) ?? []
 
     if (assignments.length > 0) {
-      const { error } = await supabase!.from('assignments').insert(
+      const { error } = await supabase!.from('assignments').upsert(
         assignments.map((a) => ({
           zone_id:        a.zoneId,
           district_id:    a.districtId,
           sales_agent_id: a.salesAgentId,
           ...(projectId ? { project_id: projectId } : {}),
         })),
+        { onConflict: 'zone_id' },
       )
       if (error) {
-        console.error('[DB] saveAssignments error:', error)
+        console.error('[DB] saveAssignments upsert error:', error)
         throw error
+      }
+    }
+
+    if (replaceIds.length > 0) {
+      const keptZoneIds = new Set(assignments.map((assignment) => assignment.zoneId))
+      const staleZoneIds = replaceIds.filter((zoneId) => !keptZoneIds.has(zoneId))
+      if (staleZoneIds.length > 0) {
+        let delQuery = supabase!.from('assignments').delete().in('zone_id', staleZoneIds)
+        if (projectId) delQuery = delQuery.eq('project_id', projectId)
+        const { error: deleteError } = await delQuery
+        if (deleteError) {
+          console.warn('[DB] saveAssignments stale delete warning:', deleteError)
+        }
       }
     }
   } catch (e) {
