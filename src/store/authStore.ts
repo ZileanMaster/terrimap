@@ -998,6 +998,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     const cachedMembers = getCachedProjectMembers(projectId)
     if (cachedMembers) {
+      void useDataStore.getState().refreshAgents().catch((error) => {
+        console.warn('[AuthStore] refreshAgents from cached members warning:', error)
+      })
       return includeBlocked
         ? cachedMembers
         : cachedMembers.filter((member) => !isBlockedMember(member))
@@ -1090,6 +1093,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         }
       }
 
+      setCachedProjectMembers(projectId, members)
+      void useDataStore.getState().refreshAgents().catch((error) => {
+        console.warn('[AuthStore] refreshAgents from member rows warning:', error)
+      })
+
       const profileIds = [...new Set(members.map((member) => member.user_id).filter(Boolean))]
       if (profileIds.length > 0) {
         const { data: profiles, error: profilesError } = await client
@@ -1109,6 +1117,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       setCachedProjectMembers(projectId, members)
+      void useDataStore.getState().refreshAgents().catch((error) => {
+        console.warn('[AuthStore] refreshAgents after loadMembers warning:', error)
+      })
       return members
     })()
 

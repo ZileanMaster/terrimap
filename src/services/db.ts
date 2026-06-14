@@ -152,6 +152,19 @@ interface DbSalesAgent {
   capacity:      number
 }
 
+interface DbProjectMember {
+  user_id:   string
+  role:      string | null
+  region_id: string | null
+  status?:   string | null
+}
+
+interface DbProfile {
+  id:        string
+  email?:    string | null
+  full_name?: string | null
+}
+
 interface DbRegion {
   id:             string
   name:           string
@@ -278,10 +291,16 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
 
   const { data, error } = await query
 
+  const memberAgents = await loadAgentsFromProjectMembers(projectId)
+
   if (error || !data || data.length === 0) {
     if (error) console.error('[DB] loadAgents error or empty:', error)
     const cached = readScopedCollections<SalesAgent>('terrimap_agents', projectId)
-    if (cached.length > 0) return cached
+    const fallbackAgents = mergeAgents(cached, memberAgents)
+    if (fallbackAgents.length > 0) {
+      writeJsonArray(scopedKey('terrimap_agents', projectId), fallbackAgents)
+      return fallbackAgents
+    }
     return []
   }
 
@@ -302,8 +321,79 @@ export async function loadAgents(projectId?: string): Promise<SalesAgent[]> {
     capacity:     a.capacity,
   }))
 
-  writeJsonArray(scopedKey('terrimap_agents', projectId), remoteAgents)
-  return remoteAgents
+  const mergedAgents = mergeAgents(remoteAgents, memberAgents)
+  writeJsonArray(scopedKey('terrimap_agents', projectId), mergedAgents)
+  return mergedAgents
+}
+
+function mergeAgents(primary: SalesAgent[], fallback: SalesAgent[]): SalesAgent[] {
+  const map = new Map<string, SalesAgent>()
+  for (const agent of fallback) map.set(agent.id, agent)
+  for (const agent of primary) map.set(agent.id, agent)
+  return [...map.values()]
+}
+
+async function loadAgentsFromProjectMembers(projectId?: string): Promise<SalesAgent[]> {
+  if (!isOnline() || !projectId) return []
+
+  const { data: members, error } = await supabase!
+    .from('project_members')
+    .select('user_id, role, region_id, status')
+    .eq('project_id', projectId)
+    .or('role.eq.sales,role.is.null')
+    .or('status.is.null,status.neq.blocked')
+
+  if (error || !members || members.length === 0) {
+    if (error) console.warn('[DB] loadAgentsFromProjectMembers warning:', error)
+    return []
+  }
+
+  const userIds = [...new Set((members as DbProjectMember[]).map((member) => member.user_id).filter(Boolean))]
+  const profileMap = new Map<string, DbProfile>()
+
+  if (userIds.length > 0) {
+    const { data: profiles, error: profileError } = await supabase!
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds)
+
+    if (profileError) {
+      console.warn('[DB] loadAgentsFromProjectMembers profile warning:', profileError)
+    } else {
+      for (const profile of (profiles ?? []) as DbProfile[]) {
+        profileMap.set(profile.id, profile)
+      }
+    }
+  }
+
+  const agents = (members as DbProjectMember[]).map((member) => {
+    const profile = profileMap.get(member.user_id)
+    return {
+      id: member.user_id,
+      name: profile?.full_name || profile?.email?.split('@')[0] || member.user_id,
+      activeRegion: member.region_id ?? '',
+      ...(member.region_id ? { regionId: member.region_id } : {}),
+      capacity: 500,
+    }
+  })
+
+  if (agents.length > 0) {
+    const { error: upsertError } = await supabase!.from('sales_agents').upsert(
+      agents.map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+        active_region: agent.activeRegion,
+        region_id: (agent as any).regionId ?? null,
+        capacity: agent.capacity,
+        project_id: projectId,
+      })),
+    )
+    if (upsertError) {
+      console.warn('[DB] loadAgentsFromProjectMembers sales agent sync warning:', upsertError)
+    }
+  }
+
+  return agents
 }
 
 //  SAVE 
@@ -412,7 +502,7 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
     const { error: deleteError } = await delQuery
     if (deleteError) {
       console.error('[DB] saveAssignments delete error:', deleteError)
-      return
+      throw deleteError
     }
 
     if (assignments.length > 0) {
@@ -424,10 +514,14 @@ export async function saveAssignments(assignments: Assignment[], projectId?: str
           ...(projectId ? { project_id: projectId } : {}),
         })),
       )
-      if (error) console.error('[DB] saveAssignments error:', error)
+      if (error) {
+        console.error('[DB] saveAssignments error:', error)
+        throw error
+      }
     }
   } catch (e) {
     console.error('[DB] saveAssignments unexpected error:', e)
+    throw e
   }
 }
 

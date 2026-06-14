@@ -206,8 +206,14 @@ function formatAlgoLabel(algo: Algo): string {
       return
     }
 
-    await persistAssignments(mergedAssignments)
-    window.alert(`Đã áp dụng thành công kịch bản ${side} vào dữ liệu hiện tại.`)
+    try {
+      await persistAssignments(mergedAssignments)
+      window.alert(`Đã áp dụng thành công kịch bản ${side} vào dữ liệu hiện tại.`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Không thể lưu kết quả phân chia.'
+      setError(message)
+      window.alert(message)
+    }
   }
 
   const recommendation = useMemo(() => {
