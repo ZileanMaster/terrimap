@@ -575,7 +575,7 @@ export function UsersView() {
   const ROLE_LABELS: Record<string, string> = {
     admin: 'Quản trị viên',
     coordinator: 'Điều phối viên',
-    sales: 'Nhân sự',
+    sales: 'Nhân viên',
   };
 
   return (
@@ -643,7 +643,7 @@ export function UsersView() {
                           >
                             <option value="admin">Quản trị viên</option>
                             <option value="coordinator">Điều phối viên</option>
-                            <option value="sales">Nhân sự</option>
+                            <option value="sales">Nhân viên</option>
                           </select>
                         ) : (
                           <span style={{
