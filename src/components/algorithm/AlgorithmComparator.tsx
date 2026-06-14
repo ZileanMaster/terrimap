@@ -6,7 +6,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
 import { useSAWorker } from '../../hooks/useSAWorker.js'
-import { useToast } from '../ui/Toast.js'
 import TerritoryMap from '../map/TerritoryMap.js'
 import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
@@ -66,7 +65,6 @@ function formatAlgoLabel(algo: Algo): string {
   const persistAssignments = useDataStore((s) => s.persistAssignments)
   const ctx = useFacade()
   const { runSA } = useSAWorker()
-  const { push } = useToast()
 
   const [selectedRegionId, setSelectedRegionId] = useState(currentRegionId || regions[0]?.id || '')
   const [isRunning, setIsRunning] = useState(false)
@@ -209,11 +207,7 @@ function formatAlgoLabel(algo: Algo): string {
     }
 
     await persistAssignments(mergedAssignments)
-    push({
-      kind: 'success',
-      title: 'Áp dụng thành công',
-      message: `Đã áp dụng kịch bản ${side} vào dữ liệu hiện tại.`,
-    })
+    window.alert(`Đã áp dụng thành công kịch bản ${side} vào dữ liệu hiện tại.`)
   }
 
   const recommendation = useMemo(() => {
