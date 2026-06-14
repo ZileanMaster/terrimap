@@ -114,8 +114,9 @@ function formatAlgoLabel(algo: Algo): string {
     !selectedRegionId ? 'Chưa chọn khu vực.' : null,
     displayZones.length < 2 ? 'Khu vực cần ít nhất 2 zones.' : null,
     displayAgents.length < 2 ? 'Khu vực cần ít nhất 2 sales đang hoạt động.' : null,
-    topologyViolations.length > 0 ? `Có ${topologyViolations.length} lỗi topology vùng.` : null,
-    components > 1 ? `Đồ thị zone có ${components} cụm rời, không thể đảm bảo liên thông.` : null,
+    topologyViolations.length > 0 || components > 1
+      ? 'Dữ liệu khu vực chưa đủ ổn định để chạy thuật toán.'
+      : null,
   ].filter((x): x is string => Boolean(x))
 
     const canRun = blockers.length === 0 && !isRunning
@@ -268,8 +269,6 @@ function formatAlgoLabel(algo: Algo): string {
         </label>
         <DataChip label="Zones" value={displayZones.length} ok={displayZones.length >= 2} />
         <DataChip label="Sales" value={displayAgents.length} ok={displayAgents.length >= 2} />
-        <DataChip label="Topology" value={topologyViolations.length} ok={topologyViolations.length === 0} />
-        <DataChip label="Components" value={components} ok={components <= 1 && components > 0} />
         <label style={styles.checkbox}>
           <input type="checkbox" checked={syncViewport} onChange={(e) => setSyncViewport(e.target.checked)} />
           Đồng bộ góc nhìn bản đồ
