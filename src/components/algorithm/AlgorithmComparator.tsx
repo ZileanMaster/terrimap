@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useDataStore } from '../../store/dataStore.js'
 import { useFacade } from '../../context/FacadeContext.js'
 import { useSAWorker } from '../../hooks/useSAWorker.js'
+import { saveSnapshot } from '../../services/db.js'
 import TerritoryMap from '../map/TerritoryMap.js'
 import type { Assignment, Zone } from '../../../facades/viewmodels.js'
 import { buildAdjacencyMatrix, findPolygonTopologyViolations } from '../../../lib/geometry.js'
@@ -61,6 +62,7 @@ function formatAlgoLabel(algo: Algo): string {
   const regions = useDataStore((s) => s.regions)
   const agents = useDataStore((s) => s.agents)
   const currentRegionId = useDataStore((s) => s.currentRegionId)
+  const currentProjectId = useDataStore((s) => s.currentProjectId)
   const setCurrentRegion = useDataStore((s) => s.setCurrentRegion)
   const persistAssignments = useDataStore((s) => s.persistAssignments)
   const ctx = useFacade()
@@ -208,6 +210,20 @@ function formatAlgoLabel(algo: Algo): string {
 
     try {
       await persistAssignments(mergedAssignments, [...scopedZoneIds])
+      const now = new Date()
+      const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+      const snapshotLabel = `Áp dụng ${side}${selectedRegion?.name ? ` - ${selectedRegion.name}` : ''}`
+      const snapshotResult = await saveSnapshot(
+        `algorithm-apply-${side.toLowerCase()}-${Date.now()}`,
+        snapshotLabel,
+        { zones, assignments: mergedAssignments },
+        period,
+        currentProjectId,
+        selectedRegionId || null,
+      )
+      if (!snapshotResult.ok) {
+        throw new Error(snapshotResult.error || 'Không thể lưu bản đồ đã áp dụng.')
+      }
       window.alert(`Đã áp dụng thành công kịch bản ${side} vào dữ liệu hiện tại.`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Không thể lưu kết quả phân chia.'
